@@ -251,8 +251,10 @@ class UntrustedWireV2(unittest.TestCase):
         extra["entitlement_verified"] = True
         with self.assertRaises(ValueError):
             decode_untrusted_v2_json(json.dumps(extra))
+        payload = json.loads(wire())
+        payload["evidence"] = float("nan")
         with self.assertRaises(ValueError):
-            decode_untrusted_v2_json(wire().replace('"evidence":[]', '"evidence":NaN'))
+            decode_untrusted_v2_json(json.dumps(payload))
 
     def test_non_object_nonstring_and_oversize_denied(self):
         for x in (None, b"{}", {}, 1):
