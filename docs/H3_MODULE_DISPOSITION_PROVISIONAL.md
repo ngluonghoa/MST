@@ -23,7 +23,7 @@ these require separate consumer, migration and rollback evidence.
 | cache_swap_preview | domain_and_reference | 133 | 16 | 47 | 0 | KEEP | none |
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
 | causal_indicators | domain_and_reference | 236 | 18 | 58 | 2 | KEEP | none |
-| contracts | domain_and_reference | 59 | 5 | 6 | 8 | KEEP | none |
+| contracts | domain_and_reference | 59 | 5 | 6 | 9 | KEEP | none |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -66,7 +66,8 @@ these require separate consumer, migration and rollback evidence.
 | ssi_multivenue_review | source_adapter_and_quality | 129 | 11 | 59 | 0 | KEEP | none |
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 1 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 0 | KEEP | none |
+| strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 1 | KEEP | none |
+| v2_replay_port | domain_and_reference | 88 | 10 | 22 | 0 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
