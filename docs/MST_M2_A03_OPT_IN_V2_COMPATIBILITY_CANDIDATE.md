@@ -20,7 +20,7 @@
 - No external data rights, signed provider provenance, real market data, cache persistence or brokerage execution rights are created.
 
 ## 3. Legacy consumer and port interaction
-- Legacy `BacktestHarness.from_contracts` intentionally checks `isinstance(clock, ReplayClock)`; it **must not** silently accept `StrictReplayClockV2` as a v1 versioned port. An explicit v2 PortDescriptor/adapter and separate consumer golden tests are required for a production-quality v2 backtest harness.
+- Legacy `BacktestHarness.from_contracts` intentionally checks `isinstance(clock, ReplayClock)`; it **must not** silently accept `StrictReplayClockV2` as a v1 versioned port. A **separate synthetic-only v2 port consumer** now exists in `v2_replay_port.py`; it is not a production backtesting implementation or a replacement for the original harness.
 - Other v1 clients can continue on the original v1 classes without mandatory migration. App-level wiring to v2 is *opt-in*, explicit and not yet approved in MST.
 - Do not conflate equal names or behaviors with ABI compatibility: distinct v2 class identities are deliberately separate. No legacy serializer or v1 signed-domain/cache fingerprint is modified.
 
@@ -38,3 +38,13 @@
 - All development, CI, docs and release are **GitHub + Google Drive Cloud-only**; no Mac, MOCHI, or other local project runtime.
 
 **Decision state:** PROPOSED/TESTED, NOT OWNER-APPROVED. Do not automatically authorize merge, release or trade.
+
+## 6. Scoped versioned v2 replay port — synthetic fixture only
+- NEW `swing_trading.v2_replay_port.StrictReplayHarnessV2` uses explicit `PortDescriptor("replay.causal_events", "2.0.0", "SYNTHETIC_TEST_ONLY", ("available_events",))` and `PortDescriptor("rules.zone_registry", "2.0.0", "SYNTHETIC_TEST_ONLY", ("evaluate",))`. Existing `engineering_contracts.py` is reused **without modifying its original source blob**.
+- `StrictReplayHarnessV2.from_contracts` requires an exact `StrictReplayClockV2`. It validates both descriptors and callable operations **before** invoking a provider or rule; no automatic v1 substitution, provider fallback or live rights are permitted. The legacy `BacktestHarness.from_contracts` continues to reject the strict clock.
+- `visible_events` accepts typed `CausalMarketEvent` fixtures only, gates by both event time and first-known time, and sorts deterministically. It does NOT prove source publisher truth or a real market calendar.
+- `evaluate_unverified` accepts only exactly matched zone/strategy and a typed `StrictSignalDecisionV2(status=UNVERIFIED, evidence=())`. Callbacks asserting `DETECTED`, `NOT_DETECTED`, fake evidence or mixed identities fail closed; 16 zones and both strategies remain uncalibrated.
+- The existing **in-memory** `EngineeringPortRegistry` demonstrates v2 add/resolve/replace/rollback; test fixtures pin a v2 consumer and prove an incompatible downgrade/replacement is rejected without corrupting the previous pointer. Rollback to a lower minor is permitted only when *all pinned consumers* allow it. No distributed Cloud service, atomic Google Drive manifest, independent signing or hot-swap operational authority follows from this fixture.
+- New `tests/test_m2_a03_v2_replay_port.py` supplies **23** explicit v2 port, consumer, fail-closed, deterministic replay and rollback tests. PR #8 now contains **50** new opt-in v2 tests overall (27 earlier + 23 new), alongside the 1,332 locked legacy tests. H3 inventories 65 source Python modules (63 pinned originals + strict_contract_v2 + v2_replay_port), without altering any of the 63 legacy source files.
+- The additional v2 module updates H3 source importer numbers: `replay` consumer count remains 32 from the earlier v2 module, `contracts` importer rises 8→9, and `strict_contract_v2` consumer count becomes 1. These are static import counts, not runtime consumer approval.
+- Both the v2 sidecar and this versioned port are **draft engineering artifacts, not a released v2 package**. Continue to require user-owner compatibility/version signoff, all protected CI, licensed provider authorization and formal rollback before any merge/release. Never combine the closed in-place PR #7 with opt-in PR #8.
