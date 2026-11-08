@@ -21,7 +21,7 @@ these require separate consumer, migration and rollback evidence.
 | cache_fetch_planner | cache_and_persistence | 150 | 30 | 77 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
 | cache_snapshot_bundle | cache_and_persistence | 357 | 24 | 61 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | cache_swap_preview | domain_and_reference | 133 | 16 | 47 | 0 | KEEP | none |
-| causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
+| causal | domain_and_reference | 22 | 4 | 7 | 2 | KEEP | none |
 | causal_indicators | domain_and_reference | 236 | 18 | 58 | 2 | KEEP | none |
 | contracts | domain_and_reference | 59 | 5 | 6 | 9 | KEEP | none |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -29,7 +29,7 @@ these require separate consumer, migration and rollback evidence.
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
 | engine | domain_and_reference | 14 | 1 | 7 | 0 | KEEP | none |
-| engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
+| engineering_contracts | engineering_governance | 175 | 10 | 27 | 6 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
 | evidence_recovery | evidence_and_rights | 81 | 4 | 23 | 1 | KEEP | none |
