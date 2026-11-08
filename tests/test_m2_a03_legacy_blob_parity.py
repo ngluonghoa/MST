@@ -80,7 +80,7 @@ ALLOWED_NEW_OPT_IN_MODULES = frozenset(("strict_contract_v2.py", "v2_replay_port
 
 
 def git_blob_sha(data: bytes) -> str:
-    header = b"blob " + str(len(data)).encode("ascii") + b"\\0"
+    header = b"blob " + str(len(data)).encode("ascii") + bytes((0,))
     return sha1(header + data).hexdigest()
 
 
