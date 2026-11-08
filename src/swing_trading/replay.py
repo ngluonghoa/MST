@@ -13,6 +13,19 @@ def require_utc(value: datetime) -> datetime:
 class ReplayClock:
     as_of_utc: datetime
 
+    def __setattr__(self, name: str, value: object) -> None:
+        """Apply the same UTC/monotonic invariant to direct clock assignments.
+
+        The public dataclass field and advance_to() API remain unchanged.
+        A new ReplayClock may still be created for a separate earlier snapshot.
+        """
+        if name == "as_of_utc":
+            require_utc(value)
+            previous = self.__dict__.get("as_of_utc")
+            if previous is not None and value < previous:
+                raise ValueError("Replay clock cannot go backwards")
+        object.__setattr__(self, name, value)
+
     def __post_init__(self) -> None:
         require_utc(self.as_of_utc)
 
