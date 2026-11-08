@@ -58,6 +58,14 @@ class LegacyV1Parity(unittest.TestCase):
         self.assertIsNot(Evidence, StrictEvidenceV2)
         self.assertIsNot(SignalDecision, StrictSignalDecisionV2)
 
+    def test_legacy_versioned_backtest_port_rejects_v2_clock(self):
+        # The opt-in clock is not silently substituted into a v1 versioned port.
+        with self.assertRaisesRegex(TypeError, "Explicit causal ReplayClock required"):
+            BacktestHarness.from_contracts(
+                clock=StrictReplayClockV2(T0), market_data=None,
+                market_port=None, rules=None, rules_port=None,
+            )
+
 
 class StrictClockV2(unittest.TestCase):
     def test_assignment_and_advance_cannot_rewind(self):
