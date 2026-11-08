@@ -23,7 +23,7 @@ Legacy Python behavior -> strict candidate behavior:
 A new AST test on all 63 src/swing_trading Python modules measured on GitHub Actions:
 replay_module_importers=31; ReplayClock_calls=1; SignalDecision_calls=1; Evidence_calls=0; ReplayClock_direct_writes=1.
 Importing replay.require_utc is not the same as constructing a ReplayClock. These are static call expressions, NOT a certification of reflection/dynamic loads or external applications. No static SignalDecision constructor was called with explicit string literal for strategy/status.
-Existing 1,332 tests plus 27 A03 tests run on Python 3.11 and 3.12; include serial compatibility, dataclasses.replace, synthetic copy/pickle from trusted bytes, JSON typed conversion, all-zone UNVERIFIED golden and BacktestHarness causal replay. Do not unpickle untrusted data.
+Existing 1,332 tests plus 40 A03 candidate tests run on Python 3.11 and 3.12; include serial compatibility, dataclasses.replace, synthetic copy/pickle from trusted bytes, JSON typed conversion, all-zone UNVERIFIED golden and BacktestHarness causal replay. Do not unpickle untrusted data.
 
 ## 3. Versioned JSON and deprecation plan
 The Python dataclasses are NOT themselves a JSON wire decoder. Enum values serialize as strings. Direct SignalDecision(**json.loads(...)) must be rejected by strict runtime boundaries.
@@ -44,3 +44,8 @@ Before any merge:
 5) verified separate GitHub main CI after squash merge ONLY if merge is explicitly authorized.
 If unapproved, KEEP PR #7 DRAFT, do not merge. Before merge rollback is simply close the PR. After an approved merge, rollback through a tested protected revert PR, never force-push main.
 This is a CANDIDATE engineering policy and not a user approval or production deployment.
+
+## 6. Synthetic-only v2 wire boundary test fixture — NOT a production decoder
+The draft additionally includes tests/test_m2_a03_v2_wire_contract_candidate.py with 13 synthetic-only negative/golden tests (total A03 tests now 15 + 12 + 13 = 40; baseline total 1,372 per Python version on current draft). This test-local fixture defines the proposed mst.signal_decision.v2 schema discriminator and deliberately accepts ONLY UNVERIFIED decisions with empty evidence for UNTRUSTED INPUT. It rejects versionless v1 JSON, wrong/unknown versions, missing/extra fields, malformed zones/enums and self-claimed DETECTED/NOT_DETECTED or verified evidence. A test-local Python helper is NOT a shipped codec or licensed provider authority.
+
+Scoped A02 technical review and alternative v1/v2 strategy are documented in MST Drive QA https://docs.google.com/document/d/1TBnFx9K-ahpvZpVN1lB_hjc_tIRkVhtVylZhD6UEAwM/edit . In particular, if undocumented v1 consumers may exist, prefer evaluating an OPT-IN separate v2 interface alongside unchanged legacy v1 classes over silently changing existing public semantics. This alternative needs its own approved design, code changes and CI; the present PR still represents strict behavior on existing public classes and remains DRAFT pending owner compatibility decision. Do not claim the package is already a v2 release: package metadata stays 0.0.1.
