@@ -4,7 +4,7 @@ Tests cover explicit v1/v2 isolation, semantic known-time parity, and
 EngineeringPortRegistry's in-memory swap/rollback contract. They do not
 exercise network I/O, vendor entitlements, broker execution or Cloud runtime.
 """
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timedelta, timezone
 import unittest
 
@@ -84,6 +84,30 @@ class VersionedPortIsolationTests(unittest.TestCase):
             harness(clock=ReplayClock(T0), source=source, rules=rules)
         self.assertEqual(source.calls, 0)
         self.assertEqual(rules.calls, 0)
+
+    def test_direct_constructor_without_port_pins_cannot_bypass_gate(self):
+        with self.assertRaises(TypeError):
+            StrictReplayHarnessV2(
+                clock=StrictReplayClockV2(T0),
+                market_data=FakeSource(), rules=FakeRules(),
+            )
+        with self.assertRaisesRegex(ValueError, "INCOMPATIBLE_CONTRACT_VERSION"):
+            StrictReplayHarnessV2(
+                clock=StrictReplayClockV2(T0),
+                market_data=FakeSource(), rules=FakeRules(),
+                market_port=replace(V2_MARKET_PORT, version="1.0.0"),
+                rules_port=V2_RULES_PORT,
+            )
+
+    def test_after_wiring_ports_and_provider_cannot_be_reassigned(self):
+        fixture = harness()
+        with self.assertRaises(FrozenInstanceError):
+            fixture.market_port = replace(V2_MARKET_PORT, version="1.0.0")
+        with self.assertRaises(FrozenInstanceError):
+            fixture.market_data = MissingMethods()
+        with self.assertRaises(FrozenInstanceError):
+            fixture.clock = ReplayClock(T0)
+        self.assertEqual(fixture.market_port.version, "2.0.0")
 
     def test_legacy_version_1_port_cannot_fake_v2(self):
         source = FakeSource()
