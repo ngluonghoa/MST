@@ -21,13 +21,23 @@ V2_RULES_PORT = PortDescriptor(
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class StrictReplayHarnessV2:
-    """Pure fixture replay consumer requiring explicit v2 port versions."""
+    """Immutable fixture wiring with mandatory, explicit v2 port descriptors."""
 
     clock: StrictReplayClockV2
     market_data: object
     rules: object
+    market_port: PortDescriptor
+    rules_port: PortDescriptor
+
+    def __post_init__(self) -> None:
+        # Enforce the contract even for direct Python construction; a caller
+        # must not bypass from_contracts() by omitting versioned port metadata.
+        if type(self.clock) is not StrictReplayClockV2:
+            raise TypeError("Explicit StrictReplayClockV2 required")
+        require_compatible_port(V2_MARKET_PORT, self.market_port, self.market_data)
+        require_compatible_port(V2_RULES_PORT, self.rules_port, self.rules)
 
     @classmethod
     def from_contracts(
@@ -35,11 +45,10 @@ class StrictReplayHarnessV2:
         market_port: PortDescriptor, rules: object,
         rules_port: PortDescriptor,
     ) -> "StrictReplayHarnessV2":
-        if type(clock) is not StrictReplayClockV2:
-            raise TypeError("Explicit StrictReplayClockV2 required")
-        require_compatible_port(V2_MARKET_PORT, market_port, market_data)
-        require_compatible_port(V2_RULES_PORT, rules_port, rules)
-        return cls(clock=clock, market_data=market_data, rules=rules)
+        return cls(
+            clock=clock, market_data=market_data, rules=rules,
+            market_port=market_port, rules_port=rules_port,
+        )
 
     def visible_events(self) -> tuple[CausalMarketEvent, ...]:
         """No future-known or future-event observations in synthetic replay."""
