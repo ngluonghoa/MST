@@ -67,7 +67,7 @@ these require separate consumer, migration and rollback evidence.
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 1 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 1 | KEEP | none |
-| v2_replay_port | domain_and_reference | 88 | 10 | 22 | 0 | KEEP | none |
+| v2_replay_port | domain_and_reference | 97 | 10 | 22 | 0 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
