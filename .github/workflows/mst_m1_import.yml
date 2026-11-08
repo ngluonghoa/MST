@@ -1,0 +1,35 @@
+name: MST M1 One-time Source Baseline Import
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/mst_m1_import.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  stage-pinned-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Fetch pinned source and stage exact tree on import branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_SHA=cd90c1babae8912db31490ad614fc2ad2f868042
+          SOURCE_TREE=d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e
+          DEST_BRANCH=mst/m1-exact-source
+          git remote add swing-pinned https://github.com/ngluonghoa/swing-trading-1-8.git
+          git fetch --no-tags swing-pinned "$SOURCE_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$SOURCE_SHA"
+          test "$(git rev-parse FETCH_HEAD^{tree})" = "$SOURCE_TREE"
+          test "$(git ls-tree -r --name-only "$SOURCE_TREE" | wc -l | tr -d ' ')" = 208
+          echo "Verified pinned source commit=$SOURCE_SHA tree=$SOURCE_TREE files=208"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          NEW_COMMIT=$(printf 'chore(m1): import pinned Swing Trading source tree exactly\n\nSource: ngluonghoa/swing-trading-1-8@%s\nSource tree: %s\nMST-CR-001: 1:1 baseline only, no logic changes\n' "$SOURCE_SHA" "$SOURCE_TREE" | git commit-tree "$SOURCE_TREE" -p "$GITHUB_SHA")
+          test "$(git rev-parse "$NEW_COMMIT^{tree}")" = "$SOURCE_TREE"
+          git push origin "$NEW_COMMIT:refs/heads/$DEST_BRANCH"
+          echo "Staged MST branch $DEST_BRANCH; commit=$NEW_COMMIT; exact tree=$SOURCE_TREE"
