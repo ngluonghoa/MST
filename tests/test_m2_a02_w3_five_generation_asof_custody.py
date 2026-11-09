@@ -144,15 +144,12 @@ class FiveGenerationCustodyTests(unittest.TestCase):
             (self.times[3], 3),
             (self.times[4], 4),
         )
-        for asof, expected in cases:
+        for case_id, (asof, expected) in enumerate(cases):
             with self.subTest(asof=asof):
                 index = max(i for i, publication in enumerate(self.times)
                             if publication <= asof)
                 self.assertEqual(index, expected)
-                restored = self._restore(index, "asof-" + str(len(str(asof))))
-                # Distinct subtest writes require unique destination names:
-                # this helper uses generation+date length, and is invoked
-                # once per generation except boundary duplicates.
+                restored = self._restore(index, f"asof-case{case_id}")
                 self.assertEqual(restored.read_bars(self.identity),
                                  self.versions[expected])
 
