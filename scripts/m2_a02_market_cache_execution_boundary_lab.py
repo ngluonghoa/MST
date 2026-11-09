@@ -158,14 +158,14 @@ def run_boundary_matrix():
         raise AssertionError("FUTURE_CORRECTION_REPLAY_PARITY_DRIFT")
 
     cursor = SourceCursor(
-        last_closed_start_utc=minute(15),
+        last_closed_start_utc=minute(0),
         last_checked_utc=minute(25),
         last_full_reconciled_utc=minute(22),
     )
     def old_plan(at: int):
         return plan_refresh(
             now_utc=minute(at), session_start_utc=minute(0),
-            latest_expected_closed_start_utc=minute(15),
+            latest_expected_closed_start_utc=minute(0),
             bar_duration=timedelta(minutes=15),
             capability=SourceCapability.WINDOWED, cursor=cursor,
         )
