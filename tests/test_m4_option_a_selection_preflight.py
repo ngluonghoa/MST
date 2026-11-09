@@ -198,6 +198,22 @@ class OptionAArchitectureSelectionTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 self.check(lambda x, n=name: x.__setitem__(n, None))
 
+    def test_legacy_module_count_float_coercion_denied(self):
+        with self.assertRaisesRegex(ValueError, "PINNED_SOURCE_LOCK"):
+            self.check(lambda x: x["source_lock"].update(
+                inherited_v1_modules=63.0
+            ))
+
+    def test_legacy_source_commit_untyped_denied(self):
+        with self.assertRaisesRegex(ValueError, "PINNED_SOURCE_LOCK"):
+            self.check(lambda x: x["source_lock"].update(
+                swing_commit=None
+            ))
+
+    def test_legacy_source_lock_must_be_mapping(self):
+        with self.assertRaisesRegex(ValueError, "PINNED_SOURCE_LOCK"):
+            self.check(lambda x: x.update(source_lock=[SOURCE]))
+
     def test_source_lock_extra_field_denied(self):
         with self.assertRaisesRegex(ValueError, "PINNED_SOURCE_LOCK"):
             self.check(lambda x: x["source_lock"].update(unapproved_new_service="GCP"))
