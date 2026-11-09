@@ -7,7 +7,12 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timedelta, timezone
 import unittest
 
+from swing_trading.contracts import DecisionStatus
 from swing_trading.engineering_contracts import PortDescriptor
+from swing_trading.strict_contract_v2 import StrictReplayClockV2, StrictSignalDecisionV2
+from swing_trading.v2_replay_port import (
+    StrictReplayHarnessV2, V2_MARKET_PORT, V2_RULES_PORT,
+)
 from swing_trading.v2_source_adapter import (
     FixtureProbeReceiptV2, FixtureProbeRequestV2,
     FixtureSourceAdapterV2, FixtureSourceIdentityV2,
@@ -190,6 +195,40 @@ class SourceIsolationTests(unittest.TestCase):
             })
         with self.assertRaises(TypeError):
             synthetic_source_registry().probe(request(), "SSI")
+
+
+class ReplayBoundaryIsolationTests(unittest.TestCase):
+    class DummyRules:
+        def evaluate(self, zone_id, strategy, as_of_utc):
+            return StrictSignalDecisionV2(
+                zone_id, strategy, DecisionStatus.UNVERIFIED,
+            )
+
+    def test_provider_metadata_probe_cannot_pose_as_causal_events_port(self):
+        fixture = adapter("SSI")
+        with self.assertRaisesRegex(ValueError, "CONTRACT_ID_MISMATCH"):
+            StrictReplayHarnessV2.from_contracts(
+                clock=StrictReplayClockV2(T0),
+                market_data=fixture,
+                market_port=fixture.descriptor,
+                rules=self.DummyRules(),
+                rules_port=V2_RULES_PORT,
+            )
+
+    def test_unverified_receipt_not_accepted_as_market_event(self):
+        class BogusMarketEvents:
+            def available_events(self, as_of_utc):
+                return (adapter("VCBS").probe(request("VCBS")),)
+
+        h = StrictReplayHarnessV2.from_contracts(
+            clock=StrictReplayClockV2(T0),
+            market_data=BogusMarketEvents(),
+            market_port=V2_MARKET_PORT,
+            rules=self.DummyRules(),
+            rules_port=V2_RULES_PORT,
+        )
+        with self.assertRaisesRegex(TypeError, "Only typed causal fixture events"):
+            h.visible_events()
 
 
 class RegistrySwapAndRollbackTests(unittest.TestCase):
