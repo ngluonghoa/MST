@@ -54,7 +54,7 @@ these require separate consumer, migration and rollback evidence.
 | reference_offline_verified_archive | evidence_and_rights | 159 | 15 | 96 | 0 | IMPROVE | FUNCTION_90_PLUS |
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| replay | domain_and_reference | 26 | 3 | 5 | 36 | KEEP | HIGH_FAN_IN |
+| replay | domain_and_reference | 26 | 3 | 5 | 37 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 191 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -69,6 +69,7 @@ these require separate consumer, migration and rollback evidence.
 | strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 1 | KEEP | none |
 | v2_cache_fencing_lab | domain_and_reference | 207 | 23 | 42 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | v2_cache_partition_plan | domain_and_reference | 161 | 10 | 25 | 1 | KEEP | none |
+| v2_cloud_ref_witness_plan | domain_and_reference | 164 | 8 | 26 | 0 | KEEP | none |
 | v2_provider_readiness | domain_and_reference | 167 | 21 | 43 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | v2_replay_port | domain_and_reference | 97 | 10 | 22 | 0 | KEEP | none |
 | v2_source_adapter | domain_and_reference | 230 | 7 | 18 | 2 | KEEP | none |
