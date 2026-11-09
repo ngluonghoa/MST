@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import unittest
 
 from swing_trading.v2_provider_readiness import (
-    ClaimState, ProviderGate, UnverifiedGateNoteV2,
+    ClaimState, ProviderGate, ProviderReadinessV2, UnverifiedGateNoteV2,
     review_unverified_provider_docket,
 )
 from swing_trading.v2_source_adapter import FixtureSourceIdentityV2
@@ -179,6 +179,48 @@ class StrictAdmissionDenial(unittest.TestCase):
         self.assertIn(ProviderGate.ACCOUNT_ENTITLEMENT, result.unverified_gates)
         self.assertIn(ProviderGate.CLOUD_RETENTION_RIGHTS, result.missing_gates)
         self.assertFalse(result.live_transport_authorized)
+
+
+class ReadinessReportTamperingTests(unittest.TestCase):
+    def test_direct_empty_summary_cannot_claim_all_requirements_satisfied(self):
+        original = check()
+        with self.assertRaisesRegex(ValueError, "Incomplete"):
+            replace(original, missing_gates=())
+
+    def test_duplicate_or_contradictory_summary_gate_is_rejected(self):
+        original = check()
+        gate = ProviderGate.ACCOUNT_ENTITLEMENT
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            replace(original, missing_gates=(gate, gate))
+        with self.assertRaisesRegex(ValueError, "contradictory"):
+            replace(original, unverified_gates=(gate,))
+        entry = note(gate)
+        with self.assertRaisesRegex(ValueError, "contradictory"):
+            replace(check(notes=(entry,)), gates_present=())
+
+    def test_bad_summary_fields_and_scope_are_rejected(self):
+        original = check()
+        with self.assertRaises(TypeError):
+            replace(original, missing_gates=[*original.missing_gates])
+        with self.assertRaises(TypeError):
+            replace(original, unverified_gates=("ACCOUNT_ENTITLEMENT",))
+        with self.assertRaises(ValueError):
+            replace(original, provider_id="ssi")
+        with self.assertRaises(ValueError):
+            replace(original, checked_at_utc=NOW.replace(tzinfo=None))
+
+    def test_even_structurally_complete_forged_summary_grants_no_rights(self):
+        all_gates = tuple(ProviderGate)
+        forged = ProviderReadinessV2(
+            "SSI", "fixture.ssi.d1", NOW,
+            all_gates, (), all_gates, (),
+        )
+        self.assertEqual(forged.missing_gates, ())
+        self.assertFalse(forged.external_vendor_verification)
+        self.assertFalse(forged.live_transport_authorized)
+        self.assertFalse(forged.cloud_retention_authorized)
+        self.assertFalse(forged.backtest_authorized)
+        self.assertFalse(forged.trading_authorized)
 
 
 if __name__ == "__main__":
