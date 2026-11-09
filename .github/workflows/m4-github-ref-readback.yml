@@ -16,6 +16,10 @@ on:
       - "scripts/m4_github_ruleset_audit.py"
       - "tests/test_m4_github_ruleset_audit.py"
       - "docs/MST_M4_PROTECTED_REF_POLICY_AUDIT_20261109.md"
+      - "docs/MST_M4_WITNESS_RULESET_PROPOSAL_20261109.json"
+      - "scripts/m4_witness_ruleset_preflight.py"
+      - "tests/test_m4_witness_ruleset_preflight.py"
+      - "docs/MST_M4_WITNESS_PROVISIONING_OWNER_GATE_20261109.md"
 
 permissions:
   contents: read
@@ -62,3 +66,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python -m scripts.m4_github_ruleset_audit
+
+  verify-owner-gated-witness-policy:
+    name: Read-only owner-gated witness ruleset preflight
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Audit live remote witness-policy visibility without any write scope
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m scripts.m4_witness_ruleset_preflight
