@@ -4,7 +4,8 @@ import unittest
 
 from scripts.mst_remote_legacy_tree_lock import (
     _MAIN_COMMIT, _SOURCE_COMMIT, _TREE,
-    _ALLOWED_V2_PATHS, _objects, inspect_remote_legacy_parity,
+    _ALLOWED_V2_PATHS, _objects, inspect_live_protected_main,
+    inspect_remote_legacy_parity,
 )
 
 
@@ -31,6 +32,35 @@ def fixture_tree():
 
 def commit(sha):
     return {"sha": sha, "tree": {"sha": _TREE}}
+
+
+class LiveRemoteMainReadbackTests(unittest.TestCase):
+    def test_protected_main_sha_pinned(self):
+        self.assertTrue(inspect_live_protected_main({
+            "name": "main", "protected": True,
+            "commit": {"sha": _MAIN_COMMIT},
+        }))
+
+    def test_moved_main_head_denied(self):
+        with self.assertRaisesRegex(ValueError, "PROTECTED_MAIN_MOVED"):
+            inspect_live_protected_main({
+                "name": "main", "protected": True,
+                "commit": {"sha": "f" * 40},
+            })
+
+    def test_main_protection_disabled_denied(self):
+        with self.assertRaisesRegex(ValueError, "PROTECTED_MAIN_MOVED"):
+            inspect_live_protected_main({
+                "name": "main", "protected": False,
+                "commit": {"sha": _MAIN_COMMIT},
+            })
+
+    def test_wrong_named_branch_denied(self):
+        with self.assertRaisesRegex(ValueError, "LIVE_MAIN_BRANCH"):
+            inspect_live_protected_main({
+                "name": "develop", "protected": True,
+                "commit": {"sha": _MAIN_COMMIT},
+            })
 
 
 class OriginalGitTreeParityTests(unittest.TestCase):
