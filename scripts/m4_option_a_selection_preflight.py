@@ -101,8 +101,12 @@ def validate_option_a_choice(record):
     for k, expected in REQUIRED_STRINGS.items():
         if record[k] != expected or type(record[k]) is not str:
             raise ValueError("OPTION_A_CHOICE_IDENTITY_OR_SCOPE_DRIFT_" + k)
-    if record["source_lock"] != SOURCE:
+    lock = record["source_lock"]
+    if type(lock) is not dict or set(lock) != set(SOURCE):
         raise ValueError("PINNED_SOURCE_LOCK_CHANGED")
+    for name, expected in SOURCE.items():
+        if type(lock[name]) is not type(expected) or lock[name] != expected:
+            raise ValueError("PINNED_SOURCE_LOCK_CHANGED")
     for k in TRUE_FLAGS:
         if record[k] is not True:
             raise ValueError("EXPLICIT_ARCHITECTURE_CHOICE_NOT_RECORDED_" + k)
