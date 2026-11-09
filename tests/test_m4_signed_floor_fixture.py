@@ -187,8 +187,11 @@ class SignedFloorFixtureContracts(unittest.TestCase):
         self.assertNotEqual(a["receipt_digest"], b["receipt_digest"])
         self.assertFalse(a["distributed_two_writer_cas_verified"])
         self.assertFalse(b["distributed_two_writer_cas_verified"])
+        g2_stale_parent = self.make_receipt(
+            floor=a["next_floor"], parent_receipt_digest="0" * 64
+        )
         with self.assertRaisesRegex(ValueError, "PARENT_HEAD_MISMATCH"):
-            self.check(g1b, floor=a["next_floor"])
+            self.check(g2_stale_parent, floor=a["next_floor"])
 
     def test_replacing_ephemeral_floor_reaccepts_old_signed_receipt(self):
         floor1 = self.check(self.g1)["next_floor"]
