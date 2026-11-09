@@ -179,12 +179,18 @@ class VersionedManifestFailClosedTests(unittest.TestCase):
         self.assert_bad((self.cold, self.warm, wrong), "GENERATION")
 
     def test_chain_as_of_clock_rewind_denied(self):
-        wrong = replace(self.lineage, as_of_utc=instant(21))
-        self.assert_bad((self.cold, self.warm, wrong), "NONMONOTONIC")
+        # Keep all source revisions individually known at their own as-of
+        # and rewire the *local* parent correctly to exercise monotonicity.
+        advanced_cold = replace(self.cold, as_of_utc=instant(22))
+        reparented_warm = replace(
+            self.warm, parent_digest=advanced_cold.digest,
+        )
+        self.assert_bad((advanced_cold, reparented_warm), "NONMONOTONIC")
 
     def test_unchanged_as_of_duplicate_generation_denied(self):
-        wrong = replace(self.lineage, as_of_utc=self.warm.as_of_utc)
-        self.assert_bad((self.cold, self.warm, wrong), "NONMONOTONIC")
+        # Both snapshots are individually valid (all rows known by minute20).
+        wrong = replace(self.warm, as_of_utc=self.cold.as_of_utc)
+        self.assert_bad((self.cold, wrong), "NONMONOTONIC")
 
     def test_full_rights_scope_digest_drift_denied(self):
         wrong = replace(self.lineage, scope_binding_sha256="f" * 64)
