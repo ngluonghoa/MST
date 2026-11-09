@@ -1,0 +1,42 @@
+name: MST M4 Option A Live GitHub ACL + Historical Drive Metadata
+
+# Real GitHub REST only. Drive evidence was observed separately by the
+# connected Drive API and is historical, NOT reauthenticated by this job.
+# Green = correct denial of production readiness.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-live-custody-readonly.yml"
+      - "scripts/m4_option_a_live_custody_audit.py"
+      - "tests/test_m4_option_a_live_custody_audit.py"
+      - "docs/MST_M4_OPTION_A_DRIVE_ACL_OBSERVATION_20261109.json"
+      - "docs/MST_M4_OPTION_A_LIVE_CUSTODY_GAP_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  scope-identity-acl-readonly:
+    name: Observe main ruleset and reject unauthenticated M4 custody
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Observe real GitHub refs/rulesets with read-only token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m scripts.m4_option_a_live_custody_audit > /tmp/m4-option-a-live-github-drive-historical-acl.json
+          cat /tmp/m4-option-a-live-github-drive-historical-acl.json
+      - name: Archive review only, never an external floor or signer receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-option-a-permissions-inventory-readonly-unattested
+          path: |
+            /tmp/m4-option-a-live-github-drive-historical-acl.json
+            docs/MST_M4_OPTION_A_DRIVE_ACL_OBSERVATION_20261109.json
+          retention-days: 14
+          if-no-files-found: error
