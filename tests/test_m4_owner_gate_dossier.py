@@ -141,9 +141,13 @@ class OwnerGateDossierUntrustedContract(unittest.TestCase):
                 self.compile(run=v)
 
     def test_untyped_and_malformed_candidate_head_denied(self):
-        for v in (None, True, "z" * 40, "a" * 39, "A" * 40):
+        for v in (True, "z" * 40, "a" * 39, "A" * 40):
             with self.subTest(v=v), self.assertRaises(ValueError):
                 self.compile(head=v)
+        # None bypasses the convenience method's default; call the API itself.
+        with self.assertRaises(ValueError):
+            build_dossier(self.audit, workflow_run_id=1234,
+                          candidate_head_sha=None)
 
     def test_malformed_witness_presence_denied(self):
         for v in (None, 1, "yes"):
