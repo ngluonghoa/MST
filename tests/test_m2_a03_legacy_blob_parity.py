@@ -76,7 +76,7 @@ V1_BLOB_SHA = {
     "vn_backtest_execution_fixture.py": "3aafbf5575426748ae017d716d009b1f960116d7",
     "vn_release_rollback.py": "7836bb7513e51b14a551543ca8a9f61cb4b55ba5",
 }
-ALLOWED_NEW_OPT_IN_MODULES = frozenset(("strict_contract_v2.py", "v2_replay_port.py", "v2_source_adapter.py", "v2_provider_readiness.py", "v2_cache_partition_plan.py", "v2_cache_fencing_lab.py"))
+ALLOWED_NEW_OPT_IN_MODULES = frozenset(("strict_contract_v2.py", "v2_replay_port.py", "v2_source_adapter.py", "v2_provider_readiness.py", "v2_cache_partition_plan.py", "v2_cache_fencing_lab.py", "v2_cloud_ref_witness_plan.py"))
 
 
 def git_blob_sha(data: bytes) -> str:
@@ -98,7 +98,7 @@ class LegacySourceExactParityTests(unittest.TestCase):
         self.assertEqual(
             names, set(V1_BLOB_SHA) | ALLOWED_NEW_OPT_IN_MODULES
         )
-        self.assertEqual(len(names), 69)
+        self.assertEqual(len(names), 70)
 
     def test_original_package_metadata_remains_pinned(self):
         self.assertEqual(
