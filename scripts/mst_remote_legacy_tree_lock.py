@@ -44,6 +44,7 @@ def _objects(data, *, expected_tree=None):
         seen.add(path)
         if row.get("type") not in ("tree", "blob") or (
             type(row.get("sha")) is not str or len(row["sha"]) != 40
+            or any(c not in "0123456789abcdef" for c in row["sha"])
         ):
             raise ValueError("MALFORMED_REMOTE_GIT_ENTRY")
         if type(row.get("mode")) is not str:
