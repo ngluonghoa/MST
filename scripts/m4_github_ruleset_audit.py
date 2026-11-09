@@ -113,6 +113,7 @@ def main() -> None:
     ruleset = _get("/rulesets/" + str(_RULESET_ID), token)
     main_branch = _get("/branches/main", token)
     test_branches = [_get("/branches/" + name, token) for name in _TEST_REFS]
+    print(json.dumps({"debug_ruleset_actor_bypass": ruleset.get("current_user_can_bypass", "<absent>"), "debug_configured_bypass_actor_count": len(ruleset.get("bypass_actors", [])) if isinstance(ruleset.get("bypass_actors"), list) else "<unavailable>", "debug_meta_not_authority": True}, sort_keys=True))
     print(json.dumps(audit_ruleset(ruleset, main_branch, test_branches), sort_keys=True))
 
 
