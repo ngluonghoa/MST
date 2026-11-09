@@ -100,6 +100,9 @@ class FixtureBarrierStateV2(str, Enum):
     DRIVE_OBJECT_NOT_READY = "DRIVE_OBJECT_NOT_READY"
     DRIVE_OBJECT_DIGEST_MISMATCH = "DRIVE_OBJECT_DIGEST_MISMATCH"
     REPLAY_FLOOR_REJECTED = "REPLAY_FLOOR_REJECTED"
+    FINAL_REF_READBACK_MISSING = "FINAL_REF_READBACK_MISSING"
+    FINAL_REF_READBACK_STALE = "FINAL_REF_READBACK_STALE"
+    FINAL_REF_CHANGED_OR_UNKNOWN = "FINAL_REF_CHANGED_OR_UNKNOWN"
     CONSISTENT_CLAIMS_UNATTESTED = "CONSISTENT_CLAIMS_UNATTESTED"
 
 
@@ -145,6 +148,7 @@ def audit_fixture_cloud_publish(
     expected_tree_sha: str,
     expected_content_sha256: str,
     reader_floor: FixtureReaderFloorV2 | None = None,
+    final_readback: FixtureGitRefReadbackV2 | None = None,
 ) -> FixtureReadBarrierV2:
     """Audit one synthetic publish snapshot; all results deny production use.
 
@@ -160,6 +164,10 @@ def audit_fixture_cloud_publish(
     _hex(expected_content_sha256, _SHA256)
     if reader_floor is not None and type(reader_floor) is not FixtureReaderFloorV2:
         raise TypeError("Typed reader floor required")
+    if final_readback is not None and type(final_readback) is not FixtureGitRefReadbackV2:
+        raise TypeError("Typed final Git ref readback required")
+    if final_readback is not None and proposal.branch_name != final_readback.branch_name:
+        raise ValueError("CROSS_PARTITION_FINAL_REF_READBACK")
     if proposal.branch_name != readback.branch_name:
         raise ValueError("CROSS_PARTITION_REF_READBACK")
     if (readback.checked_at_utc < proposal.proposed_at_utc
@@ -192,6 +200,15 @@ def audit_fixture_cloud_publish(
         or reader_floor.observed_at_utc > readback.checked_at_utc
     ):
         state = FixtureBarrierStateV2.REPLAY_FLOOR_REJECTED
+    elif final_readback is None:
+        state = FixtureBarrierStateV2.FINAL_REF_READBACK_MISSING
+    elif final_readback.checked_at_utc < max(
+        readback.checked_at_utc, commit.observed_at_utc, drive.observed_at_utc,
+    ):
+        state = FixtureBarrierStateV2.FINAL_REF_READBACK_STALE
+    elif final_readback.observed_head_sha != proposal.candidate_commit_sha:
+        state = FixtureBarrierStateV2.FINAL_REF_CHANGED_OR_UNKNOWN
     else:
+        # A stable-looking second caller claim is still NOT an attestation.
         state = FixtureBarrierStateV2.CONSISTENT_CLAIMS_UNATTESTED
     return FixtureReadBarrierV2(state, proposal.candidate_commit_sha, proposal.manifest_digest)
