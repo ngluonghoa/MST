@@ -1,0 +1,55 @@
+{
+  "schema": "mst.m4.witness.ruleset.proposal.v1",
+  "project": "MST",
+  "repository": "ngluonghoa/MST",
+  "status": "DRAFT_OWNER_APPROVAL_REQUIRED_NOT_APPLIED",
+  "witness_ref": "refs/heads/mst/m4-witness/v1",
+  "proposed_ruleset": {
+    "name": "MST - M4 Protected Witness (proposed)",
+    "target": "branch",
+    "enforcement": "active",
+    "bypass_actors": [],
+    "conditions": {
+      "ref_name": {
+        "include": [
+          "refs/heads/mst/m4-witness/v1"
+        ],
+        "exclude": []
+      }
+    },
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "required_signatures"
+      }
+    ]
+  },
+  "source_main_baseline": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "guardrails": {
+    "proposal_only": true,
+    "owner_approval_received": false,
+    "branch_bootstrapped": false,
+    "authenticated_writers_enrolled": false,
+    "source_clock_attested": false,
+    "protected_monotonic_floor_operational": false,
+    "physical_drive_cache_verified": false,
+    "published_cache_authorized": false,
+    "trading_authorized": false
+  },
+  "excluded_rules": [
+    "creation",
+    "update"
+  ],
+  "notes": [
+    "No ruleset POST/PATCH/DELETE. The intended branch must be bootstrapped before enabling restrictive rules.",
+    "A creation rule would prohibit initial branch creation without an authorized bypass; an update restriction without an enrolled bypass actor can freeze all future writes.",
+    "Deletion and non_fast_forward alone do not prohibit an authorized fast-forward of stale signed contents.",
+    "required_signatures checks Git commit signature verification, not vendor OHLCV truth, key custody, entitlement, or source-clock provenance.",
+    "A GitHub Actions PR token must remain contents:read. Do not grant write/admin secrets to an unreviewed PR workflow."
+  ]
+}
