@@ -46,7 +46,7 @@ The apparent `SILENT_EXCEPT` H3 flag originates from narrowly catching `FileNotF
 - `test_forged_conditional_report_flags_cannot_grant_permissions`
 - `test_two_independent_indexes_accept_conflicting_genesis_heads`
 
-Expected **+5 tests** on top of previous 1536 in each Python 3.11 and 3.12 suite, pending exact-head GitHub Actions validation. Existing 63 v1 Python blob SHA pins and original package metadata remain protected by `tests/test_m2_a03_legacy_blob_parity.py`. No new source modules; H3 remains 71 modules (63 v1 + 8 opt-in v2) and should not change. Test fixtures generate only synthetic local ephemeral SQLite under GitHub hosted CI runners, not user Mac, MOCHI or a persistent local deployment.
+**+5 tests** on top of 1536 inherited-on-branch cases: exact prior [GitHub PR run #42567571566](https://github.com/ngluonghoa/MST/actions/runs/42567571566) for commit `48c74e90597010ef9da46329683fc4ca79840b64` completed SUCCESS all 3 jobs. Python 3.11 **1541/1541**, Python 3.12 **1541/1541**, engineering suite **63/63**, H2/H3 regenerated 71-module matrix, lint and isolated wheel checks PASS. This report addition changes documentation only; verify final exact PR head after this doc update before treating it as latest QA. Existing 63 v1 Python blob SHA pins and original package metadata remain protected by `tests/test_m2_a03_legacy_blob_parity.py`. No new source modules; H3 remains 71 modules (63 v1 + 8 opt-in v2) and should not change. Test fixtures generate only synthetic local ephemeral SQLite under GitHub hosted CI runners, not user Mac, MOCHI or a persistent local deployment.
 
 ## Explicit boundaries and exit gates
 
