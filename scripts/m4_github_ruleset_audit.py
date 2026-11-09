@@ -70,8 +70,16 @@ def audit_ruleset(ruleset: dict, main: dict, trial_refs: list[dict]) -> dict:
     for kind in ("deletion", "non_fast_forward", "pull_request", "required_status_checks"):
         if not _has_rule(rules, kind):
             raise ValueError("MISSING_MAIN_RULE_" + kind.upper())
+    pr_rule = next(x for x in rules if x.get("type") == "pull_request")
+    pr_params = pr_rule.get("parameters")
+    approvals = pr_params.get("required_approving_review_count") if type(pr_params) is dict else None
+    if type(approvals) is not int or approvals < 0:
+        raise ValueError("UNVERIFIABLE_PULL_REQUEST_REVIEW_COUNT")
     req = next(x for x in rules if x.get("type") == "required_status_checks")
     parameters = req.get("parameters")
+    strict = parameters.get("strict_required_status_checks_policy") if type(parameters) is dict else None
+    if type(strict) is not bool:
+        raise ValueError("UNVERIFIABLE_REQUIRED_STATUS_STRICTNESS")
     checks = parameters.get("required_status_checks") if type(parameters) is dict else None
     if type(checks) is not list or set(
         item.get("context") for item in checks if type(item) is dict
@@ -102,6 +110,9 @@ def audit_ruleset(ruleset: dict, main: dict, trial_refs: list[dict]) -> dict:
         "main_baseline_head": _BASE,
         "main_ruleset_id": _RULESET_ID,
         "main_required_status_checks": list(_REQUIRED_CI),
+        "main_required_approving_review_count": approvals,
+        "main_requires_positive_review": approvals >= 1,
+        "main_required_ci_strict_up_to_date": strict,
         "main_no_configured_bypass_for_this_actor": True,
         "test_ref_protected": [False, False],
         "source": "GitHub ruleset and branch REST metadata (not effective policy enforcement test)",
