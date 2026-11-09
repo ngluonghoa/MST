@@ -80,6 +80,27 @@ class ProviderReadinessV2:
     unverified_gates: tuple[ProviderGate, ...]
     expired_or_revoked_gates: tuple[ProviderGate, ...]
 
+    def __post_init__(self) -> None:
+        # A caller cannot construct a summary with all requirements omitted.
+        # This remains a report of unverified CLAIMS, never vendor approval.
+        FixtureSourceIdentityV2(self.provider_id, self.endpoint_id)
+        _checked_utc(self.checked_at_utc)
+        groups = (
+            self.gates_present, self.missing_gates,
+            self.unverified_gates, self.expired_or_revoked_gates,
+        )
+        for group in groups:
+            if type(group) is not tuple or any(type(item) is not ProviderGate for item in group):
+                raise TypeError("Exact immutable ProviderGate tuple required")
+            if len(set(group)) != len(group):
+                raise ValueError("Duplicate gate in review output")
+        present, missing, unverified, revoked = map(set, groups)
+        if (unverified & missing or revoked & missing or revoked & unverified
+                or present - set(ProviderGate)
+                or not (unverified | revoked) <= present
+                or missing | unverified | revoked != set(ProviderGate)):
+            raise ValueError("Incomplete or contradictory provider readiness summary")
+
     @property
     def external_vendor_verification(self) -> bool:
         return False
