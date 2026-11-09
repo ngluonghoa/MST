@@ -29,7 +29,7 @@ these require separate consumer, migration and rollback evidence.
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
 | engine | domain_and_reference | 14 | 1 | 7 | 0 | KEEP | none |
-| engineering_contracts | engineering_governance | 175 | 10 | 27 | 6 | KEEP | none |
+| engineering_contracts | engineering_governance | 175 | 10 | 27 | 7 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
 | evidence_recovery | evidence_and_rights | 81 | 4 | 23 | 1 | KEEP | none |
@@ -54,7 +54,7 @@ these require separate consumer, migration and rollback evidence.
 | reference_offline_verified_archive | evidence_and_rights | 159 | 15 | 96 | 0 | IMPROVE | FUNCTION_90_PLUS |
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| replay | domain_and_reference | 26 | 3 | 5 | 32 | KEEP | HIGH_FAN_IN |
+| replay | domain_and_reference | 26 | 3 | 5 | 33 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 191 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -68,6 +68,7 @@ these require separate consumer, migration and rollback evidence.
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 1 | KEEP | none |
 | v2_replay_port | domain_and_reference | 97 | 10 | 22 | 0 | KEEP | none |
+| v2_source_adapter | domain_and_reference | 230 | 7 | 18 | 0 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
