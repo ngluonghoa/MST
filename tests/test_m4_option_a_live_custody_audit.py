@@ -143,9 +143,14 @@ class OptionAGithubLiveRulesetContracts(unittest.TestCase):
             self.inspect(m=m)
 
     def test_main_metadata_untyped_denied(self):
-        for m in ([], None, True, "main"):
+        for m in ([], True, "main"):
             with self.subTest(m=m), self.assertRaises(ValueError):
                 self.inspect(m=m)
+        # Explicit None differs from the helper's convenience default.
+        r = ruleset()
+        with self.assertRaises(ValueError):
+            inspect_github_custody(None, [r], {r["id"]: r}, None,
+                                   "INACCESSIBLE_TO_TOKEN_403")
 
     def test_duplicate_ruleset_name_fails_closed(self):
         r = ruleset()
