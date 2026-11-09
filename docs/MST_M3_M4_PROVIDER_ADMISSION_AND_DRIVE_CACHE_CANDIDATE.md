@@ -71,4 +71,5 @@ Track:
 - https://github.com/ngluonghoa/MST/issues/4 — A02 full 63-module review.
 - https://github.com/ngluonghoa/MST/issues/6 — A03 strict v2 contract readiness.
 - https://github.com/ngluonghoa/MST/issues/9 — M3 independently authorized real SSI/DNSE/VCBS provider admission.
-- M4 separate Google Drive operational Cache issue: to be filed; no M4 delivery claimed here.
+- M4 separate Google Drive operational Cache issue: https://github.com/ngluonghoa/MST/issues/10 ; no M4 operational delivery claimed here.
+- M3/M4 full QA receipt, source blob SHAs, current CI and rollback boundaries: https://docs.google.com/document/d/1DVO7c-eoW8vK5iAxjdLLHr4xpReMtwEXywTEUQFw2kw/edit .
