@@ -1,0 +1,38 @@
+name: MST A03 V2 Cache Consumer Versioned Scope and Rights - REVIEW ONLY
+
+# Pure read-only candidate bridge. No remote Drive bytes/manifest, real
+# OHLCV, source entitlement, external CAS, independent signer or production.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-v2-cache-consumer-readonly.yml"
+      - "scripts/m2_a03_v2_cache_consumer_contract.py"
+      - "tests/test_m2_a03_v2_cache_consumer_contract.py"
+      - "docs/MST_A03_V2_CACHE_CONSUMER_POLICY_AND_PARITY_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  review-full-identity-and-as-of-invariants:
+    name: Bind legacy policy versions; deny historical replay and unsafe rights
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked fixtures (no provider access)
+        run: python -m pip install -e ".[custody]"
+      - name: Execute actual V1 fixture and candidate V2 read-only contract
+        run: |
+          python -m scripts.m2_a03_v2_cache_consumer_contract \
+            --out /tmp/mst-a03-v2-cache-consumer-unapproved.json
+      - name: Retain synthetic trace only, no owner authentication
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-v2-consumer-rights-asof-draft-NO-AUTH
+          path: /tmp/mst-a03-v2-cache-consumer-unapproved.json
+          if-no-files-found: error
+          retention-days: 14
