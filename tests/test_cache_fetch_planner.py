@@ -112,4 +112,37 @@ class PlannerTests(unittest.TestCase):
         self.assertFalse(p.data_authorized)
 
 
+    def test_caller_claimed_finality_preempts_due_reconciliation_but_never_certifies(self):
+        """Only an independently attested head may justify real cache finality."""
+        with_claim = plan(
+            minute=50, current=45, checked=45, full=0,
+            session_ended_verified=True,
+            immutable_source_head_verified=True,
+        )
+        without_claim = plan(
+            minute=50, current=45, checked=45, full=0,
+            session_ended_verified=True,
+            immutable_source_head_verified=False,
+        )
+        self.assertEqual(with_claim.action, RefreshAction.REUSE_CLOSED)
+        self.assertEqual(with_claim.reason,
+                         "INDEPENDENT_FINALITY_CLAIM_REUSE_NOT_PRODUCTION_CERTIFIED")
+        self.assertFalse(with_claim.certified_source_freshness)
+        self.assertFalse(with_claim.data_authorized)
+        self.assertEqual(without_claim.action, RefreshAction.REQUEST_FULL_SESSION)
+        self.assertEqual(without_claim.reason, "CORRECTION_RECONCILIATION_DUE")
+
+    def test_unknown_capability_stays_blocked_despite_finality_claims(self):
+        fixture = plan(
+            minute=50, current=45, checked=45, full=0,
+            cap=SourceCapability.UNKNOWN,
+            session_ended_verified=True,
+            immutable_source_head_verified=True,
+        )
+        self.assertEqual(fixture.action, RefreshAction.BLOCKED)
+        self.assertFalse(fixture.certified_source_freshness)
+        self.assertFalse(fixture.data_authorized)
+
+
+
 if __name__=='__main__':unittest.main()
