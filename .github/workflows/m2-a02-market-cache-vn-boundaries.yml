@@ -1,0 +1,39 @@
+name: MST A02 Market / Cache / VN Execution Contract Boundaries - SYNTHETIC ONLY
+
+# Read-only actual inherited V1 / V1.2 business guard execution and V2
+# planning contract gap reporting; passing does NOT approve V2 parity, source
+# entitlements, broker fills, certified Vietnam calendar or production.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-market-cache-vn-boundaries.yml"
+      - "scripts/m2_a02_market_cache_execution_boundary_lab.py"
+      - "tests/test_m2_a02_market_cache_execution_boundary_lab.py"
+      - "docs/MST_A02_ACTUAL_MARKET_CACHE_VN_BEHAVIOR_BOUNDARIES_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  real-inherited-guards-and-explicit-v2-gaps:
+    name: Market/revision/cache/settlement guards - no live inputs
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package without external vendor access
+        run: python -m pip install -e ".[custody]"
+      - name: Execute real inherited V1 guards and report V2 non-equivalent planner
+        run: |
+          python -m scripts.m2_a02_market_cache_execution_boundary_lab \
+            --out /tmp/mst-a02-market-cache-vn-boundary-fixtures-no-admission.json
+      - name: Store synthetic matrix only, not a provider signer or durable cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-market-cache-vn-contract-boundaries-NO-AUTH
+          path: /tmp/mst-a02-market-cache-vn-boundary-fixtures-no-admission.json
+          retention-days: 14
+          if-no-files-found: error
