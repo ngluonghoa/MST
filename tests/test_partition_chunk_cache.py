@@ -349,5 +349,41 @@ class ChunkTests(unittest.TestCase):
         self.assertEqual(len({self.pin(k) for k in keys}),20)
 
 
+    def test_two_independent_indexes_accept_conflicting_genesis_heads(self):
+        """A valid local manifest is not a distributed CAS/fencing witness."""
+        self.assertEqual(self.stage(), PartitionWrite.CREATED)
+        original_head = self.pin()
+        peer = SyntheticDrivePartitionIndex()
+        rows = self.store.read_bars(self.key)
+        competing_rows = rows[:-1] + (replace(rows[-1], revision="r2"),)
+        self.assertEqual(
+            peer.stage_and_publish(
+                self.key, competing_rows,
+                expected_head_sha256=None, created_at_utc=NOW,
+            ),
+            PartitionWrite.CREATED,
+        )
+        competing_head = peer.active_manifest_sha(self.key)
+        self.assertNotEqual(original_head, competing_head)
+        first = FixturePartitionManifest.parse_json(
+            self.cloud._manifests[original_head],
+        )
+        second = FixturePartitionManifest.parse_json(
+            peer._manifests[competing_head],
+        )
+        self.assertEqual(first.partition_sha256, second.partition_sha256)
+        self.assertEqual((first.generation, second.generation), (1, 1))
+        self.assertEqual(
+            self.cloud.load(self.key, pinned_manifest_sha256=original_head), rows,
+        )
+        self.assertEqual(
+            peer.load(self.key, pinned_manifest_sha256=competing_head),
+            competing_rows,
+        )
+        self.assertNotEqual(rows, competing_rows)
+        with self.assertRaises(PermissionError):
+            require_real_market_cache_transport()
+
+
 if __name__=="__main__":
     unittest.main()
