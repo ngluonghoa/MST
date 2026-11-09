@@ -169,7 +169,9 @@ class FixtureSourceRegistryV2:
         if key not in self._adapters:
             raise KeyError("PROVIDER_NOT_REGISTERED_NO_FALLBACK")
         adapter = self._adapters[key]
-        if type(required) is not PortDescriptor or required.scope != key:
+        if type(required) is not PortDescriptor:
+            raise TypeError("Typed PortDescriptor required")
+        if required.scope != key:
             raise ValueError("REQUESTED_PROVIDER_SCOPE_MISMATCH")
         require_compatible_port(required, adapter.descriptor, adapter)
         return adapter
