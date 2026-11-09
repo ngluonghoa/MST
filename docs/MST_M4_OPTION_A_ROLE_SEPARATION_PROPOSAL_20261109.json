@@ -246,6 +246,26 @@
     [
       "DRIVE_CHUNK_WRITER",
       "SIGNER_ROOT_CUSTODIAN"
+    ],
+    [
+      "POLICY_CONTROLLER",
+      "REVOCATION_CONTROLLER"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "WITNESS_WRITER_A"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "WITNESS_WRITER_B"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "DRIVE_CHUNK_WRITER"
     ]
   ],
   "owner_signoff_decisions": [
