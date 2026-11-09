@@ -35,6 +35,13 @@ def readback(p=None, sha=CANDIDATE):
     )
 
 
+def final_readback(p=None, sha=CANDIDATE, at=None):
+    p = proposal() if p is None else p
+    return FixtureGitRefReadbackV2(
+        p.branch_name, sha, T0 + timedelta(seconds=4) if at is None else at,
+    )
+
+
 def commit():
     return FixtureGitCommitObservationV2(
         CANDIDATE, (HEAD,), TREE, P, M, 2, T0 + timedelta(seconds=2),
@@ -59,6 +66,7 @@ def inspect(**changes):
         "readback": readback(),
         "commit": commit(),
         "drive": drive(),
+        "final_readback": final_readback(),
         "expected_tree_sha": TREE,
         "expected_content_sha256": CONTENT,
     }
@@ -80,6 +88,45 @@ class CloudPublishNegativeTests(unittest.TestCase):
         self.assertBlocked(value, FixtureBarrierStateV2.CONSISTENT_CLAIMS_UNATTESTED)
         self.assertEqual(value.candidate_sha, CANDIDATE)
         self.assertEqual(value.manifest_digest, M)
+
+    def test_missing_final_ref_readback_keeps_claims_unproven(self):
+        self.assertBlocked(
+            inspect(final_readback=None),
+            FixtureBarrierStateV2.FINAL_REF_READBACK_MISSING,
+        )
+
+    def test_final_ref_readback_before_drive_verification_is_stale(self):
+        self.assertBlocked(
+            inspect(final_readback=final_readback(at=T0 + timedelta(seconds=2))),
+            FixtureBarrierStateV2.FINAL_REF_READBACK_STALE,
+        )
+
+    def test_final_ref_moved_to_competing_writer(self):
+        self.assertBlocked(
+            inspect(final_readback=final_readback(sha=FOREIGN)),
+            FixtureBarrierStateV2.FINAL_REF_CHANGED_OR_UNKNOWN,
+        )
+
+    def test_final_ref_reverted_to_old_head(self):
+        self.assertBlocked(
+            inspect(final_readback=final_readback(sha=HEAD)),
+            FixtureBarrierStateV2.FINAL_REF_CHANGED_OR_UNKNOWN,
+        )
+
+    def test_final_ref_different_partition_cannot_prove_stability(self):
+        p = proposal()
+        bad = FixtureGitRefReadbackV2(
+            p.branch_name[:-64] + "d" * 64,
+            CANDIDATE,
+            T0 + timedelta(seconds=4),
+        )
+        with self.assertRaisesRegex(ValueError, "CROSS_PARTITION_FINAL_REF"):
+            inspect(final_readback=bad)
+
+    def test_final_ref_must_be_typed_and_bounded(self):
+        for invalid in ({"observed_head_sha": CANDIDATE}, 0, False):
+            with self.subTest(invalid=invalid), self.assertRaises(TypeError):
+                inspect(final_readback=invalid)
 
     def test_old_ref_still_present_blocks_publish(self):
         self.assertBlocked(
