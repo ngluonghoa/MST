@@ -1,0 +1,40 @@
+name: MST M4 Option A Owner / Signer / Writer Role Separation - REVIEW ONLY
+
+# A passing job means privileged roles are UNASSIGNED and all G01-G08
+# security/release gates are still OPEN. No real owner signoff is implied.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-role-separation-review.yml"
+      - "docs/MST_M4_OPTION_A_ROLE_SEPARATION_PROPOSAL_20261109.json"
+      - "docs/MST_M4_OPTION_A_ROLE_SEPARATION_OWNER_REVIEW_20261109.md"
+      - "docs/MST_M4_OPTION_A_ROLE_SEPARATION_QA_20261109.md"
+      - "scripts/m4_option_a_role_separation_preflight.py"
+      - "tests/test_m4_option_a_role_separation_preflight.py"
+
+permissions:
+  contents: read
+
+jobs:
+  owner-role-topology-blocking:
+    name: 8 unassigned roles, 25 identity constraints, no privileged authority
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile unassigned Option A owner / signer role policy
+        run: |
+          python -m scripts.m4_option_a_role_separation_preflight \
+            --output /tmp/m4-role-topology-owner-review-only.json
+      - name: Retain separate review-only evidence; never a witness floor
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-option-a-8roles-unassigned-25-separation-constraints
+          path: |
+            docs/MST_M4_OPTION_A_ROLE_SEPARATION_PROPOSAL_20261109.json
+            /tmp/m4-role-topology-owner-review-only.json
+          retention-days: 14
+          if-no-files-found: error
