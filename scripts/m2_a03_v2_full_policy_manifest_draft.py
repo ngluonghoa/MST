@@ -216,6 +216,10 @@ def verify_manifest_chain(chain: tuple[ManifestDraft, ...]) -> dict:
             raise ValueError("NONMONOTONIC_AS_OF_MANIFEST_LINEAGE")
         before = {r.start_utc: r for r in previous.revisions}
         after = {r.start_utc: r for r in manifest.revisions}
+        # Deletion is NOT a supported event type in this four-stage draft.
+        # Otherwise an attacker could drop an old bar and relabel a correction.
+        if set(before) - set(after):
+            raise ValueError("UNATTESTED_HISTORICAL_BAR_DELETION_DENIED")
         # Local named correction must become known AFTER the prior as-of.
         for start, revision in after.items():
             prior = before.get(start)
