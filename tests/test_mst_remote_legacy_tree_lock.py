@@ -88,7 +88,7 @@ class OriginalGitTreeParityTests(unittest.TestCase):
 
     def test_full_original_tree_and_package_remain_exact(self):
         x = self.verify()
-        self.assertIn("MATCH", x["status"])
+        self.assertEqual(x["status"], "ORIGINAL_TREE_1TO1_LEGACY_63_UNCHANGED_AND_EIGHT_V2_SIDECARS")
         self.assertEqual(x["original_git_tree_entry_count"], 216)
         self.assertEqual(x["original_git_blob_count"], 208)
         self.assertEqual(x["original_python_module_count"], 63)
