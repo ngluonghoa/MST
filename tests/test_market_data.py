@@ -77,5 +77,24 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ObservationRevision("rev-1", "a" * 64, T0 + timedelta(seconds=1), T0)
 
+
+    def test_legacy_first_known_is_a_claim_not_an_authenticated_source_timestamp(self):
+        """A caller may assert early first-known time despite later retrieval.
+
+        Necessary v1 eligibility is not a signed live-source permission gate.
+        This preserves the exact original behavior without changing v1 logic.
+        """
+        candle = valid_candle(
+            revision=ObservationRevision(
+                "revision-claimed-early", "b" * 64,
+                T0, T0 + timedelta(hours=2),
+            ),
+        )
+        as_of = T0 + timedelta(minutes=15)
+        self.assertLess(as_of, candle.revision.retrieved_at_utc)
+        self.assertTrue(candle.eligible_for_confirmed_signals(as_of))
+        self.assertEqual(candle.observation_key.provider_id, "FIXTURE")
+
+
 if __name__ == "__main__":
     unittest.main()
