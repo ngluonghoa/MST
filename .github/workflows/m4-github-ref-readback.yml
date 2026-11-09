@@ -1,0 +1,30 @@
+name: MST M4 Real GitHub Ref Readback - TEST ONLY
+
+# Test-only GitHub REST readback of an isolated branch on Draft PR #8.
+# It does not mutate any ref, fetch licensed market data, access Drive,
+# attest an independent signer/floor, or authorize a production publisher.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-github-ref-readback.yml"
+      - "scripts/m4_github_ref_readback.py"
+      - "tests/test_m4_github_ref_readback.py"
+      - "docs/MST_M4_REAL_GITHUB_FAST_FORWARD_EVIDENCE_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-github-remote-readback:
+    name: Independently read GitHub test ref and sibling commits
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify remote GitHub ref, candidate commit parents and trees
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m scripts.m4_github_ref_readback
