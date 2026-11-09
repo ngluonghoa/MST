@@ -18,7 +18,17 @@ At PR candidate commit `b7584794196cc28101fec9c2a578782213631aaf`:
 - [Separate cross-run workflow #42586778775](https://github.com/ngluonghoa/MST/actions/runs/42586778775): **SUCCESS 2/2**, `recover-prior-run` reports `BOOTSTRAP_NO_PRIOR_CACHE` for current run ID `42586778775`, and `stage-next-run` successfully uploads a synthetic cache with an explicitly separate future-recoverable key.
 - [Foundation CI #42586778685](https://github.com/ngluonghoa/MST/actions/runs/42586778685): **SUCCESS 3/3**, Python 3.11 `1609/1609`, Python 3.12 `1609/1609`, engineering `63/63` and H2/H3/lint/wheel passing.
 
-**The second independent run is the acceptance event**: it must report `CROSS_RUN_CACHE_BYTES_VERIFIED_UNATTESTED` with `prior_run_id=42586778775` and a different new `current_run_id`, including seven false authorization flags. If GitHub has evicted the cache or scoped it differently, the run must FAIL and this remains a blocker; do not claim cross-run verification from the first run.
+## Second independent run — verified with strict prior-cache requirement
+
+At PR candidate commit `04f538d3d5c709b341a4d51d59aa28e3bef6ba94`, the new committed report marker enabled `--require-prior`. This required a **new, independent hosted Actions run** to restore a prior-run cached artifact or fail:
+
+- [Cross-run workflow #42587018713](https://github.com/ngluonghoa/MST/actions/runs/42587018713) **SUCCESS 2/2**: `recover-prior-run` obtained a GitHub-hosted Actions cache and printed exact status `CROSS_RUN_CACHE_BYTES_VERIFIED_UNATTESTED` with `prior_run_id=42586778775` and `current_run_id=42587018713` (`pr_number=8`). GitHub Actions log independently shows `Cache restored from key`. The second job used its own runner to save a new disposable fixture for the next run.
+- Crucially, the following seven result fields are all **false**: `distributed_cas`, `durable_rollback_floor`, `independent_witness`, `market_data_authorized`, `real_google_drive_readback`, `trading_authorized`, `vendor_entitlement`. A valid SHA256 of arbitrary fixture bytes is **not** a cryptographically authenticated market-data source.
+- [Foundation CI #42587018689](https://github.com/ngluonghoa/MST/actions/runs/42587018689) **SUCCESS 3/3**: Python 3.11 `1,609/1,609`, Python 3.12 `1,609/1,609`, engineering `63/63`, H2/H3/lint/wheel PASS.
+
+**What was actually demonstrated:** one synthetic operation fixture stored in a real GitHub Actions cache during completed run #42586778775 and independently retrieved/validated during completed run #42587018713, with exact run ID, PR, partition and checksum matching and fail-closed permission fields. Two distinct GitHub Actions workflow executions and their hosted jobs participated. **What was NOT demonstrated:** actual Google Drive CRUD; an independently protected durable floor; server-side atomic publisher CAS; authentic vendor clocks/entitlements/retention; distinct account authentication; an end-to-end historical OHLCV store, production source read or trading.
+
+Cache scope, eviction and integrity remain subject to GitHub cache policy. The currently strict marker means subsequent runs should fail if no prior fixture is available rather than silently resetting to bootstrap. The next reporting-only HEAD must run the new workflow and Foundation CI again; no final claim may be made from its build before verification.
 
 ## Security model and absence of production authority
 
