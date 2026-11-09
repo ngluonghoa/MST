@@ -1,0 +1,38 @@
+name: MST A03 Tombstone Backfill Local Recovery - SYNTHETIC NO APPLY
+
+# New opt-in source-history/recovery fixtures only: no signed provider events,
+# physical Google Drive cache, externally protected monotonic floor or trading.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-tombstone-backfill-recovery-lab.yml"
+      - "scripts/m2_a03_tombstone_backfill_recovery_lab.py"
+      - "tests/test_m2_a03_tombstone_backfill_recovery_lab.py"
+      - "docs/MST_A03_TOMBSTONE_BACKFILL_RECOVERY_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  versioned-events-and-failclosed-recovery:
+    name: V1 SQLite tombstone + backfill + nonpromoting crash quarantine
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package without provider rights
+        run: python -m pip install -e ".[custody]"
+      - name: Exercise actual inherited V1 fixture deletion/backfill and local quarantine
+        run: |
+          python -m scripts.m2_a03_tombstone_backfill_recovery_lab \
+            --out /tmp/mst-a03-tombstone-backfill-recovery-unattested.json
+      - name: Retain JSON fixture trace only, not independent custody evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-tombstone-backfill-recovery-NO-AUTH
+          path: /tmp/mst-a03-tombstone-backfill-recovery-unattested.json
+          retention-days: 14
+          if-no-files-found: error
