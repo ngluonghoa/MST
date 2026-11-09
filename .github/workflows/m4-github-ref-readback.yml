@@ -10,6 +10,9 @@ on:
       - "scripts/m4_github_ref_readback.py"
       - "tests/test_m4_github_ref_readback.py"
       - "docs/MST_M4_REAL_GITHUB_FAST_FORWARD_EVIDENCE_20261109.md"
+      - "scripts/m4_github_parallel_ref_readback.py"
+      - "tests/test_m4_github_parallel_ref_readback.py"
+      - "docs/MST_M4_PARALLEL_REMOTE_REF_TRIAL_20261109.md"
 
 permissions:
   contents: read
@@ -28,3 +31,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python -m scripts.m4_github_ref_readback
+
+  verify-parallel-attempt-ref-readback:
+    name: Read both isolated parallel-attempt ref branches
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify two test ref heads and both sibling commit parents and trees
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m scripts.m4_github_parallel_ref_readback
