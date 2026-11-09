@@ -154,8 +154,11 @@ class V2TombstoneFailClosedTests(unittest.TestCase):
         self.denied((self.cold, bad), "PARENT_DIGEST")
 
     def test_time_rewind_denied(self):
-        bad = replace(self.deleted, as_of_utc=self.cold.as_of_utc)
-        self.denied((self.cold, bad), "LOCAL_FRAME_TIME_REWIND")
+        # Make each frame independently time-valid, but order the chain wrong.
+        # The original tombstone still first becomes known at minute 30.
+        advanced_genesis = replace(self.cold, as_of_utc=instant(31))
+        child = replace(self.deleted, parent_digest=advanced_genesis.digest)
+        self.denied((advanced_genesis, child), "LOCAL_FRAME_TIME_REWIND")
 
     def test_rights_scope_drift_denied(self):
         bad = replace(self.deleted, scope_binding_sha256="f" * 64)
@@ -212,9 +215,16 @@ class V2TombstoneFailClosedTests(unittest.TestCase):
             ))
 
     def test_backfill_requires_prior_tombstone(self):
+        # Build a genesis with a missing bar, then try a backfill with no
+        # previous deletion event in this local lineage.
+        missing_genesis = patch_revisions(
+            self.cold,
+            tuple(r for r in self.cold.revisions
+                  if r.start_utc != instant(11)),
+        )
         bad = replace(self.restored, generation=2,
-                      parent_digest=self.cold.digest)
-        self.denied((self.cold, bad), "RESTORE_MUST_MATCH|BACKFILL_WITHOUT")
+                      parent_digest=missing_genesis.digest)
+        self.denied((missing_genesis, bad), "BACKFILL_WITHOUT_PRIOR_TOMBSTONE")
 
     def test_backfill_prior_digest_must_match_tombstone(self):
         bad = replace(self.restored,
