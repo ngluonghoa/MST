@@ -136,12 +136,12 @@ class ActualCandleBoundaryTests(unittest.TestCase):
 
 class DifferentCacheContractTests(unittest.TestCase):
     def cursor(self):
-        return SourceCursor(minute(15), minute(25), minute(22))
+        return SourceCursor(minute(0), minute(25), minute(22))
 
     def v1_plan(self, *, minute_now=28, capability=SourceCapability.WINDOWED):
         return plan_refresh(
             now_utc=minute(minute_now), session_start_utc=minute(0),
-            latest_expected_closed_start_utc=minute(15),
+            latest_expected_closed_start_utc=minute(0),
             bar_duration=timedelta(minutes=15), capability=capability,
             cursor=self.cursor(),
         )
