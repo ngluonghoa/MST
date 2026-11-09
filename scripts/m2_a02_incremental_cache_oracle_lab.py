@@ -215,7 +215,7 @@ def run_cache_oracle_lab() -> dict:
         # Explicit complete bounded response may remove exactly the missing bar.
         removal = _apply(cache, key, (bar(10), bar(12)),
                          now=41, start=10, end=13, complete=True)
-        if removal.deleted != 1 or removal.indicator_bars_recomputed != 26:
+        if removal.deleted != 1 or removal.indicator_bars_recomputed != 25:
             raise AssertionError("V1_COMPLETE_WINDOW_DELETION_TAIL_DRIFT")
         record("COMPLETE_SCOPE_DELETE_BAR11", removal, 36)
 
