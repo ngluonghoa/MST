@@ -71,3 +71,11 @@ Files:
 - Never merge Draft PR #8, modify `main`/rulesets/witness ref, grant owner keys/Drive sharing, or trade based on this source-only evidence.
 
 **Disposition:** `REMOTE_SOURCE_1TO1_LOCK_PASS; OPTION_A_ADMIN_ROOT_INDEPENDENCE_UNVERIFIED; G01_G08_ALL_OPEN; PR8_DRAFT; M5_M8_BLOCKED`.
+
+## 6. Hosted QA status after hardened live-main guard and corrected assertion
+
+At code HEAD `997180580c4e512ad5c6a5930a539d4dec956ce7`, [Foundation CI #42631740281](https://github.com/ngluonghoa/MST/actions/runs/42631740281) **SUCCESS 3/3** (Python3.11 **1985/1985**, Python3.12 **1985/1985**, engineering **63/63**, H2/H3/lint/wheel PASS). [Live GitHub remote full-tree source audit #42631740484](https://github.com/ngluonghoa/MST/actions/runs/42631740484) **SUCCESS**, current main protected and pinned, original tree 216 Git entries, 208 blobs, 63 unchanged V1 Python objects, exactly 8 V2 additions allowed. Other eight workflows SUCCESS: **10/10 exact-code-head PASS**. A temporary GitHub artifact retains the source tree receipt only for the configured CI retention; it does not count as owner-signed custody.
+
+The first full-tree design rejected all extra modules, and was corrected after real GitHub identified the eight pre-existing opt-in V2 sidecars. The next Foundation run failed one *test assertion on expected status text* (the security evaluator itself still passed live remote verification); the test assertion was corrected without altering acceptance. Latest full source/parity and Foundation CI both PASS.
+
+[Google Drive QA — Option A administrator-root feasibility and 1:1 source evidence](https://docs.google.com/document/d/1IpFra3Xu4nVDizjB6w6iZjwFYkjT-hi3sKALiD11l7c/edit) resides in the MST `02_QA_RELEASE_EVIDENCE` folder. This documentation-only update creates another PR head and must be separately rechecked before calling that final head green. All G01–G08 external owner/production gates remain OPEN.
