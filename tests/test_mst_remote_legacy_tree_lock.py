@@ -4,7 +4,7 @@ import unittest
 
 from scripts.mst_remote_legacy_tree_lock import (
     _MAIN_COMMIT, _SOURCE_COMMIT, _TREE,
-    _objects, inspect_remote_legacy_parity,
+    _ALLOWED_V2_PATHS, _objects, inspect_remote_legacy_parity,
 )
 
 
@@ -41,6 +41,13 @@ class OriginalGitTreeParityTests(unittest.TestCase):
         self.b = deepcopy(self.a)
         self.c = deepcopy(self.a)
         self.c["sha"] = "f" * 40
+        # The real PR8 contains precisely these eight additive V2 modules,
+        # while every one of the 63 inherited V1 Python blobs is unchanged.
+        for i, path in enumerate(sorted(_ALLOWED_V2_PATHS)):
+            self.c["tree"].append({
+                "path": path, "type": "blob", "mode": "100644",
+                "sha": f"{i+500:040x}",
+            })
         self.head = "b" * 40
 
     def verify(self):
@@ -58,6 +65,8 @@ class OriginalGitTreeParityTests(unittest.TestCase):
         self.assertEqual(x["shared_original_tree_sha"], _TREE)
         self.assertTrue(x["all_original_tree_entries_match_between_source_and_main"])
         self.assertTrue(x["all_inherited_package_paths_unchanged_on_pr"])
+        self.assertEqual(x["approved_opt_in_v2_sidecar_module_count"], 8)
+        self.assertTrue(x["only_exact_eight_known_v2_sidecars_added_on_pr"])
         self.assertFalse(x["a02_owner_module_review_signed_off"])
         self.assertFalse(x["m4_witness_admin_independence_proven"])
         self.assertFalse(x["production_release_authorized"])
@@ -87,7 +96,21 @@ class OriginalGitTreeParityTests(unittest.TestCase):
             "path": "src/swing_trading/unapproved_new.py",
             "type": "blob", "mode": "100644", "sha": "a" * 40,
         })
-        with self.assertRaisesRegex(ValueError, "INHERITED_SOURCE_CHANGED"):
+        with self.assertRaisesRegex(ValueError, "V2_SIDECAR_ALLOWLIST_DRIFT"):
+            self.verify()
+
+    def test_candidate_expected_v2_sidecar_deleted_denied(self):
+        self.c["tree"] = [entry for entry in self.c["tree"]
+                          if entry["path"] != sorted(_ALLOWED_V2_PATHS)[0]]
+        with self.assertRaisesRegex(ValueError, "V2_SIDECAR_ALLOWLIST_DRIFT"):
+            self.verify()
+
+    def test_candidate_v2_sidecar_must_be_regular_blob(self):
+        target = sorted(_ALLOWED_V2_PATHS)[0]
+        for entry in self.c["tree"]:
+            if entry["path"] == target:
+                entry["mode"] = "120000"
+        with self.assertRaisesRegex(ValueError, "V2_SIDECAR_OBJECT_TYPE_DRIFT"):
             self.verify()
 
     def test_candidate_extra_legacy_directory_denied(self):
@@ -95,7 +118,7 @@ class OriginalGitTreeParityTests(unittest.TestCase):
             "path": "src/swing_trading/accidental_dir",
             "type": "tree", "mode": "040000", "sha": "a" * 40,
         })
-        with self.assertRaisesRegex(ValueError, "INHERITED_NAMESPACE_CHANGED"):
+        with self.assertRaisesRegex(ValueError, "V2_SIDECAR_ALLOWLIST_DRIFT"):
             self.verify()
 
     def test_candidate_legacy_module_file_mode_change_denied(self):
