@@ -1,6 +1,6 @@
-name: MST M4 G01 G02 Owner Architecture - DRAFT ONLY
+name: MST M4 Option A Scope Choice - PRODUCTION BLOCKED
 
-# A successful job means draft proposals are still unresolved and blocked.
+# A successful job means GitHub+Drive scope choice is recorded; all G01-G08\n# custody/source/release gates remain OPEN and production remains BLOCKED.
 # No OIDC, write scopes, admin APIs, signer keys, Drive market data or production.
 on:
   pull_request:
@@ -8,16 +8,21 @@ on:
       - ".github/workflows/m4-owner-architecture-review.yml"
       - "docs/MST_M4_ADR_G01_G02_TRUST_ROOT_MONOTONIC_FLOOR_20261109.md"
       - "docs/MST_M4_G01_G02_OWNER_DECISIONS_20261109.json"
+      - "docs/MST_M4_OPTION_A_SCOPE_SELECTION_20261109.json"
+      - "docs/MST_M4_OPTION_A_GITHUB_DRIVE_TRUST_CUSTODY_PLAN_20261109.md"
       - "scripts/m4_owner_architecture_preflight.py"
       - "tests/test_m4_owner_architecture_preflight.py"
+      - "scripts/m4_option_a_selection_preflight.py"
+      - "tests/test_m4_option_a_selection_preflight.py"
       - "docs/MST_M4_G01_G02_ARCHITECTURE_QA_20261109.md"
+      - "docs/MST_M4_OPTION_A_CHOICE_QA_20261109.md"
 
 permissions:
   contents: read
 
 jobs:
   assert-draft-and-deny-production:
-    name: Validate all owner decisions OPEN, no production authorization
+    name: Validate user Option A scope only, owner production gates OPEN
     if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
@@ -29,13 +34,19 @@ jobs:
         run: |
           python -m scripts.m4_owner_architecture_preflight \
             --output /tmp/m4-g01-g02-architecture-blocked.json
+      - name: Validate current Option A selection without admitting production
+        run: |
+          python -m scripts.m4_option_a_selection_preflight \
+            --output /tmp/m4-option-a-selected-scope-only.json
       - name: Preserve owner-review-only architecture and blocking receipt
         uses: actions/upload-artifact@v4
         with:
-          name: mst-m4-g01-g02-owner-architecture-draft-unapproved
+          name: mst-m4-option-a-scope-selected-production-blocked
           path: |
             docs/MST_M4_ADR_G01_G02_TRUST_ROOT_MONOTONIC_FLOOR_20261109.md
             docs/MST_M4_G01_G02_OWNER_DECISIONS_20261109.json
+            docs/MST_M4_OPTION_A_SCOPE_SELECTION_20261109.json
             /tmp/m4-g01-g02-architecture-blocked.json
+            /tmp/m4-option-a-selected-scope-only.json
           if-no-files-found: error
           retention-days: 14
