@@ -69,7 +69,7 @@ these require separate consumer, migration and rollback evidence.
 | strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 1 | KEEP | none |
 | v2_cache_fencing_lab | domain_and_reference | 207 | 23 | 42 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | v2_cache_partition_plan | domain_and_reference | 161 | 10 | 25 | 1 | KEEP | none |
-| v2_cloud_publish_verify_lab | domain_and_reference | 197 | 25 | 59 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| v2_cloud_publish_verify_lab | domain_and_reference | 214 | 32 | 73 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | v2_cloud_ref_witness_plan | domain_and_reference | 164 | 8 | 26 | 1 | KEEP | none |
 | v2_provider_readiness | domain_and_reference | 167 | 21 | 43 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | v2_replay_port | domain_and_reference | 97 | 10 | 22 | 0 | KEEP | none |
