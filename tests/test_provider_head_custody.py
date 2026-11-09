@@ -319,5 +319,67 @@ class P029CustodyTests(unittest.TestCase):
                         issued_at_utc=NOW-timedelta(minutes=1))
 
 
+    def test_same_claimed_floor_allows_two_distinct_signed_forks(self):
+        """Crypto integrity alone cannot establish a globally unique head."""
+        first = self.audit(head=self.mkhead(sequence=3, tail_sha256=B))
+        fork = self.audit(head=self.mkhead(sequence=3, tail_sha256=D))
+        self.assertTrue(first.custodian_signature_integrity)
+        self.assertTrue(fork.custodian_signature_integrity)
+        self.assertTrue(first.relative_floor_held)
+        self.assertTrue(fork.relative_floor_held)
+        self.assertNotEqual(first.tail_sha256, fork.tail_sha256)
+        self.assertFalse(first.conditional_event_chain_integrity)
+        self.assertFalse(fork.conditional_event_chain_integrity)
+        self.assertFalse(first.anti_rollback_across_restarts_verified)
+        self.assertFalse(fork.rights_to_read_or_cache)
+
+    def test_older_signed_head_replays_against_weaker_self_claimed_floor(self):
+        """Reader must obtain a durable independent floor, not trust the caller."""
+        older = self.mkhead(sequence=2, tail_sha256=A)
+        weak = self.audit(head=older, floor=self.mkfloor())
+        self.assertTrue(weak.relative_floor_held)
+        self.assertFalse(weak.anti_rollback_across_restarts_verified)
+        advanced_floor = self.mkfloor(
+            sequence=3, tail_sha256=B,
+            last_issued_at_utc=NOW-timedelta(seconds=40),
+            observed_at_utc=NOW-timedelta(seconds=30),
+        )
+        with self.assertRaisesRegex(CustodyRejected, "sequence rolled back"):
+            self.audit(head=older, floor=advanced_floor)
+
+    def test_attacker_enrolled_self_claimed_key_cannot_grant_vendor_rights(self):
+        """Valid Ed25519 signatures do not attest the real vendor key owner."""
+        other = self.mkkey(self.priv2, K2, 1)
+        self_claimed_floor = self.mkfloor(
+            custody_key_id=K2,
+            custody_key_sha256=other.public_key_sha256,
+        )
+        self_signed_head = self.mkhead(key=other, private=self.priv2)
+        report = self.audit(head=self_signed_head, key=other,
+                            floor=self_claimed_floor)
+        self.assertTrue(report.custodian_signature_integrity)
+        self.assertFalse(other.vendor_key_owner_verified)
+        self.assertFalse(report.rights_to_read_or_cache)
+        with self.assertRaises(PermissionError):
+            require_authenticated_provider_rights(report)
+
+    def test_forged_conditional_report_flags_cannot_grant_permissions(self):
+        """Never use the data-class booleans as an admission decision."""
+        forged = replace(
+            self.audit(),
+            conditional_event_chain_integrity=True,
+            dual_rotation_signatures_verified=True,
+            unresolved=(),
+        )
+        self.assertTrue(forged.conditional_event_chain_integrity)
+        self.assertEqual(forged.unresolved, ())
+        self.assertFalse(forged.vendor_key_origin_verified)
+        self.assertFalse(forged.anti_rollback_across_restarts_verified)
+        self.assertFalse(forged.rights_to_read_or_cache)
+        self.assertFalse(forged.trading_actionable)
+        with self.assertRaises(PermissionError):
+            require_authenticated_provider_rights(forged)
+
+
 if __name__ == '__main__':
     unittest.main()
