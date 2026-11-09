@@ -57,9 +57,13 @@ def audit_ruleset(ruleset: dict, main: dict, trial_refs: list[dict]) -> dict:
     refs = conditions.get("ref_name") if type(conditions) is dict else None
     if type(refs) is not dict or refs.get("include") != ["~DEFAULT_BRANCH"] or refs.get("exclude") != []:
         raise ValueError("RULESET_NOT_DEFAULT_BRANCH_ONLY")
+    # GitHub's ruleset response is token-dependent: a read-only Actions
+    # GITHUB_TOKEN can receive current_user_can_bypass='never' while the
+    # bypass_actors collection is OMITTED. Do not turn omission into [].
     bypass = ruleset.get("bypass_actors")
-    if bypass != [] or ruleset.get("current_user_can_bypass") != "never":
-        raise ValueError("RULESET_BYPASS_NOT_EXCLUDED_FOR_CURRENT_ACTOR")
+    bypass_list_verified = bypass == []
+    if (bypass is not None and bypass != []) or ruleset.get("current_user_can_bypass") != "never":
+        raise ValueError("RULESET_BYPASS_OR_CURRENT_ACTOR_NOT_SAFE")
     rules = ruleset.get("rules")
     if type(rules) is not list:
         raise ValueError("INVALID_RULES")
@@ -90,7 +94,10 @@ def audit_ruleset(ruleset: dict, main: dict, trial_refs: list[dict]) -> dict:
         if type(commit) is not dict or commit.get("sha") != _TEST_HEADS[i]:
             raise ValueError("TEST_BRANCH_HEAD_CHANGED")
     return {
-        "status": "MAIN_RULESET_ACTIVE_M4_TEST_REFS_UNPROTECTED",
+        "status": ("MAIN_RULESET_ACTIVE_TEST_REFS_UNPROTECTED_BYPASS_LIST_VERIFIED"
+                   if bypass_list_verified else
+                   "MAIN_RULESET_ACTIVE_TEST_REFS_UNPROTECTED_BYPASS_LIST_UNVERIFIED"),
+        "bypass_actor_list_verified_for_this_token": bypass_list_verified,
         "main_protected": True,
         "main_baseline_head": _BASE,
         "main_ruleset_id": _RULESET_ID,
@@ -113,7 +120,6 @@ def main() -> None:
     ruleset = _get("/rulesets/" + str(_RULESET_ID), token)
     main_branch = _get("/branches/main", token)
     test_branches = [_get("/branches/" + name, token) for name in _TEST_REFS]
-    print(json.dumps({"debug_ruleset_actor_bypass": ruleset.get("current_user_can_bypass", "<absent>"), "debug_configured_bypass_actor_count": len(ruleset.get("bypass_actors", [])) if isinstance(ruleset.get("bypass_actors"), list) else "<unavailable>", "debug_meta_not_authority": True}, sort_keys=True))
     print(json.dumps(audit_ruleset(ruleset, main_branch, test_branches), sort_keys=True))
 
 
