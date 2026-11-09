@@ -127,6 +127,21 @@ def check_role_topology(raw):
     """Validate exact zero-enrollment proposal and return a blocked review."""
     if type(raw) is not dict or raw.get("schema") != _SCHEMA:
         raise ValueError("INVALID_ROLE_TOPOLOGY_SCHEMA")
+    expected_keys = (
+        set(_FALSE) | {
+            "schema", "status", "scope_choice", "owner_instruction_source",
+            "repository", "baseline_main_commit", "witness_ref",
+            "historical_observed_main_pr_review_approval_count",
+            "historical_main_rule_includes_signed_commit",
+            "historical_witness_ref_absent",
+            "historical_google_drive_visible_owner_count_per_project_folder",
+            "roles", "required_distinct_principal_pairs",
+            "owner_signoff_decisions", "failure_policy",
+            "pending_privileged_actions",
+        }
+    )
+    if set(raw) != expected_keys:
+        raise ValueError("NONCANONICAL_ROLE_POLICY_FIELDS")
     if (raw.get("repository") != "ngluonghoa/MST"
             or raw.get("scope_choice") != "A_GITHUB_DRIVE_ONLY"
             or raw.get("status") != _STATUS
