@@ -1,0 +1,55 @@
+name: MST M4 Cross-Run Registry Floor - UNTRUSTED LAB
+
+# Only proof of untrusted cache file continuity across independent GitHub
+# hosted jobs and later workflow runs. NO source signer, protected trust root,
+# authorized provider, Google Drive real data or distributed CAS.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-registry-cross-run-fixture.yml"
+      - "scripts/m4_registry_cross_run_fixture.py"
+      - "tests/test_m4_registry_cross_run_fixture.py"
+      - "docs/MST_M4_REGISTRY_CROSS_RUN_FLOOR_NEGATIVE_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  recover-prior-registry-fixture:
+    name: Recover prior untrusted registry bytes on hosted runner A
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore older disposable GitHub cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .m4-registry-crossrun
+          key: mst-m4-registry-pr${{ github.event.pull_request.number }}-run${{ github.run_id }}
+          restore-keys: |
+            mst-m4-registry-pr${{ github.event.pull_request.number }}-run
+      - name: Check prior-run synthetic registry and caller floor, never certify source
+        run: |
+          python -m scripts.m4_registry_cross_run_fixture recover \
+            --path .m4-registry-crossrun/registry.json \
+            --run-id ${{ github.run_id }} \
+            --pr ${{ github.event.pull_request.number }}
+
+  stage-next-registry-fixture:
+    name: Stage next disposable registry on distinct hosted runner B
+    needs: recover-prior-registry-fixture
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Emit fresh untrusted schema-checked registry claim
+        run: |
+          python -m scripts.m4_registry_cross_run_fixture emit \
+            --path .m4-registry-crossrun/registry.json \
+            --run-id ${{ github.run_id }} \
+            --pr ${{ github.event.pull_request.number }}
+      - name: Cache synthetic bytes only for future run
+        uses: actions/cache/save@v4
+        with:
+          path: .m4-registry-crossrun
+          key: mst-m4-registry-pr${{ github.event.pull_request.number }}-run${{ github.run_id }}
