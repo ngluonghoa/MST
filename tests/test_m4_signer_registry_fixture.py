@@ -112,9 +112,15 @@ class LocalSignerRegistryFixtureTests(unittest.TestCase):
             self.verify(pin="f" * 64)
 
     def test_untyped_or_malformed_registry_pin_fails(self):
-        for pin in ("not-sha", "", "A" * 64, None, 42):
+        for pin in ("not-sha", "", "A" * 64, 42):
             with self.subTest(pin=pin), self.assertRaises(ValueError):
                 self.verify(pin=pin)
+
+    def test_explicit_none_registry_pin_fails_direct_verifier(self):
+        with self.assertRaises(ValueError):
+            verify_with_caller_registry(
+                self.receipt, self.signed(), self.registry, self.floor, None,
+            )
 
     def test_valid_signature_not_accepted_after_local_revocation(self):
         revoked = self.next_registry(revoked=True)
