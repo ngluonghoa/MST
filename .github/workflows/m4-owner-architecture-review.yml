@@ -1,0 +1,41 @@
+name: MST M4 G01 G02 Owner Architecture - DRAFT ONLY
+
+# A successful job means draft proposals are still unresolved and blocked.
+# No OIDC, write scopes, admin APIs, signer keys, Drive market data or production.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-owner-architecture-review.yml"
+      - "docs/MST_M4_ADR_G01_G02_TRUST_ROOT_MONOTONIC_FLOOR_20261109.md"
+      - "docs/MST_M4_G01_G02_OWNER_DECISIONS_20261109.json"
+      - "scripts/m4_owner_architecture_preflight.py"
+      - "tests/test_m4_owner_architecture_preflight.py"
+      - "docs/MST_M4_G01_G02_ARCHITECTURE_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  assert-draft-and-deny-production:
+    name: Validate all owner decisions OPEN, no production authorization
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate G01/G02 ADR decision draft, fail-closed
+        run: |
+          python -m scripts.m4_owner_architecture_preflight \
+            --output /tmp/m4-g01-g02-architecture-blocked.json
+      - name: Preserve owner-review-only architecture and blocking receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-g01-g02-owner-architecture-draft-unapproved
+          path: |
+            docs/MST_M4_ADR_G01_G02_TRUST_ROOT_MONOTONIC_FLOOR_20261109.md
+            docs/MST_M4_G01_G02_OWNER_DECISIONS_20261109.json
+            /tmp/m4-g01-g02-architecture-blocked.json
+          if-no-files-found: error
+          retention-days: 14
