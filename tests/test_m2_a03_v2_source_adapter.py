@@ -197,7 +197,7 @@ class RegistrySwapAndRollbackTests(unittest.TestCase):
         reg = synthetic_source_registry()
         with self.assertRaisesRegex(ValueError, "DUPLICATE_PROVIDER"):
             reg.register(adapter("SSI"))
-        self.assertEqual(reg.providers, PROVIDERS)
+        self.assertEqual(reg.providers, tuple(sorted(PROVIDERS)))
 
     def test_replacement_with_higher_minor_preserves_other_providers(self):
         reg = synthetic_source_registry()
