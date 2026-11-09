@@ -19,6 +19,7 @@ def fixtures():
             {"type": "non_fast_forward"},
             {"type": "pull_request", "parameters": {"required_approving_review_count": 0}},
             {"type": "required_status_checks", "parameters": {
+                "strict_required_status_checks_policy": False,
                 "required_status_checks": [{"context": c, "integration_id": 15368} for c in _REQUIRED_CI],
             }},
         ],
@@ -35,6 +36,9 @@ class M4RulesetAuditTests(unittest.TestCase):
         result = audit_ruleset(*fixtures())
         self.assertEqual(result["status"], "MAIN_RULESET_ACTIVE_TEST_REFS_UNPROTECTED_BYPASS_LIST_VERIFIED")
         self.assertTrue(result["bypass_actor_list_verified_for_this_token"])
+        self.assertEqual(result["main_required_approving_review_count"], 0)
+        self.assertFalse(result["main_requires_positive_review"])
+        self.assertFalse(result["main_required_ci_strict_up_to_date"])
         self.assertTrue(result["main_protected"])
         self.assertEqual(result["test_ref_protected"], [False, False])
         self.assertTrue(result["main_no_configured_bypass_for_this_actor"])
@@ -57,6 +61,26 @@ class M4RulesetAuditTests(unittest.TestCase):
         self.assertIs(result["bypass_actor_list_verified_for_this_token"], False)
         self.assertIs(result["main_no_configured_bypass_for_this_actor"], True)
         self.assertFalse(result["independently_protected_rollback_floor"])
+
+    def test_positive_review_count_is_reported_without_approval_assumption(self):
+        r, m, b = fixtures()
+        r["rules"][2]["parameters"]["required_approving_review_count"] = 2
+        result = audit_ruleset(r, m, b)
+        self.assertEqual(result["main_required_approving_review_count"], 2)
+        self.assertTrue(result["main_requires_positive_review"])
+        self.assertFalse(result["independently_protected_rollback_floor"])
+
+    def test_invalid_review_count_or_missing_strictness_fails_closed(self):
+        for count in (None, -1, "0", True):
+            with self.subTest(count=count):
+                r, m, b = fixtures()
+                r["rules"][2]["parameters"]["required_approving_review_count"] = count
+                with self.assertRaisesRegex(ValueError, "UNVERIFIABLE_PULL_REQUEST_REVIEW_COUNT"):
+                    audit_ruleset(r, m, b)
+        r, m, b = fixtures()
+        del r["rules"][-1]["parameters"]["strict_required_status_checks_policy"]
+        with self.assertRaisesRegex(ValueError, "UNVERIFIABLE_REQUIRED_STATUS_STRICTNESS"):
+            audit_ruleset(r, m, b)
 
     def test_inactive_ruleset_denied(self):
         r, m, b = fixtures()
