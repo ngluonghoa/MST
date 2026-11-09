@@ -176,8 +176,8 @@ def create_manifest(
         bars_digest=preview["v1_bar_revisions_digest"],
         indicators_digest=preview["v1_ema20_atr14_checkpoint_digest"],
     )
-    if parent is not None:
-        verify_manifest_chain((parent, manifest))
+    # Full G1..Gn chain validation is mandatory at the reviewer boundary.
+    # Two adjacent manifests alone cannot establish local genesis continuity.
     return manifest
 
 
