@@ -302,7 +302,7 @@ def run_cache_oracle_lab() -> dict:
                now=1, start=0, end=1, complete=True, full=True)
         with sqlite3.connect(tamperpath) as sql:
             sql.execute("UPDATE fixture_bars SET c=? WHERE cache_key=?",
-                        ("999", key.fingerprint))
+                        ("101", key.fingerprint))
         try:
             tamper.read_bars(key)
         except RuntimeError as ex:
