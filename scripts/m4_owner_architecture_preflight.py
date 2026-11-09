@@ -68,6 +68,17 @@ _TRUE_INVARIANTS = (
 def validate_owner_architecture_draft(raw):
     if type(raw) is not dict:
         raise TypeError("OWNER_ARCHITECTURE_DRAFT_DICT_REQUIRED")
+    expected_keys = {
+        "schema", "project", "repository", "source_lock", "status", "adr",
+        "owner_approval_received", "production_cache_read_authorized",
+        "production_cache_write_authorized", "trading_authorized",
+        "external_trust_root_verified", "external_monotonic_floor_verified",
+        "real_two_principal_server_cas_verified", "licensed_market_data_verified",
+        "actual_google_drive_chunk_sha_verified", "options", "owner_decisions",
+        "required_witness_tests", "security_invariants", "operational_status",
+    }
+    if set(raw) != expected_keys:
+        raise ValueError("NONCANONICAL_ARCHITECTURE_DRAFT_FIELDS")
     if raw.get("schema") != _SCHEMA or raw.get("status") != _STATUS:
         raise ValueError("UNAPPROVED_OR_MODIFIED_DECISION_SCHEMA")
     if raw.get("project") != "MST" or raw.get("repository") != "ngluonghoa/MST":
@@ -87,6 +98,11 @@ def validate_owner_architecture_draft(raw):
     if [o.get("id") if type(o) is dict else None for o in options] != list(_OPTIONS):
         raise ValueError("ARCHITECTURE_OPTIONS_CHANGED")
     for option in options:
+        if set(option) != {
+            "id", "status", "scope", "is_selected", "owner_approval_required",
+            "description", "blocks",
+        }:
+            raise ValueError("NONCANONICAL_ARCHITECTURE_OPTION_FIELDS")
         expected_status, expected_scope, needs_approval = _OPTIONS[option["id"]]
         if (option.get("status") != expected_status
                 or option.get("scope") != expected_scope
@@ -107,6 +123,10 @@ def validate_owner_architecture_draft(raw):
     if [x.get("id") if type(x) is dict else None for x in decisions] != list(_DECISIONS):
         raise ValueError("OWNER_DECISION_IDS_CHANGED")
     for decision in decisions:
+        if set(decision) != {
+            "id", "gate", "decision", "state", "chosen", "owner_evidence_uri",
+        }:
+            raise ValueError("NONCANONICAL_OWNER_DECISION_FIELDS")
         gate, name = _DECISIONS[decision["id"]]
         if decision.get("gate") != gate or decision.get("decision") != name:
             raise ValueError("OWNER_DECISION_TAXONOMY_DRIFT")
