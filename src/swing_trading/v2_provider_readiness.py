@@ -46,6 +46,8 @@ class ClaimState(str, Enum):
 class UnverifiedGateNoteV2:
     """Opaque docket reference, never an attached licence or secret."""
 
+    provider_id: str
+    endpoint_id: str
     gate: ProviderGate
     state: ClaimState
     observed_at_utc: datetime
@@ -53,6 +55,7 @@ class UnverifiedGateNoteV2:
     claimed_expires_utc: datetime | None = None
 
     def __post_init__(self) -> None:
+        FixtureSourceIdentityV2(self.provider_id, self.endpoint_id)
         if type(self.gate) is not ProviderGate or type(self.state) is not ClaimState:
             raise TypeError("Exact gate/state enums required")
         _checked_utc(self.observed_at_utc)
@@ -113,6 +116,9 @@ def review_unverified_provider_docket(
     seen = {}
     refs = set()
     for note in notes:
+        if (note.provider_id != identity.provider_id
+                or note.endpoint_id != identity.endpoint_id):
+            raise ValueError("CROSS_PROVIDER_OR_ENDPOINT_EVIDENCE_DENIED")
         if note.gate in seen:
             raise ValueError("Duplicate requirement in docket")
         if note.observed_at_utc > checked_at_utc:
