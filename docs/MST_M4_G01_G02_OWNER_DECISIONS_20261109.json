@@ -1,0 +1,161 @@
+{
+  "schema": "mst.m4.g01-g02.owner-decision.proposal.v1",
+  "project": "MST",
+  "repository": "ngluonghoa/MST",
+  "source_lock": {
+    "swing_commit": "cd90c1babae8912db31490ad614fc2ad2f868042",
+    "mst_main_commit": "4048f91beaaa3410116d97e35896c8b688384e19",
+    "mst_main_tree": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+    "inherited_v1_modules": 63
+  },
+  "status": "DRAFT_UNSELECTED_OWNER_APPROVAL_REQUIRED",
+  "adr": "docs/MST_M4_ADR_G01_G02_TRUST_ROOT_MONOTONIC_FLOOR_20261109.md",
+  "owner_approval_received": false,
+  "production_cache_read_authorized": false,
+  "production_cache_write_authorized": false,
+  "trading_authorized": false,
+  "external_trust_root_verified": false,
+  "external_monotonic_floor_verified": false,
+  "real_two_principal_server_cas_verified": false,
+  "licensed_market_data_verified": false,
+  "actual_google_drive_chunk_sha_verified": false,
+  "options": [
+    {
+      "id": "A_GITHUB_DRIVE_ONLY",
+      "status": "CONDITIONAL_UNPROVEN",
+      "scope": "EXISTING_GITHUB_DRIVE_ONLY",
+      "is_selected": false,
+      "owner_approval_required": true,
+      "description": "Separate owner-governed GitHub witness and signer policy, independent principals and readback; real cache on licensed Google Drive",
+      "blocks": [
+        "PR_actor_admin_bypass_not_eliminated",
+        "git_ff_cannot_prove_manifest_freshness",
+        "no_protected_cross_service_cas",
+        "independent_monotonic_floor_not_proven"
+      ]
+    },
+    {
+      "id": "B_CLOUD_KMS_FIRESTORE",
+      "status": "REQUIRES_EXPLICIT_SCOPE_EXTENSION",
+      "scope": "NEW_SERVICES_OWNER_PERMISSION_REQUIRED",
+      "is_selected": false,
+      "owner_approval_required": true,
+      "description": "Separately governed Cloud KMS key lifecycle and Firestore transactional floor, GitHub OIDC federation and Google Drive market cache",
+      "blocks": [
+        "new_cloud_services_not_authorized",
+        "iam_admin_reset_risk",
+        "git_drive_cross_service_crash_gap",
+        "kms_algorithm_tier_quota_cost_unverified"
+      ]
+    },
+    {
+      "id": "C_ACTIONS_CACHE_AS_ROOT",
+      "status": "REJECTED_UNSAFE",
+      "scope": "EXISTING_COMPONENTS_INSUFFICIENT",
+      "is_selected": false,
+      "owner_approval_required": false,
+      "description": "Use GitHub Actions cache or self-hashed Google Drive metadata as sole trust root and floor",
+      "blocks": [
+        "evictable_self_asserted_state",
+        "no_independent_root_or_cas",
+        "replay_and_reset_attack"
+      ]
+    }
+  ],
+  "owner_decisions": [
+    {
+      "id": "D01",
+      "gate": "SIGNED-G01",
+      "decision": "CUSTODY_ARCHITECTURE_AND_SCOPE",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D02",
+      "gate": "SIGNED-G01",
+      "decision": "SIGNER_ENROLLMENT_AUTHORITY_AND_ADMIN_BYPASS",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D03",
+      "gate": "SIGNED-G02",
+      "decision": "DURABLE_FLOOR_AND_CAS_ROOT",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D04",
+      "gate": "SIGNED-G03",
+      "decision": "TWO_INDEPENDENT_PUBLISHERS_AND_READER_IDENTITY",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D05",
+      "gate": "SIGNED-G04",
+      "decision": "LICENSED_VENDOR_ASOF_CORRECTION_AND_RETENTION",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D06",
+      "gate": "SIGNED-G06",
+      "decision": "GLOBAL_REVOCATION_AND_RECOVERY",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D07",
+      "gate": "SIGNED-G05",
+      "decision": "ADDITIONAL_CLOUD_COST_RISK_DATA_RESIDENCY",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    },
+    {
+      "id": "D08",
+      "gate": "SIGNED-G08",
+      "decision": "FINAL_OWNER_APPROVAL_A02_A03_M3_M4_M8",
+      "state": "OPEN",
+      "chosen": null,
+      "owner_evidence_uri": null
+    }
+  ],
+  "required_witness_tests": [
+    "G01-T01",
+    "G01-T02",
+    "G01-T03",
+    "G02-T01",
+    "G02-T02",
+    "G02-T03",
+    "G02-T04",
+    "G02-T05",
+    "G02-T06",
+    "G02-T07",
+    "M4-T08",
+    "M4-T09",
+    "M4-T10"
+  ],
+  "security_invariants": {
+    "external_owner_authority_required": true,
+    "provider_rights_separate_from_publisher_signature": true,
+    "signatures_do_not_prove_market_truth": true,
+    "writer_cannot_reset_floor": true,
+    "reader_must_refetch_external_floor": true,
+    "recovery_never_lowers_floor": true,
+    "key_rotation_must_preserve_generation": true,
+    "github_drive_not_single_transaction": true,
+    "any_missing_independent_evidence_blocks": true,
+    "vendor_late_corrections_not_naively_rejected_by_clock": true,
+    "root_admin_reset_risk_must_be_reviewed": true,
+    "github_pr_workflows_read_only": true
+  },
+  "operational_status": "ARCHITECTURE_REVIEW_ONLY_PRODUCTION_BLOCKED"
+}
