@@ -42,7 +42,7 @@ def descriptor(provider="SSI", version="2.0.0", operations=("probe",)):
 class IdentityAndRightsTests(unittest.TestCase):
     def test_three_explicit_legacy_provider_names_are_independent(self):
         registry = synthetic_source_registry()
-        self.assertEqual(registry.providers, PROVIDERS)
+        self.assertEqual(registry.providers, tuple(sorted(PROVIDERS)))
         for provider in PROVIDERS:
             with self.subTest(provider=provider):
                 a = registry.resolve(provider, descriptor(provider))
@@ -134,7 +134,7 @@ class SourceIsolationTests(unittest.TestCase):
             registry.probe(request("DNSE"), descriptor("SSI"))
         with self.assertRaises(KeyError):
             registry.probe(request("FOURTH"), descriptor("FOURTH"))
-        self.assertEqual(registry.providers, PROVIDERS)
+        self.assertEqual(registry.providers, tuple(sorted(PROVIDERS)))
 
     def test_wrong_provider_cannot_call_other_adapter(self):
         a = adapter("SSI")
