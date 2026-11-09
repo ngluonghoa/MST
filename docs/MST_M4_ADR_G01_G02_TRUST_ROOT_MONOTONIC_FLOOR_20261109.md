@@ -1,8 +1,14 @@
 # MST ADR-M4-001 — Independent signer root and monotonic rollback floor (G01/G02)
 
-**Status:** PROPOSED / OWNER DECISION REQUIRED / NOT IMPLEMENTED / NO DEPLOY  
+**Status:** OPTION A (GitHub + Google Drive only) SELECTED FOR ARCHITECTURE SCOPE on 2026-11-09; G01/G02 authority and provisioning STILL NOT APPROVED / NO DEPLOY  
 **Date:** 2026-11-09 (Asia/Ho_Chi_Minh)  
 **Scope:** architecture and acceptance only. **Source baseline:** Swing Trading 1.8 `cd90c1babae8912db31490ad614fc2ad2f868042`, protected MST `main@4048f91beaaa3410116d97e35896c8b688384e19` (tree `d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e`); 63 inherited V1 modules unchanged. Work only on Draft PR #8, not main. Cloud-only, never Mac/MOCHI/local. Existing real market OHLCV, licensed cache retention, trading and production keys **NOT AUTHORIZED**.
+
+## Decision amendment — explicit user selection after the draft
+
+The user has explicitly responded **"Đồng ý phương án A"**. This confirms **GitHub + Google Drive only** as the present MST architecture/platform scope. It does NOT authenticate an independent signing key, close any SIGNED-G01..G08 security gate, authorize admin provisioning, new GitHub witness rules, production credentials, licensed OHLCV ingestion, Google Drive cache write or PR merge. Any additional Cloud KMS/Firestore service is explicitly **not selected** and needs a new user decision.
+
+The original unselected decision JSON (`docs/MST_M4_G01_G02_OWNER_DECISIONS_20261109.json`) is intentionally kept as the **historical draft snapshot** for audit. Current architecture selection is recorded in the later **versioned overlay** `docs/MST_M4_OPTION_A_SCOPE_SELECTION_20261109.json`, which takes precedence *only on selected platform scope*, while all owner security/admin/release decisions D01–D08 stay OPEN. Operational Option A blueprint: `docs/MST_M4_OPTION_A_GITHUB_DRIVE_TRUST_CUSTODY_PLAN_20261109.md`. This chat approval is not an independent cryptographic owner attestation and must never be used to close signer/floor release gates.
 
 ## 1. Decision to make
 
@@ -10,7 +16,7 @@ MST's M4 signed receipt laboratory is NOT a trust service. It accepts a caller-p
 
 **G01** needs a key-enrollment trust root independent of data writers/readers: owner governance, signer identities, issuer, roles, key versions, expiry/revocation and secure private-key custody. **G02** needs an externally protected high-water mark per canonical (provider, symbol, timeframe, interval/as-of partition, rights-policy version) across GitHub runs, accounts, crashes and key rotations. Neither property follows from a valid signature or stable-looking Git commit.
 
-**Decision state now: NONE SELECTED.** The owner must choose an implementation and accept independent administration, costs, regulatory entitlements and availability tradeoffs. This ADR does not grant credentials or create a new cloud provider.
+**Historical pre-choice draft state: NONE SELECTED at initial ADR creation.** The subsequent user message explicitly selected A for architecture scope, with all implementation/privileged approvals still OPEN. This ADR does not grant credentials or create a new cloud provider.
 
 ## 2. Non-negotiable safety invariants
 
@@ -33,7 +39,7 @@ MST's M4 signed receipt laboratory is NOT a trust service. It accepts a caller-p
 
 **Critical unresolved points:** Two GitHub accounts in a repo do not prove independence if both share admin/bypass rights; signed commits verify key signatures, not owner enrollment or data provenance; a fast-forward can publish old manifest contents with a *new* commit; Git branch state is not a non-resettable floor if privileged actors can rewrite/delete or replace policy. A GitHub ref-FF race can allow one winner at one ref but **does not atomically commit Google Drive objects or guarantee cross-account source authority**. Protected repo/ref and signer root must be separated from the PR actor and verified against root/admin bypass and recovery; no implementation claim until independent red-team acceptance.
 
-**Disposition:** CONDITIONALLY VIABLE for a rigorously scoped review-only pilot *within existing products*. **Not enough to close G01/G02 on present evidence.** Cannot automatically release production.
+**Disposition:** **SELECTED FOR ARCHITECTURE SCOPE ONLY** by the user, still conditionally viable and subject to independent proofs. **Not enough to close G01/G02 on present evidence.** Cannot automatically release production.
 
 ### B — Owner-separated managed key service + transactional floor (REQUIRES EXPLICIT SCOPE EXPANSION)
 
@@ -43,7 +49,7 @@ MST's M4 signed receipt laboratory is NOT a trust service. It accepts a caller-p
 
 **Critical unresolved points:** Firestore transaction consistency is not immutable/admin-proof custody: project admins can still change IAM, delete/reset databases or disable retention; independent organization audit, backup, alerting and WORM/secondary witnesses may be necessary. A Firestore transaction does not atomically commit GitHub ref and Drive bytes; explicit prepare/commit/read barrier and crash-recovery protocol still needed. KMS signer authorization, key algorithm/protection tier, actual product entitlement, quotas/cost, region, identity setup, audit retention and owner-managed emergency revoke require validation. No external service may be provisioned without owner explicitly expanding the project scope beyond GitHub + Google Drive.
 
-**Disposition:** PREFERRED SECURITY CANDIDATE *only if* owner authorizes additional managed services, IAM governance, budget and operational risk. **Not selected or deployed.** A Cloud-only service is not automatically allowed merely because it is in the cloud.
+**Disposition:** ALTERNATIVE ON HOLD; user chose Option A, so Cloud KMS/Firestore are **out of current approved scope**. Must obtain a new explicit platform decision before any such service could be considered. Not selected or deployed.
 
 ### C — GitHub Actions cache / Google Drive files as the sole trust root and mutable floor (REJECT)
 
@@ -87,7 +93,7 @@ All tests need **actual authenticated, independently controlled principals and p
 
 | Decision | Options and impact | State |
 | --- | --- | --- |
-| D01 custody boundary | A GitHub+Drive-only pilot / B independently governed GCP KMS+Firestore extension / reject | OPEN |
+| D01 custody boundary | A GitHub+Drive-only architecture explicitly selected; controller identities, independent trust and privileges still unresolved | SCOPE CHOSEN A / CUSTODY APPROVAL OPEN |
 | D02 root signer/controller | Named owner role, emergency revoker, distinct publisher/verifier admin, explicit bypass inventory | OPEN |
 | D03 durable floor | Exact authority, namespace scope, CAS semantics, retention, backups, external tamper monitor | OPEN |
 | D04 publisher/reader identity | Two actual independent principals; OIDC binding/ref restrictions and short-lived credentials | OPEN |
@@ -96,7 +102,7 @@ All tests need **actual authenticated, independently controlled principals and p
 | D07 costs/operations | Extra cloud allowed? provider budget/IAM, owner pager, failure modes, data residency | OPEN |
 | D08 acceptance | Owner G01–G08, A02/A03, M3/M4/M8 signoff and no self-attested promotion | OPEN |
 
-**Recommended next action:** owner decides whether GitHub+Drive restriction is absolute (then build read-only proof protocol and leave G02 blocked if independence impossible) or explicitly approves a separately governed cloud trust service. The ADR is a review proposal **only**, no selection presumed.
+**Current next action:** implement/read-only-test the Option A GitHub+Drive custody design. Owner still needs to approve concrete signer/controller identities, effective protections, witness creation, licensed data and real-custody testing. If Option A demonstrably cannot satisfy G01/G02, report the gap to the user for a *new explicit platform-scope decision*; never silently activate Cloud KMS/Firestore. This ADR selection is architecture-only.
 
 ## 7. External reference facts (read-only research; verify again at deployment)
 
@@ -105,4 +111,4 @@ All tests need **actual authenticated, independently controlled principals and p
 - Workload Identity Federation supports GitHub OIDC without static service account key files; IAM claim binding must be restrictive. https://docs.cloud.google.com/iam/docs/workload-identity-federation
 - Cloud KMS supports asymmetric signing including Ed25519 at certain protection levels; select exact protection tier before relying on it. https://docs.cloud.google.com/kms/docs/algorithms
 
-**Dossier verdict:** `M4_G01_G02_ARCHITECTURE_DESIGNED_FOR_OWNER_REVIEW_NOT_SELECTED`. Every operational gate stays OPEN, `cache_read_authorized=false`, `cache_write_authorized=false`, `trading_authorized=false`. Signed reader receipt, licensed cache, live deployment and trading remain blocked.
+**Dossier verdict:** `M4_OPTION_A_SCOPE_SELECTED_G01_G02_SECURITY_AND_PRODUCTION_BLOCKED`. Every operational gate stays OPEN, `cache_read_authorized=false`, `cache_write_authorized=false`, `trading_authorized=false`. Signed reader receipt, licensed cache, live deployment and trading remain blocked.
