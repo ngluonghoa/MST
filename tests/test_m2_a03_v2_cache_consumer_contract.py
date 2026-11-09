@@ -49,7 +49,7 @@ class V2CacheConsumerContractMatrixTests(unittest.TestCase):
         a, b = self.steps["COLD"], self.steps["WARM"]
         self.assertEqual(a["bar_revisions_digest"], b["bar_revisions_digest"])
         self.assertEqual(a["ema20_atr14_digest"], b["ema20_atr14_digest"])
-        self.assertEqual(b["v2_refresh_hint"], "RECENT_METADATA")
+        self.assertEqual(b["v2_refresh_hint"], "NEEDS_PROVIDER_REVALIDATION")
 
     def test_metadata_only_revision_changes_bar_lineage_not_indicator(self):
         a, b = self.steps["WARM"], self.steps["LINEAGE_ONLY"]
