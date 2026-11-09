@@ -20,6 +20,18 @@ _MAIN_ENTRY_COUNT = 216
 _MAIN_BLOB_COUNT = 208
 _LEGACY_PY_COUNT = 63
 _SRC_PREFIX = "src/swing_trading/"
+# Already-known, separate opt-in V2 source modules: additive and NOT V1 rewrites.
+# An unreviewed extra package module must fail until explicitly dispositioned.
+_ALLOWED_V2_PATHS = frozenset({
+    "src/swing_trading/strict_contract_v2.py",
+    "src/swing_trading/v2_cache_fencing_lab.py",
+    "src/swing_trading/v2_cache_partition_plan.py",
+    "src/swing_trading/v2_cloud_publish_verify_lab.py",
+    "src/swing_trading/v2_cloud_ref_witness_plan.py",
+    "src/swing_trading/v2_provider_readiness.py",
+    "src/swing_trading/v2_replay_port.py",
+    "src/swing_trading/v2_source_adapter.py",
+})
 
 
 def _objects(data, *, expected_tree=None):
@@ -85,32 +97,38 @@ def inspect_remote_legacy_parity(upstream_commit, mst_main_commit,
     package_py = [p for p in package if p.endswith(".py")]
     if len(package_py) != _LEGACY_PY_COUNT:
         raise ValueError("REMOTE_LEGACY_MODULE_COUNT_DRIFT")
-    candidate_package = {p: meta for p, meta in candidate.items()
-                         if p.startswith(_SRC_PREFIX) and meta[0] == "blob"}
-    if package != candidate_package:
-        raise ValueError("PR_CANDIDATE_INHERITED_SOURCE_CHANGED")
-    # Treat new symlinks/subdirs in inherited namespace as a drift too.
     original_source_paths = {p: v for p, v in original.items()
                              if p.startswith(_SRC_PREFIX)}
     candidate_source_paths = {p: v for p, v in candidate.items()
                               if p.startswith(_SRC_PREFIX)}
-    if original_source_paths != candidate_source_paths:
-        raise ValueError("PR_CANDIDATE_INHERITED_NAMESPACE_CHANGED")
+    # Original 63 Python modules and any inherited package metadata remain
+    # byte-identical. Additive V2 is allowed ONLY at eight reviewed filenames.
+    for path, original_meta in original_source_paths.items():
+        if candidate_source_paths.get(path) != original_meta:
+            raise ValueError("PR_CANDIDATE_INHERITED_SOURCE_CHANGED")
+    extras = set(candidate_source_paths) - set(original_source_paths)
+    if extras != _ALLOWED_V2_PATHS:
+        raise ValueError("PR_CANDIDATE_V2_SIDECAR_ALLOWLIST_DRIFT")
+    for path in extras:
+        if candidate_source_paths[path][0:2] != ("blob", "100644"):
+            raise ValueError("PR_CANDIDATE_V2_SIDECAR_OBJECT_TYPE_DRIFT")
     return {
         "schema": "mst.source-1to1.github-remote-tree-lock.readonly.v1",
-        "status": "ORIGINAL_TREE_1TO1_AND_INHERITED_PR_PACKAGE_BYTES_MATCH",
+        "status": "ORIGINAL_TREE_1TO1_LEGACY_63_UNCHANGED_AND_EIGHT_V2_SIDECARS",
         "upstream_source_commit": _SOURCE_COMMIT,
         "mst_main_commit": _MAIN_COMMIT,
         "shared_original_tree_sha": _TREE,
         "original_git_tree_entry_count": len(original),
-        "original_git_blob_count": len(package) + (
-            _MAIN_BLOB_COUNT - len(package)
+        "original_git_blob_count": sum(
+            meta[0] == "blob" for meta in original.values()
         ),
         "original_python_module_count": len(package_py),
         "candidate_head_sha_checked": candidate_sha,
         "all_original_tree_entries_match_between_source_and_main": True,
         "inherited_python_source_unchanged_on_pr": True,
         "all_inherited_package_paths_unchanged_on_pr": True,
+        "approved_opt_in_v2_sidecar_module_count": len(extras),
+        "only_exact_eight_known_v2_sidecars_added_on_pr": True,
         "v2_business_behavior_parity_verified": False,
         "a02_owner_module_review_signed_off": False,
         "license_and_real_cache_authorized": False,
