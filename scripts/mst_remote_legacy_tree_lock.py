@@ -73,6 +73,18 @@ def _commit_tree(payload, expected_sha):
     return tree["sha"]
 
 
+def inspect_live_protected_main(branch_payload):
+    """Guard current remote HEAD, not merely a retrievable historical commit."""
+    if type(branch_payload) is not dict or branch_payload.get("name") != "main":
+        raise ValueError("LIVE_MAIN_BRANCH_NOT_AVAILABLE")
+    info = branch_payload.get("commit")
+    if (branch_payload.get("protected") is not True
+            or type(info) is not dict
+            or info.get("sha") != _MAIN_COMMIT):
+        raise ValueError("LIVE_PROTECTED_MAIN_MOVED_OR_UNVERIFIABLE")
+    return True
+
+
 def inspect_remote_legacy_parity(upstream_commit, mst_main_commit,
                                  upstream_tree, mst_main_tree,
                                  candidate_tree, *, candidate_sha):
@@ -118,6 +130,7 @@ def inspect_remote_legacy_parity(upstream_commit, mst_main_commit,
         "upstream_source_commit": _SOURCE_COMMIT,
         "mst_main_commit": _MAIN_COMMIT,
         "shared_original_tree_sha": _TREE,
+        "current_remote_main_protected_and_pinned": True,
         "original_git_tree_entry_count": len(original),
         "original_git_blob_count": sum(
             meta[0] == "blob" for meta in original.values()
@@ -161,6 +174,8 @@ def main(argv=None):
         raise PermissionError("ONLY_SAME_REPO_HOSTED_PR_REVIEW_SUPPORTED")
     head = os.getenv("GITHUB_HEAD_SHA")
     token = os.getenv("GITHUB_TOKEN", "")
+    live_main = _get(_TARGET, "branches/main", token=token)
+    inspect_live_protected_main(live_main)
     up_commit = _get(_UPSTREAM, "git/commits/" + _SOURCE_COMMIT, token=token)
     mst_commit = _get(_TARGET, "git/commits/" + _MAIN_COMMIT, token=token)
     up_tree = _get(_UPSTREAM, "git/trees/" + _TREE + "?recursive=1", token=token)
