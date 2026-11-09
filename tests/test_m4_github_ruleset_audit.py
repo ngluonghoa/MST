@@ -33,7 +33,8 @@ def fixtures():
 class M4RulesetAuditTests(unittest.TestCase):
     def test_active_main_ruleset_and_unprotected_tests_no_authority(self):
         result = audit_ruleset(*fixtures())
-        self.assertEqual(result["status"], "MAIN_RULESET_ACTIVE_M4_TEST_REFS_UNPROTECTED")
+        self.assertEqual(result["status"], "MAIN_RULESET_ACTIVE_TEST_REFS_UNPROTECTED_BYPASS_LIST_VERIFIED")
+        self.assertTrue(result["bypass_actor_list_verified_for_this_token"])
         self.assertTrue(result["main_protected"])
         self.assertEqual(result["test_ref_protected"], [False, False])
         self.assertTrue(result["main_no_configured_bypass_for_this_actor"])
@@ -44,6 +45,18 @@ class M4RulesetAuditTests(unittest.TestCase):
             "real_drive_chunk_custody_verified", "trading_authorized",
         ):
             self.assertIs(result[key], False)
+
+    def test_read_only_actions_token_omits_actor_list_and_cannot_attest_it(self):
+        r, m, b = fixtures()
+        r.pop("bypass_actors")
+        result = audit_ruleset(r, m, b)
+        self.assertEqual(
+            result["status"],
+            "MAIN_RULESET_ACTIVE_TEST_REFS_UNPROTECTED_BYPASS_LIST_UNVERIFIED",
+        )
+        self.assertIs(result["bypass_actor_list_verified_for_this_token"], False)
+        self.assertIs(result["main_no_configured_bypass_for_this_actor"], True)
+        self.assertFalse(result["independently_protected_rollback_floor"])
 
     def test_inactive_ruleset_denied(self):
         r, m, b = fixtures()
