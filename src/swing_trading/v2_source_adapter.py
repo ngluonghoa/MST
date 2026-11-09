@@ -34,6 +34,10 @@ def _utc(value: datetime) -> datetime:
     return require_utc(value)
 
 
+def _required_v2_port(provider: str) -> PortDescriptor:
+    return PortDescriptor(_V2_CONTRACT, "2.0.0", provider, ("probe",))
+
+
 @dataclass(frozen=True)
 class FixtureSourceIdentityV2:
     """An explicit synthetic namespace; never a provider entitlement."""
@@ -144,7 +148,7 @@ class FixtureSourceRegistryV2:
         key = adapter.identity.provider_id
         if key in self._adapters:
             raise ValueError("DUPLICATE_PROVIDER_EXPLICIT_REPLACE_REQUIRED")
-        require_compatible_port(adapter.descriptor, adapter.descriptor, adapter)
+        require_compatible_port(_required_v2_port(key), adapter.descriptor, adapter)
         self._adapters[key] = adapter
 
     def bind_consumer(
@@ -188,7 +192,9 @@ class FixtureSourceRegistryV2:
         prior = self._adapters[key]
         if next_adapter.identity.endpoint_id != prior.identity.endpoint_id:
             raise ValueError("ENDPOINT_CHANGE_REQUIRES_SEPARATE_MIGRATION")
-        require_compatible_port(prior.descriptor, next_adapter.descriptor, next_adapter)
+        # Rollback to v2.0 is valid only if ALL pinned consumers allow it.
+        # Do not mistake current v2.1 for an immutable minimum version.
+        require_compatible_port(_required_v2_port(key), next_adapter.descriptor, next_adapter)
         for pinned_provider, required in self._pins.values():
             if pinned_provider == key:
                 require_compatible_port(required, next_adapter.descriptor, next_adapter)
