@@ -1,0 +1,30 @@
+name: MST M4 Reader Readiness - BLOCKING Read-Only Audit
+
+# Green workflow means "correctly blocked/unverified", never production ready.
+# Reads GitHub main/rulesets/witness ref using ephemeral token contents:read.
+# No admin, branch updates, signer key, OHLCV, Drive, or trading permissions.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-reader-readiness-block-gate.yml"
+      - "scripts/m4_reader_readiness_preflight.py"
+      - "tests/test_m4_reader_readiness_preflight.py"
+      - "docs/MST_M4_READ_ONLY_READER_READINESS_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-blocking-owner-gate:
+    name: Prove missing independent M4 authority stays blocked
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read live GitHub witness-ref and rulesets, emit blocked gate JSON
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m scripts.m4_reader_readiness_preflight
