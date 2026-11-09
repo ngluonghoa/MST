@@ -1,6 +1,7 @@
 name: MST M4 Option A Scope Choice - PRODUCTION BLOCKED
 
-# A successful job means GitHub+Drive scope choice is recorded; all G01-G08\n# custody/source/release gates remain OPEN and production remains BLOCKED.
+# A successful job means GitHub+Drive scope choice is recorded; all G01-G08
+# custody/source/release gates remain OPEN and production remains BLOCKED.
 # No OIDC, write scopes, admin APIs, signer keys, Drive market data or production.
 on:
   pull_request:
@@ -46,6 +47,7 @@ jobs:
             docs/MST_M4_ADR_G01_G02_TRUST_ROOT_MONOTONIC_FLOOR_20261109.md
             docs/MST_M4_G01_G02_OWNER_DECISIONS_20261109.json
             docs/MST_M4_OPTION_A_SCOPE_SELECTION_20261109.json
+            docs/MST_M4_OPTION_A_GITHUB_DRIVE_TRUST_CUSTODY_PLAN_20261109.md
             /tmp/m4-g01-g02-architecture-blocked.json
             /tmp/m4-option-a-selected-scope-only.json
           if-no-files-found: error
