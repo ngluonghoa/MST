@@ -108,7 +108,9 @@ class OptionARoleSeparationTests(unittest.TestCase):
                 self.check(lambda r, key=k: r.__setitem__(key, True))
 
     def test_missing_authority_field_is_not_false(self):
-        with self.assertRaises(PermissionError):
+        # Missing fields fail earlier at the strict schema boundary (ValueError);
+        # explicit non-false values fail the authority boundary (PermissionError).
+        with self.assertRaisesRegex(ValueError, "NONCANONICAL_ROLE_POLICY_FIELDS"):
             self.check(lambda r: r.pop("licensed_vendor_rights_verified"))
 
     def test_unrecognized_owner_approval_field_denied(self):
