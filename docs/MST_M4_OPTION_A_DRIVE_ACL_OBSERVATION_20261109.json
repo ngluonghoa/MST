@@ -1,0 +1,80 @@
+{
+  "schema": "mst.m4.option-a.drive-acl-observation.unattested.v1",
+  "as_of_date": "2026-11-09",
+  "source": "CONNECTED_GOOGLE_DRIVE_FILE_METADATA_READ_ONLY",
+  "scope": "MST_PROJECT_FOLDERS_NO_RAW_VENDOR_BYTES",
+  "visibility": "CONNECTOR_VIEW_AT_READ_TIME_NOT_PERMANENT_ATTESTATION",
+  "owner_identifiers_in_public_repo": false,
+  "folders": [
+    {
+      "scope": "MST_ROOT",
+      "shared": false,
+      "permission_metadata_available": true,
+      "visible_permissions_count": 1,
+      "visible_roles": [
+        "owner"
+      ],
+      "independent_owner_principal_proven": false,
+      "actual_market_cache_verified": false
+    },
+    {
+      "scope": "SOURCE_BASELINE_SNAPSHOT",
+      "shared": false,
+      "permission_metadata_available": true,
+      "visible_permissions_count": 1,
+      "visible_roles": [
+        "owner"
+      ],
+      "independent_owner_principal_proven": false,
+      "actual_market_cache_verified": false
+    },
+    {
+      "scope": "CANONICAL_DOCS",
+      "shared": false,
+      "permission_metadata_available": true,
+      "visible_permissions_count": 1,
+      "visible_roles": [
+        "owner"
+      ],
+      "independent_owner_principal_proven": false,
+      "actual_market_cache_verified": false
+    },
+    {
+      "scope": "QA_EVIDENCE",
+      "shared": false,
+      "permission_metadata_available": true,
+      "visible_permissions_count": 1,
+      "visible_roles": [
+        "owner"
+      ],
+      "independent_owner_principal_proven": false,
+      "actual_market_cache_verified": false
+    },
+    {
+      "scope": "CACHE_STAGING_SYNTHETIC_ONLY",
+      "shared": false,
+      "permission_metadata_available": true,
+      "visible_permissions_count": 1,
+      "visible_roles": [
+        "owner"
+      ],
+      "independent_owner_principal_proven": false,
+      "actual_market_cache_verified": false
+    }
+  ],
+  "synthetic_staging_child_folders": [
+    "00_MANIFESTS_AND_INDEX__STAGING",
+    "01_IMMUTABLE_CHUNKS__STAGING",
+    "02_AUDIT_AND_QUARANTINE__STAGING"
+  ],
+  "distinct_owner_custody_verified": false,
+  "drive_object_immutability_verified": false,
+  "real_drive_market_cache_verified": false,
+  "approved_writer_identities_verified": false,
+  "drive_permission_change_alerting_verified": false,
+  "independent_trust_root_verified": false,
+  "production_cache_read_authorized": false,
+  "production_cache_write_authorized": false,
+  "trading_authorized": false,
+  "decision": "OWNER_CUSTODY_AND_DURABLE_FLOOR_GAP_OPEN"
+}
