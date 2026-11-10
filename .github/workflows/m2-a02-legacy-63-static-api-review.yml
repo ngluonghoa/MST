@@ -1,0 +1,65 @@
+name: MST A02 All 63 Legacy Public API and H3 Dependency Inventory - OWNER REVIEW ONLY
+
+# Green = all inherited 63 files were inspected, not owner signed off.
+# Source-byte parity is checked independently against REAL GitHub remote
+# upstream/main/pr-head Git trees, not inferred from AST fingerprints.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-legacy-63-static-api-review.yml"
+      - "scripts/m2_a02_legacy_63_interface_review.py"
+      - "tests/test_m2_a02_legacy_63_interface_review.py"
+      - "docs/MST_A02_63_INTERFACE_REVIEW_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-63-api-review-with-remote-tree-lock:
+    name: 63 inherited V1 API surfaces and H3 review, 0 human signoffs
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python package in ephemeral hosted runner only
+        run: python -m pip install -e .
+      - name: Verify REAL upstream/main/candidate Git tree source-byte lock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-actual-github-tree-source-parity.json
+      - name: Unit test all original 63 AST API dependency reviews
+        run: python -m unittest discover -s tests -p 'test_m2_a02_legacy_63_interface_review.py' -v
+      - name: Build read-only owner-review packet; NOT a signature
+        run: |
+          python -m scripts.m2_a02_legacy_63_interface_review \
+            --out /tmp/mst-a02-63-source-module-api-review-UNSIGNED.json
+          python - <<'PY'
+          import json
+          src=json.load(open("/tmp/mst-a02-actual-github-tree-source-parity.json"))
+          packet=json.load(open("/tmp/mst-a02-63-source-module-api-review-UNSIGNED.json"))
+          assert packet["original_module_count"] == 63
+          assert packet["existing_v2_sidecar_count_excluded"] == 8
+          assert packet["module_owner_dispositions_received"] == 0
+          assert packet["module_owner_abi_approvals_received"] == 0
+          assert packet["module_owner_behavior_approvals_received"] == 0
+          assert packet["production_release_authorized"] is False
+          assert packet["trading_authorized"] is False
+          assert src["original_python_module_count"] == 63
+          assert src["all_inherited_package_paths_unchanged_on_pr"] is True
+          print("A02 63/63 AST OWNER REVIEW PACKET CHECKED; REMOTE SOURCE PIN PASS; OWNER 0/63 NOT SIGNED; PRODUCTION BLOCKED")
+          PY
+      - name: Retain review-only source crosswalk and remote source-lock receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-63-static-module-interfaces-UNSIGNED-no-go
+          path: |
+            /tmp/mst-a02-actual-github-tree-source-parity.json
+            /tmp/mst-a02-63-source-module-api-review-UNSIGNED.json
+          retention-days: 14
+          if-no-files-found: error
