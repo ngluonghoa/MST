@@ -1,0 +1,78 @@
+name: MST A03 Conditional Ed25519 Supplier-Ledger Boundary — OWNER NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-signed-supplier-boundary.yml"
+      - "scripts/m2_a03_signed_supplier_boundary_lab.py"
+      - "tests/test_m2_a03_signed_supplier_boundary_lab.py"
+      - "docs/MST_A03_SIGNED_SUPPLIER_BOUNDARY_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  conditional-signature-no-issuer-authority:
+    name: 35 crypto-fixture tests / 31 unsigned-market-boundary assertions
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install existing optional cryptography fixture dependency
+        run: python -m pip install -e ".[custody]"
+      - name: Live remote Swing/main/PR original 63 V1 and eight opt-in V2 source byte lock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-crypto-boundary-source-lock.json
+      - name: Run 35 direct Ed25519 and A03 ledger cross-boundary unit tests
+        run: |
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_signed_supplier_boundary_lab.py' -v
+      - name: Validate 31 signed-fixture integrity-only cases and owner blockers
+        run: |
+          python -m scripts.m2_a03_signed_supplier_boundary_lab \
+            --out /tmp/mst-a03-signed-supplier-OWNER-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path("/tmp/mst-a03-crypto-boundary-source-lock.json").read_text())
+          x=json.loads(Path("/tmp/mst-a03-signed-supplier-OWNER-NO-GO.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"]==63
+          assert lock["approved_opt_in_v2_sidecar_module_count"]==8
+          assert x["case_count"]==31
+          assert len({c["case"] for c in x["cases"]})==31
+          assert all(c["result"]=="PASS_CONDITIONAL_FIXTURE_NO_SOURCE_AUTHORITY"
+                     for c in x["cases"])
+          assert x["conditional_ed25519_fixture_integrity_tested"] is True
+          assert x["fresh_floor_replay_and_resigned_tamper_falsified"] is True
+          assert len(x["owner_gate_ids"])==4
+          assert x["existing_private_intake_requirements"]==[
+              "E03","E08","E11","E12","E13","E14"]
+          assert x["owner_14_choices_signed"]==0
+          assert x["a02_module_owner_signoff"]==x["a03_v2_owner_signoff"]==0
+          for k in ("real_provider_issuer_independently_authenticated",
+                    "signed_provider_revision_head_completeness_proven",
+                    "independent_signer_root_and_custody_proven",
+                    "durable_cross_run_floor_or_distributed_cas_proven",
+                    "legal_provider_market_data_and_drive_cache_authorized",
+                    "g01_g08_oa01_oa06_closed",
+                    "production_release_or_trading_authorized"):
+              assert x[k] is False,k
+          print("A03 conditional Ed25519 fixture PASS, 31 cases / 35 tests. Provider/custody/cache/trading OWNER NO-GO")
+          PY
+      - name: Retain synthetic source-lock and no-authority case report for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-conditional-signature-boundary-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-crypto-boundary-source-lock.json
+            /tmp/mst-a03-signed-supplier-OWNER-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
