@@ -1,0 +1,68 @@
+name: MST A03 Consumer ABI / Rollback — Synthetic Owner NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-consumer-abi-migration.yml"
+      - "scripts/m2_a03_consumer_abi_migration_lab.py"
+      - "tests/test_m2_a03_consumer_abi_migration_lab.py"
+      - "docs/MST_A03_CONSUMER_ABI_MIGRATION_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-abi-negative:
+    name: 25 consumer ABI/rollback tests — source locked
+    if: \${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package in ephemeral GitHub runner
+        run: python -m pip install -e .
+      - name: Lock live upstream/main/PR original 63 V1 and eight V2 sources
+        env:
+          GITHUB_TOKEN: \${{ github.token }}
+          GITHUB_HEAD_SHA: \${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-consumer-source-lock.json
+      - name: Exercise 25 direct consumer migration and rollback tests
+        run: |
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_consumer_abi_migration_lab.py' -v
+      - name: Build auditable synthetic-only 26-case packet
+        run: |
+          python -m scripts.m2_a03_consumer_abi_migration_lab \
+            --out /tmp/mst-a03-consumer-abi-owner-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path("/tmp/mst-a03-consumer-source-lock.json").read_text())
+          r=json.loads(Path("/tmp/mst-a03-consumer-abi-owner-NO-GO.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"]==63
+          assert lock["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["case_count"]==26
+          assert len({c["case"] for c in r["cases"]})==26
+          assert all(c["result"]=="PASS_SYNTHETIC_ONLY" for c in r["cases"])
+          assert len(r["intentional_noninterchangeable_legacy_contracts"])==2
+          assert r["approved_adapters"]=="EMPTY_EVIDENCE_UNVERIFIED_ONLY"
+          assert r["owner_a02_signed"]==0 and r["owner_a03_signed"]==0
+          assert not r["full_v1_v2_abi_parity_proven"]
+          assert not r["real_vendor_rights_or_live_cache_proven"]
+          assert not r["independent_G01_G08_and_OA01_OA06_closed"]
+          assert not r["production_or_trading_authorized"]
+          print("A03: 25 direct tests, 26 bounded fixture cases, all owner/production gates NO-GO")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-consumer-abi-migration-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-consumer-source-lock.json
+            /tmp/mst-a03-consumer-abi-owner-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
