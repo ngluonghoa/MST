@@ -23,3 +23,13 @@ PENDING exact report-containing GitHub Actions readback.
 
 ## Boundary-test correction (QA process)
 First CI execution at code HEAD b7dad8267fc0828177182d3b3b6bf326cd553d09 flagged a *test authoring error*: [11:25,11:30) was labeled as lunch-crossing although it ends exactly at the 11:30 boundary, a valid final continuous M5 bar. Fixed at 6b7685058fdd48067e804b74b98f7c6433c581cc by using a genuinely crossing [11:27,11:32) synthetic bar, and the GitHub-hosted 31 tests passed. An explicit positive [11:25,11:30) edge assertion was added to prevent future confusion. This test-only correction does not indicate an upstream source bug or a verified real trade/calendar exception.
+
+## Actual GitHub-hosted QA at implementation code commit
+
+At Draft PR8 implementation code HEAD `7459ce226a2d152513ab96aaeb745825af50c562`, **45/45 GitHub Actions workflows SUCCESS**. Dedicated A03 gapped M5 / market phase run https://github.com/ngluonghoa/MST/actions/runs/42849198205 SUCCESS, including 32/32 newly authored negative and positive boundary unit tests, 16/16 original V1/existing V2/revision-as-of synthetic integration observations, source-lock of 63 inherited original V1 + eight existing opt-in V2 against pinned Swing/main/PR, and sanitized 14-day synthetic-only artifact.
+
+The receipt digest `fd6a191057ccec858dffc20fa46c9fb8bc87f0f713f990833d860451490e4a37` is a LOCAL QA fingerprint, not an independent exchange or licensed source attestation. The first implementation HEAD b7dad8267fc0828177182d3b3b6bf326cd553d09 failed because the new test mislabeled [11:25,11:30) as a crossing candle; corrected to an actual crossing [11:27,11:32) at 6b7685058fdd48067e804b74b98f7c6433c581cc (31 cases PASS) and added explicit valid [11:25,11:30) positive regression at `7459ce226a2d152513ab96aaeb745825af50c562` (32 cases PASS). No original source module bug is inferred from that test-authoring correction.
+
+Source remains locked, no official full-session per-security calendar, signed vendor first-known/auction-aggregation custody, licensed cache rights, real Google Drive OHLCV, independent source floor/CAS, owner approvals, release or trades. Permanent native Drive QA: https://docs.google.com/document/d/1oBO61FUYSJSxNFiXs2TOawoo7f9ntKRrGCM-jCsJHBM/edit .
+
+The appended GitHub QA update creates another report-containing PR HEAD; verify all 45 workflows at that exact final SHA before stating final CI success.
