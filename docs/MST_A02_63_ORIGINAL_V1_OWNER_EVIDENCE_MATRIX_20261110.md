@@ -94,3 +94,10 @@ Each module requires a human reviewer to verify its actual public ABI, direct an
 - B08: 7 original file paths; [QA](MST_A02_FINAL_SEVEN_ORIGINAL_V1_QA_20261110.md), [execution lab](../scripts/m2_a02_final_seven_original_v1_runtime_lab.py).
 
 Machine-readable SHA256 and complete static V2 direct import map: see the hosted job artifact from the workflow linked above; the artifact's synthetic metadata is not a custodial certificate.
+
+
+## New independent runtime observation (distinct from prior static evidence matrix)
+
+The 63/63 H3+AST+scoped QA association above was a **static crosswalk**, not independent proof all 62 domain functions execute at runtime. A new eight-suite GitHub-hosted Python call-and-line trace on 2026-11-10 (Draft PR8 source unchanged) measured **330/330 selected A02 unittest PASS, 62/63 V1 modules with at least one function call, 63/63 with source import/line events, exactly one package __init__ metadata-only**. Source-locked workflow https://github.com/ngluonghoa/MST/actions/runs/42827829755 verified the measurement at implementation HEAD 2aaa359f68e72f78e60b6fd78b38ea78709bd015. Detailed QA: [MST_A02_DYNAMIC_EXECUTED_FOOTPRINT_QA_20261110.md](MST_A02_DYNAMIC_EXECUTED_FOOTPRINT_QA_20261110.md). 
+
+Calls are scoped execution evidence ONLY, not 63 full behavioral certifications, not effective official data rights, not independent oracle across each public function, and not A02 owner approval. Original A02 dispositions remain NOT_SIGNED for 63/63. Real source/licensing, V2 Drive cache, external nonresettable floor and all release/trading gates remain blocked.

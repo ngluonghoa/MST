@@ -21,3 +21,19 @@ The concrete new dynamic count must be taken from a completed GitHub-hosted rece
 
 ## Next step
 Review measured NOT_OBSERVED and IMPORT_ONLY paths. Prefer closing an actual under-exercised original behavior on synthetic fixtures with a targeted test, not claiming 63/63 full behavior parity or adding more unreviewed owner forms. Keep PR8 Draft; protect main; no production.
+
+
+## Measured GitHub-hosted A02 dynamic footprint at implementation code HEAD (2026-11-10)
+
+Actual GitHub Draft PR #8 implementation code HEAD `2aaa359f68e72f78e60b6fd78b38ea78709bd015` verified **41/41 GitHub Actions workflow runs SUCCESS**. The amended A02 63-module owner matrix workflow https://github.com/ngluonghoa/MST/actions/runs/42827829755 completed SUCCESS, including original 63 V1 + eight pre-existing V2 upstream/main/PR source byte lock, prior 35 matrix tests, and **24 new dynamic trace validation tests**. All eight B01–B08 original synthetic A02 unittest suites actually ran under the new CPython tracer as eight isolated child processes:
+
+- **330/330 tests PASS** across the eight selected A02 suites.
+- **62/63 original V1 modules with function call events**. The remaining original module is the package `src/swing_trading/__init__.py`, previously classified import/version/metadata only; **63/63 original V1 modules appeared in import/line execution events**.
+- 63/63 original source files with source line events; no original module entirely unseen by selected A02 suites.
+- 8 approved, opt-in V2 sidecars strictly excluded from V1 source classification.
+- Metadata receipt SHA256 `24d9bc967ebbb4a64d456130b0345792978dd842766da9a7a83dd68434597992` is a deterministic QA fingerprint, not owner or supplier authority.
+
+**Important interpretation:** call events do not prove distinct tested branches, each individual method, all transitions or all symbol/market/timeframe combinations, error handling completeness, financial results, real source quality, or full V1↔V2 1:1 behavior. Some calls were reached transitively from other tests. CPython instrumentation cannot see all C extension work or external workers. No A02 human owner decision was signed (0/63). This is not a parity certification.
+
+The report-containing QA commit after this note must be checked again at its own exact PR HEAD before labeling the final checkpoint 41/41 PASS.
+Permanent QA Google Doc and canonical MST handoff/spec/gap to be linked upon verified documentation completion.
