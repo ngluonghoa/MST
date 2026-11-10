@@ -90,7 +90,8 @@ def _api_item(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict:
         "keyword_defaults_count": sum(v is not None for v in args.kw_defaults),
         "declaration_ast_sha256": hashlib.sha256(
             (ast.dump(args, include_attributes=False)
-             + ast.dump(node.returns, include_attributes=False)).encode("utf-8")
+             + (ast.dump(node.returns, include_attributes=False) if node.returns is not None else "None")
+             + _canonical([ast.dump(d, include_attributes=False) for d in node.decorator_list])).encode("utf-8")
         ).hexdigest(),
     }
 
