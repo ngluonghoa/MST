@@ -67,7 +67,7 @@ class EndpointM5Tests(TestCase):
         r=m.screen_label(self.day,(self.am,self.late),self.si("11:20:00",S.START),"AM_LAST",self.known)
         self.assertEqual(r["revision"],"r2")
     def test_27_before_candle_close_not_usable(self):
-        with self.assertRaises(PermissionError):m.screen_label(self.day,(self.bar,),self.si("11:25:00",S.START),"AM_LAST",m.vn_utc(11,29))
+        self.assertIsNone(m.screen_label(self.day,(self.bar,),self.si("11:25:00",S.START),"AM_LAST",m.vn_utc(11,29))["revision"])
     def test_28_ssi_semantic_not_authenticated(self):self.assertFalse(self.r["ssi_start_end_semantic_proven"])
     def test_29_dnse_semantic_not_authenticated(self):self.assertFalse(self.r["dnse_start_end_semantic_proven"])
     def test_30_no_native_ssi_m5_proof(self):self.assertFalse(self.r["ssi_m5_resolution_proven"])
