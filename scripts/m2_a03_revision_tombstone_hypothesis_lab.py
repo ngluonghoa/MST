@@ -348,9 +348,10 @@ def build():
          "chain")
     fail("REGRESSED_KNOWLEDGE_BLOCKED",ValueError,
          lambda:resolve_untrusted_fixture(PARTITION,"BAR1",
-             (UP1,mk(sequence=2,supersedes_revision_id="r1",
-                      first_known_utc=T0-timedelta(minutes=1),
-                      event_time_utc=T0-timedelta(minutes=2))),
+             (FixtureRevision(PARTITION,"BAR1","r1",1,RevisionKind.UPSERT,
+                       T0,TIMES[2],payload_sha256="1"*64),
+              mk(sequence=2,supersedes_revision_id="r1",
+                 first_known_utc=TIMES[1])),
              as_of_utc=TIMES[2]),"chain")
     fail("MIXED_EVENT_START_TIMES_BLOCKED",ValueError,
          lambda:resolve_untrusted_fixture(PARTITION,"BAR1",
