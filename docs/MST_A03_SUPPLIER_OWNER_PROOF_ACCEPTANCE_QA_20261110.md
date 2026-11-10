@@ -105,3 +105,24 @@ has been obtained. A03 owner signoffs 0/14, A02 0/63 and V2 0/8; all gates NO-GO
 
 CI at the newly generated commit must be checked for exact HEAD, and the
 final documentation update must likewise have its own exact-HEAD readback.
+
+## Exact implementation-HEAD CI receipt for semantic traceability hardening
+
+Draft PR #8 implementation HEAD `ac45f8615a7c304d03a35225b66a5578784f5b89` was independently checked:
+**40/40 GitHub Actions workflow runs SUCCESS** at that exact commit.
+Dedicated A03 public owner-proof workflow:
+https://github.com/ngluonghoa/MST/actions/runs/42817215874
+completed SUCCESS, with GitHub-hosted log explicitly reporting **Ran 36 tests / OK**,
+including 10 new semantic text / scenario-to-gate / M4-kind fail-closed tests.
+Original upstream/main/PR 63 V1 + 8 V2 source byte-lock ran SUCCESS before tests;
+public 4 owner gates / 12 checks / 16 risk cases and reviewed semantic contract SHA256
+`5e4ba91dc4d3ebb58c40b004fa88c068c482486f0c5a0dcbd0c62060fbc77b28`
+were validated as consistency metadata, NOT a real trusted signer.
+
+All A03 14/14 owner decisions remain unsigned; A02 module 0/63 and A03 V2 0/8.
+No private evidence, independent trust root, source rights, licensed Drive market
+cache, nonresettable floor, true two-principal CAS, market signal or trading release.
+PR8 remains DRAFT/UNMERGED, source/main unchanged.
+
+IMPORTANT: this appended report is a new commit and must be rechecked on its own
+exact final HEAD before labeling its workflow receipt as final.
