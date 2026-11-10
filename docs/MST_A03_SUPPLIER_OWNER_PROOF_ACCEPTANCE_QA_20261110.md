@@ -57,3 +57,22 @@ evidence can be inspected without public disclosure, and determine feasibility o
 externally durable floor and real two-writer CAS. Existing E03/E08/E11/E12/E13/E14
 are existing criteria, not proof of availability. After source/license/role proof,
 a separate gated execution plan must be reviewed; no current approval.
+
+
+## First exact-head CI evidence — report update requires revalidation
+
+At Draft PR #8 commit ccbfd02a379eeae65a910e5e091f702e4d143d0b,
+all **40/40** GitHub Actions workflow runs independently completed SUCCESS.
+The new A03 owner-proof read-only workflow
+https://github.com/ngluonghoa/MST/actions/runs/42815575168
+completed successfully: 26 unittest methods, 4 exact existing owner gates,
+12 public acceptance checks, 16 negative scenarios, M4 E03/E08/E11/E12/E13/E14
+crosswalk and live original 63 V1 + eight V2 source byte lock before tests.
+The job steps for both the Python tests and source lock returned SUCCESS.
+This is public requirements QA only; all private evidence remains NOT_RECEIVED,
+A03 choices 0/14, A02 0/63 and A03 V2 0/8, production/cache/trading NO-GO.
+
+IMPORTANT: this QA paragraph itself creates a later commit; **do not represent
+the prior 40/40 receipt as validating the new final HEAD** until the 40
+workflows, dedicated owner-proof workflow and original source lock at the
+later report-containing HEAD independently complete SUCCESS.
