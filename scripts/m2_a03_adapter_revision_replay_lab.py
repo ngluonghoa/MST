@@ -220,7 +220,7 @@ def build() -> dict:
           denied(TypeError,lambda:BoundedTupleFixtureAdapter(object())), "iterator")
 
     derived = _SubclassEvent("TEST", "r1", T0, T0, {"tag":"subclass"})
-    check("V1_SUBCLASS_BASELINE_ACCEPTED",
+    check("V1_SUBCLASS_RAW_GENERATOR_EXHAUSTION",
           v1_harness(T0,GeneratorFixtureSource((derived,))).visible_events()
           == (), "subclass")
     # Use a materialized tuple to observe original subclass behavior without
@@ -309,7 +309,7 @@ def build() -> dict:
           and len({d["id"] for d in DECISIONS})==6
           and all(d["owner_signed"] is False for d in DECISIONS), "governance")
 
-    if len(cases) != 36 or len({x["case"] for x in cases}) != 36:
+    if len(cases) != 38 or len({x["case"] for x in cases}) != 38:
         raise AssertionError("A03_CASE_COUNT_OR_UNIQUE_NAME_DRIFT")
     digest = sha256(json.dumps(
         {"cases":cases, "snapshots":snapshots, "decisions":DECISIONS},
