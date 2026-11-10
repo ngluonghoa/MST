@@ -185,7 +185,7 @@ def fixtures_day():
     late=records_at(am,scope,event="MORNING_BAR",rev="r2",close="250",
                     first_known=late_at,predecessor="r1")
     gap=records_at(vn_utc(12,0),scope,event="BREAK_CANDLE")
-    crossing=records_at(vn_utc(11,25),scope,event="CROSSES_LUNCH")
+    crossing=records_at(vn_utc(11,27),scope,event="CROSSES_LUNCH")
     # The source event-time is the morning bar, although the new revision
     # becomes known on the FOLLOWING day.
     return day,morning,noon,late,gap,crossing,late_at
