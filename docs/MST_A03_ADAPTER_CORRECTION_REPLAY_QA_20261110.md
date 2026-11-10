@@ -2,7 +2,7 @@
 
 QA ID: MST-A03-ADAPTER-CORRECTION-REPLAY-20261110
 Date: 10 November 2026 (Asia/Ho_Chi_Minh)
-Status: **PENDING exact-HEAD hosted CI. No owner or production approval.**
+Status: **Source-locked synthetic QA PASS at code/report HEAD 309ffacfc930b21a31f01917907f30770f22157f; owner and production remain NO-GO.** Evidence-update HEAD requires its own exact commit CI.
 GitHub: https://github.com/ngluonghoa/MST/pull/8 (Draft PR #8).
 
 ## Original source and guardrail
@@ -48,3 +48,9 @@ Workflow: https://github.com/ngluonghoa/MST/actions/workflows/m2-a03-adapter-cor
 Do not claim green until actual report-containing SHA has independent LIVE GitHub tree source lock, 36 tests, Foundation Python3.11 and 3.12, engineering source/lint/wheel, and all workflows at exact commit verified. Green synthetic QA is not full ABI parity nor independently authenticated source truth.
 
 External G01–G08 and OA01–OA06 remain OPEN; SSI/DNSE/VCBS rights, actual source corrections, official exchange calendar, physical licensed Google Drive market cache, independent signing root/revocation/floor and two-writer server CAS UNPROVEN. Protected main unchanged, PR#8 remains DRAFT/UNMERGED. **M3/M4/M5/M8 production and trading NO-GO.** GitHub + Google Drive only, no Mac/MOCHI/local/third Cloud.
+
+## Verified first report-containing GitHub commit (historical CI checkpoint)
+
+Exact GitHub Draft PR #8 report HEAD 309ffacfc930b21a31f01917907f30770f22157f: **37/37 GitHub Actions workflow runs completed SUCCESS**. Dedicated new source-locked adapter/correction replay https://github.com/ngluonghoa/MST/actions/runs/42801062987 SUCCESS (36 unittest methods; 38 synthetic cases; four as-of revision snapshots; six unsigned choices; 14-day JSON). Foundation https://github.com/ngluonghoa/MST/actions/runs/42801063592 SUCCESS all 3 jobs (Python 3.11, Python 3.12, H2/H3/lint/wheel). Independently fetched live original remote source tree https://github.com/ngluonghoa/MST/actions/runs/42801062619 SUCCESS; inherited 63 V1 and eight V2 remain source-locked.
+
+These results do not authorize owner decisions, correction supersession, actual source rights, physical Google Drive cache, signer, witness, release or trading. A later QA evidence-edit HEAD must be checked independently. Source pin Swing cd90c1babae8912db31490ad614fc2ad2f868042 and protected main 4048f91beaaa3410116d97e35896c8b688384e19 stay unchanged; PR8 remains Draft/unmerged.
