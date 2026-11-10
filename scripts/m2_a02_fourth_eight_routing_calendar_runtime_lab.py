@@ -132,8 +132,8 @@ def execute_fourth_eight_runtime():
           and shapes["vcbs_daily"].state is ProbeState.SHAPE_RETURNED
           and shapes["ssi_bad_ohlc"].state is ProbeState.SCHEMA_REJECTED
           and shapes["ssi_empty"].state is ProbeState.EMPTY_UNVERIFIED
-          and all(not x.production_adapter_enabled and not x.source_authority_verified
-                  and not x.trading_actionable for x in shapes.values())
+          and all(not x.indicator_eligible and not x.source_rights_verified
+                  and not x.live_trading_enabled for x in shapes.values())
           and _deny(lambda: require_authorized_c2_source(shapes["ssi_daily"])),
           "MCP_SHAPE_CANNOT_BE_VENDOR_ENTITLEMENT_OR_NATIVE_BAR",
     )
