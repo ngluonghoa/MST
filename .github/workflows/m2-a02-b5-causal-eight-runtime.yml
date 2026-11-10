@@ -1,0 +1,75 @@
+name: MST A02 Third Eight Original B5 Causal Backtest Runtime - SYNTHETIC NO TRADE
+
+# Actual 8 inherited source-locked V1 modules execute with existing test
+# fixtures on GitHub-hosted runners. The fixture helper imports are from
+# tests/ only. They DO NOT replace the inherited V1 functions.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-b5-causal-eight-runtime.yml"
+      - "scripts/m2_a02_b5_causal_eight_runtime_lab.py"
+      - "tests/test_m2_a02_b5_causal_eight_runtime_lab.py"
+      - "docs/MST_A02_THIRD_EIGHT_B5_CAUSAL_RUNTIME_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  third-original-eight-b5-causal-source-locked:
+    name: Eight actual V1 B5/causal functions, 40 negative tests and NO-TRADE
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install immutable legacy package in ephemeral GitHub runner
+        run: python -m pip install -e .
+      - name: Verify actual upstream/main/PR source-byte equality with GitHub REST
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-b5-causal-original-source-1to1.json
+      - name: Execute actual original B5/causal/backtest 40-case test suite
+        run: python -m unittest discover -s tests -p 'test_m2_a02_b5_causal_eight_runtime_lab.py' -v
+      - name: Cross-check independent 8-module joined NO-TRADE receipt
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m scripts.m2_a02_b5_causal_eight_runtime_lab \
+            --out /tmp/mst-a02-third-eight-b5-causal-UNAPPROVED.json
+          python - <<'PY'
+          import json
+          lock=json.load(open("/tmp/mst-a02-b5-causal-original-source-1to1.json"))
+          report=json.load(open("/tmp/mst-a02-third-eight-b5-causal-UNAPPROVED.json"))
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert report["executed_distinct_count"] == 8
+          assert report["cumulative_executed_distinct_count"] == 24
+          assert report["still_unreviewed_runtime_modules"] == 39
+          assert len(report["strategy_variant_cases"]) == 4
+          assert report["calibration_parameter_slots"] == 24
+          assert all(report["independent_business_safety_checks"].values())
+          assert report["a02_owner_signed_module_count"] == 0
+          for k in ("synthetic_B5_detector_approved", "source_license_verified",
+                    "official_session_calendar_verified", "OOS_performance_verified",
+                    "real_execution_backtest_performed", "B5_thresholds_approved",
+                    "a03_full_v2_abi_behavior_accepted", "external_signer_root_proven",
+                    "nonresettable_floor_proven","real_drive_cache_read_write",
+                    "production_release_authorized", "trading_authorized"):
+              assert report[k] is False, k
+          print("A02 THIRD EIGHT ACTUAL B5 CAUSAL V1 EXECUTED; 40 TESTS; 24 DISTINCT TOTAL; NO SIGNAL/OWNER/TRADE")
+          PY
+      - name: Review-only receipts, 14 days, not owner signatures or live bars
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-third-eight-original-b5-causal-synthetic-NO-GO
+          path: |
+            /tmp/mst-a02-b5-causal-original-source-1to1.json
+            /tmp/mst-a02-third-eight-b5-causal-UNAPPROVED.json
+          retention-days: 14
+          if-no-files-found: error
