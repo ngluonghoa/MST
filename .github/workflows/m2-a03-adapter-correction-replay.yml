@@ -1,0 +1,75 @@
+name: MST A03 Fixture Adapter and Causal Correction Replay — OWNER NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-adapter-correction-replay.yml"
+      - "scripts/m2_a03_adapter_revision_replay_lab.py"
+      - "tests/test_m2_a03_adapter_revision_replay_lab.py"
+      - "docs/MST_A03_ADAPTER_CORRECTION_REPLAY_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  source-locked-fixture-adapter-revision:
+    name: 36 original/V2 adapter + revision as-of regression tests
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package on GitHub-hosted ephemeral runner
+        run: python -m pip install -e .
+      - name: Verify LIVE original upstream/main/PR Git source byte identity before tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-adapter-source-lock.json
+      - name: Execute 36 direct negative/positive fixture consumer regression tests
+        run: |
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_adapter_revision_replay_lab.py' -v
+      - name: Emit 38-case as-of revision and six unsigned owner choices
+        run: |
+          python -m scripts.m2_a03_adapter_revision_replay_lab \
+            --out /tmp/mst-a03-adapter-correction-OWNER-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          locked=json.loads(Path("/tmp/mst-a03-adapter-source-lock.json").read_text())
+          report=json.loads(Path("/tmp/mst-a03-adapter-correction-OWNER-NO-GO.json").read_text())
+          assert locked["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert locked["original_python_module_count"]==63
+          assert locked["approved_opt_in_v2_sidecar_module_count"]==8
+          assert report["case_count"]==38
+          assert len({r["case"] for r in report["cases"]})==38
+          assert len(report["as_of_snapshots"])==4
+          assert [len(s["visible_revisions"]) for s in report["as_of_snapshots"]]==[1,1,2,3]
+          assert len(report["owner_decision_matrix"])==6
+          assert all(not d["owner_signed"] for d in report["owner_decision_matrix"])
+          assert report["a02_owner_approvals"]==0
+          assert report["a03_owner_approvals"]==0
+          for key in ("real_source_revision_supersession_proven",
+                      "historical_vendor_as_of_authenticity_proven",
+                      "data_rights_or_physical_drive_cache_proven",
+                      "adapter_owner_approved",
+                      "legacy_source_or_preexisting_v2_changed",
+                      "all_g01_g08_oa01_oa06_closed",
+                      "production_release_or_trading_authorized"):
+              assert report[key] is False,key
+          print("A03: 36 test methods/38 synthetic cases, six unsigned choices; no provider/release permissions")
+          PY
+      - name: Retain synthetic JSON evidence only for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-adapter-correction-replay-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-adapter-source-lock.json
+            /tmp/mst-a03-adapter-correction-OWNER-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
