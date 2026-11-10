@@ -72,11 +72,11 @@ _TOP_FIELDS = {
     "next_owner_action",
 }
 _UNSAFE_PUBLIC_ACCEPTANCE = (
-    re.compile(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\\.[A-Za-z]{2,}"),
+    re.compile(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}"),
     re.compile(r"https?://", re.IGNORECASE),
     re.compile(r"-----BEGIN[ -](?:RSA|OPENSSH|EC|PRIVATE)", re.IGNORECASE),
     re.compile(r"(?:github_pat_|ghp_|gho_|ghs_|AIza)[A-Za-z0-9_-]{3,}"),
-    re.compile(r"(?:password|secret|private[_ -]?key|token)\\s*[:=]\\s*\\S+", re.IGNORECASE),
+    re.compile(r"(?:password|secret|private[_ -]?key|token)\s*[:=]\s*\S+", re.IGNORECASE),
 )
 _META_FIELDS = {
     "id", "kind", "gates", "decisions", "threats", "acceptance", "state",
