@@ -178,7 +178,6 @@ class A03DynamicConsumerRollbackTests(TestCase):
         p20,p21=m._desc("2.0.0"),m._desc("2.1.0")
         a20,a21=m._Adapter(),m._Adapter()
         reg.add(p20,a20)
-        reg.bind_consumer("consumer.new",p21) if False else None
         reg.replace(p20,p21,a21)
         reg.bind_consumer("consumer.new",p21)
         with self.assertRaises(ValueError):
