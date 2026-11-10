@@ -162,7 +162,7 @@ class RevisionLedgerClosureTests(TestCase):
     def test_33_prior_head_no_downgrade(self):
         self.case("LOCAL_HIGH_WATERMARK_ROLLBACK_DENIED","rollback")
 
-    def test_34_no_prior_snapshot clock rewind(self):
+    def test_34_no_prior_snapshot_clock_rewind(self):
         self.case("SNAPSHOT_CLOCK_REWIND_DENIED","rollback")
 
     def test_35_prior_prefix rewrite denied(self):
