@@ -1,4 +1,4 @@
-"""28 synthetic DNSE WS lifecycle regression checks, no real network usage."""
+"""48 synthetic DNSE WS lifecycle regression checks, no real network usage."""
 from dataclasses import replace
 from unittest import TestCase
 from scripts import m2_a03_dnse_ws_protocol_lifecycle_lab as m
@@ -58,12 +58,14 @@ class DNSEWSDocumentedLifecycleTests(TestCase):
     def test_16_missing_pong_timeout(self):
         with self.assertRaisesRegex(ValueError, "PONG_HEARTBEAT"):
             self.run_trace(*self.e[:8], m.ToyEvent(241, "closed_data"))
-    def test_17_pong_without_ping(self):
-        with self.assertRaisesRegex(ValueError, "PONG_MUST_ECHO"):
-            self.run_trace(*self.e[:7], m.ToyEvent(7, "pong", "toy-ping-1"))
-    def test_18_wrong_pong_echo(self):
-        with self.assertRaisesRegex(ValueError, "PONG_MUST_ECHO"):
-            self.run_trace(*self.swapped(8, detail="toy-ping-wrong"))
+    def test_17_proactive_pong_without_ping_permitted_by_dnse(self):
+        r = self.run_trace(*self.e[:7], m.ToyEvent(7, "pong"))
+        self.assertEqual(r["fake_proactive_pongs"], 1)
+        self.assertEqual(r["fake_heartbeat_roundtrips"], 0)
+    def test_18_wrong_optional_echo_is_diagnostic_not_issuer(self):
+        r = self.run_trace(*self.swapped(8, detail="toy-ping-wrong"))
+        self.assertEqual(r["fake_pong_echo_mismatches"], 1)
+        self.assertFalse(r["source_issuer_authenticated"])
     def test_19_boolean_seconds_rejected(self):
         with self.assertRaises(TypeError):
             self.run_trace(m.ToyEvent(True, "welcome", "toy-session-x"))
@@ -78,7 +80,7 @@ class DNSEWSDocumentedLifecycleTests(TestCase):
             self.run_trace(*self.e[:7], m.ToyEvent(28801, "closed_data"))
     def test_22_expired_session_cannot_emit_data(self):
         with self.assertRaisesRegex(ValueError, "NO_STREAM_DATA"):
-            self.run_trace(*self.e[:7], m.ToyEvent(7, "expired"),
+            self.run_trace(*self.e[:7], m.ToyEvent(7, "connection_expired"),
                            m.ToyEvent(8, "closed_data"))
     def test_23_missing_mst_dual_channels(self):
         with self.assertRaisesRegex(ValueError, "BOTH_MST"):
@@ -98,3 +100,72 @@ class DNSEWSDocumentedLifecycleTests(TestCase):
     def test_28_reconnect_without_new_subscribe_ack(self):
         with self.assertRaisesRegex(ValueError, "NO_STREAM_DATA"):
             self.run_trace(*self.e[:12], self.e[12], m.ToyEvent(245, "closed_data"))
+
+    def test_29_pong_without_echo_timestamp_is_valid(self):
+        r = self.run_trace(*self.swapped(8, detail=""))
+        self.assertEqual(r["fake_pongs_without_echo"], 1)
+        self.assertEqual(r["fake_heartbeat_roundtrips"], 1)
+    def test_30_pong_matching_echo_still_valid(self):
+        r = self.run_trace(*self.e[:9])
+        self.assertEqual(r["fake_heartbeat_roundtrips"], 1)
+        self.assertEqual(r["fake_pong_echo_mismatches"], 0)
+    def test_31_proactive_pong_cannot_claim_rtt(self):
+        r = self.run_trace(*self.e[:7], m.ToyEvent(7, "pong"))
+        self.assertEqual(r["fake_heartbeat_roundtrips"], 0)
+    def test_32_auth_success_must_finish_within_thirty_seconds(self):
+        with self.assertRaisesRegex(ValueError, "AUTH_SUCCESS_30_SECOND"):
+            self.run_trace(self.e[0], self.e[1], m.ToyEvent(31, "auth_success"))
+    def test_33_auth_success_at_thirty_seconds_allowed(self):
+        r = self.run_trace(self.e[0], self.e[1], m.ToyEvent(30, "auth_success"))
+        self.assertEqual(r["ending_state"], "AUTHENTICATED_CLAIM")
+    def test_34_exact_connection_expired_action(self):
+        r = self.run_trace(*self.e[:7], m.ToyEvent(7, "connection_expired"))
+        self.assertEqual(r["ending_state"], "EXPIRED_CLAIM")
+    def test_35_fake_expired_alias_no_longer_accepted(self):
+        with self.assertRaisesRegex(ValueError, "KNOWN_CONTROL"):
+            self.run_trace(*self.e[:7], m.ToyEvent(7, "expired"))
+    def test_36_expired_requires_reconnect_before_data(self):
+        with self.assertRaisesRegex(ValueError, "NO_STREAM_DATA"):
+            self.run_trace(*self.e[:7], m.ToyEvent(7, "connection_expired"),
+                           m.ToyEvent(8, "closed_data"))
+    def test_37_documented_auth_failed_error_fail_closed(self):
+        r = self.run_trace(self.e[0], self.e[1], m.ToyEvent(2, "error", "AUTH_FAILED"))
+        self.assertEqual(r["ending_state"], "ERROR_CLAIM")
+        self.assertEqual(r["fake_error_controls"], 1)
+    def test_38_after_error_data_denied(self):
+        with self.assertRaisesRegex(ValueError, "NO_STREAM_DATA"):
+            self.run_trace(self.e[0], self.e[1], m.ToyEvent(2, "error", "AUTH_FAILED"),
+                           m.ToyEvent(3, "closed_data"))
+    def test_39_fake_invalid_error_code_rejected(self):
+        with self.assertRaisesRegex(ValueError, "ERROR_CONTROL"):
+            self.run_trace(self.e[0], self.e[1], m.ToyEvent(2, "error", "UNKNOWN"))
+    def test_40_backoff_documented_bounded_sequence(self):
+        self.assertEqual([m.synthetic_backoff_seconds(i) for i in range(8)],
+                         [1, 2, 4, 8, 16, 32, 60, 60])
+    def test_41_backoff_boolean_and_negative_invalid(self):
+        with self.assertRaises(ValueError):
+            m.synthetic_backoff_seconds(True)
+        with self.assertRaises(ValueError):
+            m.synthetic_backoff_seconds(-1)
+    def test_42_sixty_second_boundary_for_pong(self):
+        r = self.run_trace(*self.e[:8], m.ToyEvent(240, "pong"))
+        self.assertEqual(r["fake_heartbeat_roundtrips"], 1)
+    def test_43_sixty_one_second_pong_deadline(self):
+        with self.assertRaisesRegex(ValueError, "PONG_HEARTBEAT"):
+            self.run_trace(*self.e[:8], m.ToyEvent(241, "pong"))
+    def test_44_proactive_pong_with_fake_echo_denied_by_local_guard(self):
+        with self.assertRaisesRegex(ValueError, "PROACTIVE_PONG"):
+            self.run_trace(*self.e[:7], m.ToyEvent(7, "pong", "toy-ping-1"))
+    def test_45_control_with_t_field_known_action_is_control(self):
+        self.assertEqual(m.classify_untrusted_inbound({"action": "ping", "T": "odd"}),
+                         "CONTROL_SHAPE_UNTRUSTED")
+    def test_46_data_with_unknown_action_and_t_field_is_data(self):
+        self.assertEqual(m.classify_untrusted_inbound({"action": "estimated_index",
+                                                       "T": "market_index"}),
+                         "DATA_SHAPE_UNTRUSTED")
+    def test_47_unknown_action_without_t_is_untrusted(self):
+        self.assertEqual(m.classify_untrusted_inbound({"action": "weird"}),
+                         "UNKNOWN_SHAPE_UNTRUSTED")
+    def test_48_not_a_dict_no_trust(self):
+        with self.assertRaises(TypeError):
+            m.classify_untrusted_inbound([])
