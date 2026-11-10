@@ -1,0 +1,84 @@
+name: MST A02 Seventh Eight Original V1 Engineering Custody POSIX Rollback - READONLY NO GO
+
+# Executes eight actual source-locked original V1 modules. The POSIX SQLite
+# fixture runs only on ephemeral GitHub hosted Linux, NEVER on user's local Mac.
+# Synthetic provider rights/host claims cannot enable cache/trading.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-seventh-eight-engineering-custody-rollback.yml"
+      - "scripts/m2_a02_seventh_eight_engineering_custody_rollback_runtime_lab.py"
+      - "tests/test_m2_a02_seventh_eight_engineering_custody_rollback_runtime_lab.py"
+      - "docs/MST_A02_SEVENTH_EIGHT_ENGINEERING_CUSTODY_ROLLBACK_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-eight-eng-host-boundaries:
+    name: 40 real V1 module tests, ephemeral POSIX SQLite and NO-TRADE
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install original source package in ephemeral GitHub hosted runner
+        run: python -m pip install -e .
+      - name: Independently verify actual upstream/main/PR source-byte Git tree
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-seventh-eight-original-remote-tree-proof.json
+      - name: Run 40 inherited original engineering/custody/rollback tests
+        env:
+          PYTHONPATH: tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_seventh_eight_engineering_custody_rollback_runtime_lab.py' -v
+      - name: Execute eight real V1 modules in joined synthetic no-trade matrix
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m scripts.m2_a02_seventh_eight_engineering_custody_rollback_runtime_lab \
+            --out /tmp/mst-a02-seventh-eight-engineering-custody-rollback-NO-GO.json
+          python - <<'PY'
+          import json
+          lock=json.load(open("/tmp/mst-a02-seventh-eight-original-remote-tree-proof.json"))
+          r=json.load(open("/tmp/mst-a02-seventh-eight-engineering-custody-rollback-NO-GO.json"))
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert r["distinct_originals_this_tranche"] == 8
+          assert r["previous_distinct_originals"] == 48
+          assert r["cumulative_scoped_original_v1_modules"] == 56
+          assert r["originals_remaining_without_this_qa"] == 7
+          assert r["linked_check_count"] == 8 and all(r["linked_checks"].values())
+          assert r["synthetic_fixture_provider_fetches"] == 2
+          assert r["a02_owner_signed_module_dispositions"] == 0
+          for k in (
+              "actual_provider_market_quote_api_called",
+              "actual_signed_vendor_licence_verified",
+              "actual_external_custodian_authenticated",
+              "actual_provider_revocation_feed_authenticated",
+              "real_host_volume_or_drive_cache_approved",
+              "real_multiwriter_server_cas_or_monotonic_floor_verified",
+              "real_VN_exchange_settlement_verified",
+              "real_broker_order_or_rollback_executed",
+              "a03_full_v1_v2_abi_behavior_owner_accepted",
+              "g01_g08_independent_prod_security_gates_closed",
+              "production_release_authorized", "trading_authorized",
+          ):
+              assert r[k] is False, k
+          print("A02 SEVENTH EIGHT ORIGINAL V1 RUN: 40 TESTS, 56 DISTINCT SCOPED, 7 LEFT, NO EXTERNAL RIGHTS/TRADE")
+          PY
+      - name: Retain only review-only nonsecret synthetic receipts (14 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-seventh-eight-original-eng-custody-rollback-NO-GO
+          path: |
+            /tmp/mst-a02-seventh-eight-original-remote-tree-proof.json
+            /tmp/mst-a02-seventh-eight-engineering-custody-rollback-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
