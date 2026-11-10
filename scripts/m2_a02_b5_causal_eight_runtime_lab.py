@@ -146,7 +146,7 @@ def execute_b5_causal_matrix() -> dict:
     checks["two_strategies_two_variants_six_parameters_all_unapproved"] = True
 
     # Actual leakage-safe synthetic split checker: three folds segregated
-    conditionally, then a train label that crosses validation MUST block.
+    # conditionally, then a train label that crosses validation MUST block.
     split = plan()
     clean = inspect(split)
     leaked_records = (event(split,"train",18,24),) + records(split)[1:]
