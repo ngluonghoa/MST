@@ -12,6 +12,9 @@ on:
       - "scripts/m4_v21_layered_invalidation_lab.py"
       - "tests/test_m4_v21_layered_invalidation_lab.py"
       - "docs/MST_M4_CACHE_V21_OWNER_APPROVED_ROADMAP_20261111.md"
+      - "scripts/m4_v21_six_tf_causal_slices.py"
+      - "tests/test_m4_v21_six_tf_causal_slices.py"
+      - "docs/MST_M4_V21_SIX_TF_CAUSAL_SLICES_QA_20261111.md"
 
 permissions:
   contents: read
@@ -50,6 +53,32 @@ jobs:
           assert d["governance_p0_owner_release_approved"] is False
           print("V2.1 P0 PLAN PASS SYNTHETIC; MARKET DATA AND DRIVE NO-GO")
           PY
+      - name: Run 44 six-TF M5-to-M15-M30-H1-H4-D1 causal synthetic tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_six_tf_causal_slices.py' -v
+      - name: Validate artificial six-TF closed-window and indicator-tail receipt is no-go
+        run: |
+          python -m scripts.m4_v21_six_tf_causal_slices --out /tmp/mst-v21-six-tf-slices-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-v21-six-tf-slices-NO-GO.json").read_text())
+          assert r["status"]=="SIX_TF_M5_DEPENDENCY_AND_CAUSAL_SUFFIX_SYNTHETIC_NO_GO"
+          assert r["six_tf_total_artificial_closed_windows"]==155
+          v=r["value_revision"]["timeframes"]
+          assert {k:v[k]["numerical_bar_windows_recompute"] for k in ("M5","M15","M30","H1","H4","D1")}=={"M5":[15],"M15":[5],"M30":[2],"H1":[1],"H4":[0],"D1":[0]}
+          assert sum(len(x["causal_indicator_checkpoints_recompute"]) for x in v.values())==132
+          assert sum(len(x["quarantined_window_ordinals"]) for x in r["unqualified_provider_change"]["timeframes"].values())==155
+          for case in ("value_revision","metadata_revision","unqualified_provider_change","unchanged_fixture"):
+              c=r[case]
+              for k in ("numeric_indicators_actually_recomputed","provider_published_first_known_verified",
+                        "official_vn_calendar_and_auction_finality_verified","authorized_real_higher_tf_source_data",
+                        "real_drive_cache_read_write_performed","remote_multiwriter_cas_or_protected_floor_verified",
+                        "production_reuse_or_trading_allowed"):
+                  assert c[k] is False, (case,k)
+          assert r["no_real_google_drive_or_vendor_market_calls"] is True
+          assert r["release_and_trading_no_go"] is True
+          print("SIX TF 44 CASES SYNTHETIC, CALENDAR AND DRIVE NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -57,5 +86,6 @@ jobs:
           path: |
             /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
             /tmp/mst-v21-layer-impact-NO-GO.json
+            /tmp/mst-v21-six-tf-slices-NO-GO.json
           retention-days: 14
           if-no-files-found: error
