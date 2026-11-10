@@ -33,3 +33,9 @@ No automatically enabled live M5 source, authorized Drive cache, actionable sign
 
 ## 4. GitHub CI receipt
 PENDING: exact commit, 23/23 new focused tests and full 47-workflow remote CI must be read back before marking PASS.
+
+
+## 5. Implementation-head GitHub Actions verified
+Implementation HEAD c64fbd976f6945c7e056d3959149c60b932412e5: independently read back 47/47 GitHub Actions COMPLETED SUCCESS. Dedicated https://github.com/ngluonghoa/MST/actions/runs/42881008630 PASS including 23/23 new DNSE public REST M5 nextTime/pagination/WS-overlap Python tests, previous 194/194 targeted source tests, and live remote pinned Swing/main/PR 63 inherited V1 + eight pre-existing opt-in V2 byte-lock. 217 focused tests are synthetic-only; no actual DNSE REST/WS request, source entitlement, licensed quote/first-known history or real cache. The original Swing baseline and protected MST main remain unchanged. PR #8 is Draft/unmerged.
+
+The exact report-containing GitHub commit introduced by this documentation update must be separately checked at its own SHA before it may be called 47/47 PASS. A self-generated SHA256 of toy receipts is consistency only, not publisher authority. External rights, official calendars, retroactive corrections, physical authorized Google Drive market cache, independently protected floor/CAS, release/trading all NO-GO.
