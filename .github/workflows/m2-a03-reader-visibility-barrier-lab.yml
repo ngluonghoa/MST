@@ -1,0 +1,41 @@
+name: MST A03 Reader Visibility Barrier - SYNTHETIC NO APPLY
+
+# Only GitHub-hosted manufactured V1 SQLite+Decimal fixtures.
+# Never accesses Google Drive cache, licensed market feeds, protected witness,
+# external signing keys or production trading. Receipt/floor are in-process.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-reader-visibility-barrier-lab.yml"
+      - "scripts/m2_a03_reader_visibility_barrier_lab.py"
+      - "tests/test_m2_a03_reader_visibility_barrier_lab.py"
+      - "docs/MST_A03_READER_VISIBILITY_BARRIER_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  prepared-committed-reader-visible-no-apply:
+    name: Read barrier, stale read, crash interleavings and false trust controls
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned source package without provider authorization
+        run: python -m pip install -e ".[custody]"
+      - name: Run negative reader barrier tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_reader_visibility_barrier_lab.py' -v
+      - name: Run real inherited V1 SQLite/Decimal oracle four-state synthetic trace
+        run: |
+          python -m scripts.m2_a03_reader_visibility_barrier_lab \
+            --out /tmp/mst-a03-reader-visibility-barrier-NO-AUTH.json
+      - name: Retain review-only artifact, not independent witness/custody
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-reader-barrier-NO-AUTH
+          path: /tmp/mst-a03-reader-visibility-barrier-NO-AUTH.json
+          retention-days: 14
+          if-no-files-found: error
