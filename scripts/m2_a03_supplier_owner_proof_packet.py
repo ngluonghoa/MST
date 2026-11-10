@@ -73,6 +73,105 @@ REQUIREMENT_KEYS = {
     "owner_approved", "independent_verifier_attested",
 }
 SCENARIO_KEYS = {"id", "gate", "missing_independent_proof", "expected"}
+
+# Reviewed public semantic fixtures, not vendor authority or independently pinned
+# external security roots. These are fixed regression expectations for owner review.
+REVIEWED_ACCEPTANCE_CHECKS = {
+  "A03-OWNER-SOURCE-HEAD-CLOSURE-11": [
+    "Independent provider-issued issuer and feed enrollment with authenticated root ownership, scoped venue, symbol, timeframe, price basis and revocation",
+    "Authenticated provider revision closure and independently acquired ledger head including sequence gaps, correction and tombstone semantics",
+    "Historical as-of replay with first-known timestamps and verified official Vietnam exchange session-calendar mapping"
+  ],
+  "A03-OWNER-INDEPENDENT-CUSTODY-12": [
+    "Independently enrolled source signer and reader witnessed by separately controlled principals with effective permissions and immutable audit readbacks",
+    "Key epoch rotation and revocation verified by independently authorized reviewer, including rejection of caller-replaced public trust anchor",
+    "Reconciliation of independently fetched source and viewer receipts with explicit missing fields and no self-declared separation accepted"
+  ],
+  "A03-OWNER-DURABLE-FLOOR-13": [
+    "Independently owned nonresettable cross-run high-watermark survives fresh runner, restart, restore and attempted old signed receipt replay",
+    "Two separately authenticated nonadmin writers contend on an approved protected GitHub ref with exactly one server-serialized compare-and-swap winner",
+    "Independent verifier readback of loser denial, immutable generation lineage, owner-approved bypass controls and recovery procedures"
+  ],
+  "A03-OWNER-LICENSED-REPLAY-14": [
+    "Provider-issued contractual rights cover exact feed, historical corrections, retention duration, derived bars and Google Drive storage geography",
+    "Owner and legal review explicitly approve source-specific license scope, deletion policy, auditability and redistribution or onward-use restrictions",
+    "After rights approval, independently authorized Google Drive physical byte readback proves retention boundaries and partition-to-license provenance"
+  ]
+}
+REVIEWED_SCENARIO_GATE_REASON = {
+  "CALLER_REPLACES_PUBLIC_KEY": [
+    "A03-OWNER-INDEPENDENT-CUSTODY-12",
+    "Independent root enrollment absent"
+  ],
+  "SIGNED_HISTORY_REHASHED": [
+    "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+    "Supplier revision history not independently closed"
+  ],
+  "SELF_CLAIMED_TWO_VIEWERS": [
+    "A03-OWNER-INDEPENDENT-CUSTODY-12",
+    "Actual independently controlled principals unverified"
+  ],
+  "SAME_ACCOUNT_DIFFERENT_ROLE_LABELS": [
+    "A03-OWNER-INDEPENDENT-CUSTODY-12",
+    "Effective owner and permissions separation unverified"
+  ],
+  "MISSING_MIDDLE_CORRECTION": [
+    "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+    "Provider sequence completeness unverified"
+  ],
+  "TOMBSTONE_RESURRECTION": [
+    "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+    "Provider-authoritative tombstone policy missing"
+  ],
+  "FUTURE_CORRECTION_LEAKS_ASOF": [
+    "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+    "Provider first-known clock and historical replay unverified"
+  ],
+  "UNOFFICIAL_SESSION_CALENDAR": [
+    "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+    "Exchange calendar attestation absent"
+  ],
+  "UNATTESTED_KEY_REVOCATION": [
+    "A03-OWNER-INDEPENDENT-CUSTODY-12",
+    "Issuer revocation chain unverified"
+  ],
+  "FRESH_RUN_RESET_FLOOR": [
+    "A03-OWNER-DURABLE-FLOOR-13",
+    "Independent nonresettable high-watermark absent"
+  ],
+  "TWO_SIGNED_FORKS_PASS_SEPARATELY": [
+    "A03-OWNER-DURABLE-FLOOR-13",
+    "Real two-writer server-side compare-and-swap absent"
+  ],
+  "ADMIN_BYPASS_OF_PROTECTED_REF": [
+    "A03-OWNER-DURABLE-FLOOR-13",
+    "Effective bypass and separation owner readback absent"
+  ],
+  "VENDOR_RIGHTS_ONLY_SELF_DECLARED": [
+    "A03-OWNER-LICENSED-REPLAY-14",
+    "Provider-issued explicit feed and retention grant absent"
+  ],
+  "DRIVE_LINK_WITHOUT_PHYSICAL_BYTES": [
+    "A03-OWNER-LICENSED-REPLAY-14",
+    "Authorized physical cached bytes and retention provenance absent"
+  ],
+  "SINGLE_CONNECTED_ACCOUNT_APPROVAL": [
+    "A03-OWNER-INDEPENDENT-CUSTODY-12",
+    "Single connection not an independent attestation"
+  ],
+  "UNSIGNED_RELEASE_OWNER_DECISION": [
+    "A03-OWNER-LICENSED-REPLAY-14",
+    "Owner A02 and A03 release authorization absent"
+  ]
+}
+REVIEWED_M4_EVIDENCE_KINDS = {
+  "E03": "SIGNER_ROOT_INDEPENDENT_ENROLLMENT",
+  "E08": "RESTART_PROOF_EXTERNAL_MONOTONIC_FLOOR",
+  "E11": "LICENSED_VENDOR_FIRST_KNOWN_RIGHTS_RETENTION",
+  "E12": "OWNER_SIGNED_A02_A03_RELEASE_APPROVALS",
+  "E13": "INDEPENDENT_TWO_PRINCIPAL_SERVER_CAS_PROOF",
+  "E14": "EVIDENCE_PROVENANCE_TWO_VIEWER_RECONCILIATION"
+}
 FORBIDDEN_TOKENS = ("http://", "https://", "@", "BEGIN PRIVATE KEY", "ghp_", "github_pat_", "AIza")
 
 
@@ -105,6 +204,8 @@ def validate_packet(packet: dict, m4_intake: dict) -> dict:
         raise ValueError("M4_14_EVIDENCE_REQUIREMENTS_MISSING")
     for id_ in {e for refs in CROSSWALK.values() for e in refs}:
         r = m4[id_]
+        if r.get("kind") != REVIEWED_M4_EVIDENCE_KINDS[id_]:
+            raise PermissionError("M4_PROOF_KIND_RELABELED_" + id_)
         if r.get("state") != "NOT_RECEIVED" or r.get("independently_verified") is not False or r.get("owner_reviewed") is not False:
             raise PermissionError("M4_PRIVATE_REQUIREMENT_FALSELY_CLOSED_" + id_)
         for secret in ("private_evidence_uri", "principal_binding", "signer_fingerprint", "verifier_attestation_uri"):
@@ -130,6 +231,8 @@ def validate_packet(packet: dict, m4_intake: dict) -> dict:
             raise ValueError("A03_INDEPENDENT_ACCEPTANCE_CHECKLIST_INCOMPLETE_OR_SENSITIVE")
         if len(set(checks)) != 3:
             raise ValueError("A03_DUPLICATE_ACCEPTANCE_CHECK")
+        if checks != REVIEWED_ACCEPTANCE_CHECKS[gate]:
+            raise PermissionError("A03_REVIEWED_ACCEPTANCE_SEMANTICS_DRIFT_" + gate)
     scenarios = packet["untrusted_claim_scenarios"]
     if type(scenarios) is not list or len(scenarios) != len(SCENARIOS):
         raise ValueError("A03_UNTRUSTED_PROOF_NEGATIVE_COVERAGE_MISSING")
@@ -141,6 +244,9 @@ def validate_packet(packet: dict, m4_intake: dict) -> dict:
             raise ValueError("A03_NEGATIVE_CASE_UNKNOWN_GATE")
         _equals(scenario["expected"], "NO_GO_UNTRUSTED_PROOF_CLAIM",
                 "A03_NEGATIVE_CASE_PREMATURE_PROMOTION")
+        if (scenario["gate"], scenario["missing_independent_proof"]) != tuple(
+                REVIEWED_SCENARIO_GATE_REASON[scenario_id]):
+            raise PermissionError("A03_REVIEWED_CASE_RISK_GATE_DRIFT_" + scenario_id)
         if type(scenario["missing_independent_proof"]) is not str or len(scenario["missing_independent_proof"]) < 20:
             raise ValueError("A03_NEGATIVE_CASE_NO_INDEPENDENT_PROOF_CONDITION")
     if type(packet["admissions"]) is not dict or set(packet["admissions"]) != set(ADMISSIONS):
@@ -177,6 +283,13 @@ def validate_packet(packet: dict, m4_intake: dict) -> dict:
     canonical = json.dumps({"gates": list(CROSSWALK), "cases": case_ids}, sort_keys=True,
                            separators=(",", ":"), ensure_ascii=True)
     receipt["public_requirement_index_sha256"] = sha256(canonical.encode()).hexdigest()
+    reviewed_semantics = json.dumps({
+        "acceptance": REVIEWED_ACCEPTANCE_CHECKS,
+        "scenarios": REVIEWED_SCENARIO_GATE_REASON,
+        "m4_kind": REVIEWED_M4_EVIDENCE_KINDS,
+    }, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    receipt["reviewed_semantic_contract_sha256"] = sha256(
+        reviewed_semantics.encode()).hexdigest()
     return receipt
 
 

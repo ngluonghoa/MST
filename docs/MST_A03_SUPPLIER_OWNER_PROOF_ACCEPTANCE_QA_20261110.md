@@ -76,3 +76,32 @@ IMPORTANT: this QA paragraph itself creates a later commit; **do not represent
 the prior 40/40 receipt as validating the new final HEAD** until the 40
 workflows, dedicated owner-proof workflow and original source lock at the
 later report-containing HEAD independently complete SUCCESS.
+
+
+## Incremental A03 semantic traceability hardening — 2026-11-10
+
+Review exposed a concrete contract-integrity weakness: the previous code checked the
+length and count of twelve acceptance descriptions, and that each of sixteen risks
+referred to *some* valid owner gate. It would not reject a long irrelevant description
+or silent reassignment of a provider correction risk to the wrong gate.
+
+The new source-locked **public review-only** validator fixes these regression gaps:
+- Freeze exact semantic text for all twelve checks and their owner gate order.
+- Freeze exact 16 case ID → gate → missing independent proof mappings.
+- Freeze six existing M4 E03/E08/E11/E12/E13/E14 evidence-kind identifiers.
+- Add a SHA256 reviewed-semantic-contract index to the public NO-GO receipt; it is
+  a consistency fingerprint, **not** a vendor signature, owner signoff or trusted
+  independently enrolled source root.
+- Expand direct unit tests from 26 to **36**, exercising plausible long but irrelevant
+  descriptions, wrong provider-to-floor mapping, swapped checks, wrong M4 kinds, and
+  output contract digest. Existing source byte locks and all owner/production denials
+  remain mandatory.
+
+This changes only the existing A03 proof-preflight script, tests, read-only workflow
+and QA note within Draft PR #8. The already reviewed public JSON packet remains
+byte-identical, as do all 63 inherited V1 and eight pre-existing opt-in V2 modules.
+No provider feed, real Drive market cache, private principal, signer or release authority
+has been obtained. A03 owner signoffs 0/14, A02 0/63 and V2 0/8; all gates NO-GO.
+
+CI at the newly generated commit must be checked for exact HEAD, and the
+final documentation update must likewise have its own exact-HEAD readback.

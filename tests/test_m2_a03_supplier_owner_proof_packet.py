@@ -132,3 +132,57 @@ class SupplierProofPacketTests(TestCase):
     def test_26_public_data_handling_cannot_be_weakened(self):
         self.with_change(lambda x:x["handling"].__setitem__(
             "no_private_principal_or_key_or_evidence_url",False))
+
+    def test_27_approved_texts_are_exact_reviewed_contract(self):
+        self.assertEqual({r["gate"]: r["acceptance_checks"]
+                          for r in self.packet["requirements"]},
+                         m.REVIEWED_ACCEPTANCE_CHECKS)
+
+    def test_28_exact_16_risk_gate_reason_pairs(self):
+        self.assertEqual(
+            {r["id"]: [r["gate"], r["missing_independent_proof"]]
+             for r in self.packet["untrusted_claim_scenarios"]},
+            m.REVIEWED_SCENARIO_GATE_REASON)
+
+    def test_29_existing_m4_kind_contract(self):
+        evidence={x["id"]:x["kind"] for x in self.m4["evidence_requirements"]}
+        self.assertEqual({k:evidence[k] for k in m.REVIEWED_M4_EVIDENCE_KINDS},
+                         m.REVIEWED_M4_EVIDENCE_KINDS)
+
+    def test_30_no_semantically_empty_acceptance_replacement(self):
+        self.with_change(lambda p:p["requirements"][0]["acceptance_checks"].__setitem__(
+            0, "This long filler appears adequate for a naive length-based check but it removes the whole independent supplier enrollment requirement."))
+
+    def test_31_genuine_gate_semantic_change_requires_explicit_review(self):
+        self.with_change(lambda p:p["requirements"][2]["acceptance_checks"].__setitem__(
+            1, p["requirements"][2]["acceptance_checks"][1].replace(
+                "exactly one server-serialized compare-and-swap winner",
+                "two independent winners accepted")))
+
+    def test_32_acceptance_check_order_cannot_silently_change(self):
+        def mutate(p):
+            a=p["requirements"][1]["acceptance_checks"]
+            a[0],a[1]=a[1],a[0]
+        self.with_change(mutate)
+
+    def test_33_unknown_risk_cannot_be_mapped_to_other_gate(self):
+        self.with_change(lambda p:p["untrusted_claim_scenarios"][1].__setitem__(
+            "gate","A03-OWNER-DURABLE-FLOOR-13"))
+
+    def test_34_valid_gate_but_wrong_risk_reason_denied(self):
+        self.with_change(lambda p:p["untrusted_claim_scenarios"][4].__setitem__(
+            "missing_independent_proof",
+            "A structurally long and plausible but different explanation is substituted for the reviewed reason."))
+
+    def test_35_all_six_m4_evidence_categories_cannot_be_relabelled(self):
+        for evidence_id in m.REVIEWED_M4_EVIDENCE_KINDS:
+            intake=deepcopy(self.m4)
+            next(x for x in intake["evidence_requirements"]
+                 if x["id"]==evidence_id)["kind"]="FAKE_OTHER_KIND"
+            with self.subTest(evidence=evidence_id),self.assertRaises(PermissionError):
+                m.validate_packet(self.packet,intake)
+
+    def test_36_reviewed_contract_sha256_receipt_present(self):
+        self.assertEqual(len(self.result["reviewed_semantic_contract_sha256"]),64)
+        self.assertNotEqual(self.result["public_requirement_index_sha256"],
+                            self.result["reviewed_semantic_contract_sha256"])

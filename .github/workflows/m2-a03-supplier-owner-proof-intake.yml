@@ -29,11 +29,11 @@ jobs:
         run: |
           python -m scripts.mst_remote_legacy_tree_lock \
             --out /tmp/mst-a03-owner-proof-source-lock.json
-      - name: Run exact A03 owner proof public contract negative tests
+      - name: Run 36 exact A03 semantic contract and owner-proof denial unit tests
         run: |
           python -m unittest discover -s tests \
             -p 'test_m2_a03_supplier_owner_proof_packet.py' -v
-      - name: Validate unapproved 4-gate 12-check 16-scenario owner packet
+      - name: Validate reviewed text, case-to-gate mapping, M4 kinds and all NO-GO flags
         run: |
           python -m scripts.m2_a03_supplier_owner_proof_packet \
             --out /tmp/mst-a03-supplier-owner-proof-NO-GO.json
@@ -48,6 +48,7 @@ jobs:
           assert r["owner_gate_count"] == 4
           assert r["acceptance_check_count"] == 12
           assert r["untrusted_negative_case_count"] == 16
+          assert len(r["reviewed_semantic_contract_sha256"]) == 64
           assert len(set(r["negative_case_ids"])) == 16
           assert r["m4_existing_requirement_ids"] == ["E03","E08","E11","E12","E13","E14"]
           assert r["a03_owner_choices_approved"] == 0
