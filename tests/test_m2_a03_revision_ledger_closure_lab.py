@@ -165,7 +165,7 @@ class RevisionLedgerClosureTests(TestCase):
     def test_34_no_prior_snapshot_clock_rewind(self):
         self.case("SNAPSHOT_CLOCK_REWIND_DENIED","rollback")
 
-    def test_35_prior_prefix rewrite denied(self):
+    def test_35_prior_prefix_rewrite_denied(self):
         self.case("TAMPERED_HISTORICAL_PREFIX_DENIED","rollback")
 
     def test_36_without_prior_old_claim_is_still_accepted_not_trusted(self):
