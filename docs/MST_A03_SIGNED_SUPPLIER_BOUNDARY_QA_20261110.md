@@ -2,7 +2,7 @@
 
 QA ID: MST-A03-SIGNED-SUPPLIER-CROSS-BOUNDARY-20261110
 Date: 2026-11-10 Asia/Ho_Chi_Minh
-Status: PENDING exact GitHub final HEAD CI. All owner approvals and production/trading explicitly NO-GO.
+Status: 40/40 exact report-containing HEAD GitHub Actions SUCCESS at a7141e531ef23331c9c617eac7329b35c90e66c9 (bounded synthetic only); current evidence-update HEAD must be independently reverified. Owner/production/trading remain NO-GO.
 
 ## Existing source-lock and why this packet is nonredundant
 
@@ -47,3 +47,8 @@ Workflow https://github.com/ngluonghoa/MST/actions/workflows/m2-a03-signed-suppl
 The conditional fixture verifier must NOT be represented as a real vendor source qualification. No authenticated vendor root/ledger closure, no independent key custody/revocation, no durable nonresettable cross-run floor, no authenticated two-writer CAS, no legitimate SSI/DNSE/VCBS market data licence, no physical licensed Google Drive market cache and no official VN exchange correction/calendar proof are demonstrated. All engineering decisions remain source-unverified, never DETECTED or NOT_DETECTED qualified. M3/M4/M5/M8 production and trading NO-GO; G01–G08 and OA01–OA06 remain OPEN. PR8 remains Draft/unmerged, protected main not modified. Option A GitHub + Google Drive only, no Mac/MOCHI/local/third Cloud, privileged GitHub settings or broker operations.
 
 Do not claim exact-current-head PASS until independent GitHub Actions 35 tests/31 cases, Foundation Python3.11+3.12/source/H2/H3/lint/wheel, original-tree source byte-lock, and ALL workflows at final report-containing commit have completed SUCCESS.
+
+## Verified preliminary exact-code-and-report CI (not the later evidence-update HEAD)
+
+GitHub Draft PR #8 code and original report commit a7141e531ef23331c9c617eac7329b35c90e66c9: 40/40 GitHub Actions runs SUCCESS. Dedicated test workflow https://github.com/ngluonghoa/MST/actions/runs/42810975288 SUCCESS: 35 independent unittest methods, 31 conditional Ed25519/A03 fixture cases, live original 63 V1 plus eight pre-existing V2 source byte-lock, no vendor credentials. Foundation https://github.com/ngluonghoa/MST/actions/runs/42810975377 SUCCESS all 3 jobs (Python 3.11/3.12, source/H2/H3/lint/wheel). Independent remote original Git tree parity https://github.com/ngluonghoa/MST/actions/runs/42810975442 SUCCESS. Permanent Google Drive native QA mirror: https://docs.google.com/document/d/17JlOkC4cBPJlkx77kNkaPxOxwY8MqS2VlLhASB1ndu0/edit .
+The receipt evidence-update commit created by this paragraph must be checked on its own exact HEAD; this section alone cannot certify it. All conditional fixture cryptographic integrity is NOT provider issuer authentication, independent custody or source rights. Owner A02 0/63, A03 V2 0/8, A03 choices 0/14; G01–G08 OA01–OA06 OPEN, production/trading NO-GO.
