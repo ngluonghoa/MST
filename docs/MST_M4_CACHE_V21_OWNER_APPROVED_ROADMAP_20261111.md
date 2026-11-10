@@ -37,3 +37,10 @@ All output permissions to licensed cache reads/writes, Google Drive I/O, signed 
 GitHub synthetic-only workflow: \`.github/workflows/m2-a03-v2-manifest-full-policy-local-chain.yml\`. New targeted tests: 28 planned; actual GitHub Actions and exact final SHA require independent readback before marking PASS. Last earlier PR head \`644d10aac28136d9f98ca07e5ae5d9d2fa43fc9a\` had 47/47 prior Actions SUCCESS, not proof this new code passes.
 
 Related: [M3 provider rights issue #9](https://github.com/ngluonghoa/MST/issues/9), [M4 cache issue #10](https://github.com/ngluonghoa/MST/issues/10), [Draft PR #8](https://github.com/ngluonghoa/MST/pull/8).
+
+
+## Implementation-HEAD QA confirmed 2026-11-11
+
+Exact implementation commit \`dfb181c049004b7d92fae6f026b7729896c92f20\` independently checked: **47/47 GitHub Actions completed SUCCESS**. Dedicated full-policy and new V2.1 recompute workflow [#42889166667](https://github.com/ngluonghoa/MST/actions/runs/42889166667) succeeded, including all **28/28** new test methods and synthetic 6-of-9 price correction affected, 2-of-9 lineage-only affected, 9-of-9 unknown-source quarantined. Foundation [#42889166986](https://github.com/ngluonghoa/MST/actions/runs/42889166986) completed SUCCESS on Python 3.11 and Python 3.12 plus engineering contract/wheel checks. The earlier **217** focused synthetic source checks are unchanged, so the cumulative targeted source-plus-V2.1 scenario count is **245**, not a claim about every repository test. The existing 63 V1/8 V2 byte-lock workflows also passed at this implementation HEAD; no parent protected code altered.
+
+This implementation CI demonstrates ONLY the toy DAG and full V1 binding metadata rules. It does not implement authorized live price input, full multi-timeframe physical Cache, Google Drive reads/writes, real revision ledger, multiwriter remote CAS/floor, storage rights or trading authorization. The report-containing commit that follows must be checked independently for its own exact-head full CI status.
