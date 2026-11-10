@@ -1,0 +1,74 @@
+name: MST A03 Untrusted Revision-Tombstone Winner Hypothesis — OWNER NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-revision-tombstone-hypothesis.yml"
+      - "scripts/m2_a03_revision_tombstone_hypothesis_lab.py"
+      - "tests/test_m2_a03_revision_tombstone_hypothesis_lab.py"
+      - "docs/MST_A03_REVISION_TOMBSTONE_HYPOTHESIS_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  source-locked-tombstone-candidate:
+    name: 40 untrusted revision and tombstone denial tests
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package on GitHub-hosted ephemeral runner
+        run: python -m pip install -e .
+      - name: Confirm remote live inherited V1/V2 code stays byte-identical
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-tombstone-source-lock.json
+      - name: Run 40 causal correction/tombstone independent negative tests
+        run: |
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_revision_tombstone_hypothesis_lab.py' -v
+      - name: Build and validate source-untrusted 54-case receipt
+        run: |
+          python -m scripts.m2_a03_revision_tombstone_hypothesis_lab \
+            --out /tmp/mst-a03-tombstone-untrusted-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          l=json.loads(Path("/tmp/mst-a03-tombstone-source-lock.json").read_text())
+          r=json.loads(Path("/tmp/mst-a03-tombstone-untrusted-NO-GO.json").read_text())
+          assert l["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert l["original_python_module_count"]==63
+          assert l["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["case_count"]==54
+          assert len({x["case"] for x in r["cases"]})==54
+          assert len(r["as_of_snapshots"])==5
+          assert [len(x["raw_visible_revisions"]) for x in r["as_of_snapshots"]]==[1,1,2,3,3]
+          assert [x["candidate_revision_id"] for x in r["as_of_snapshots"]]==["r1","r1","r2",None,None]
+          assert len(r["owner_review_choices"])==4
+          assert all(x["owner_signed"] is False for x in r["owner_review_choices"])
+          assert r["owner_a02_signed"]==r["owner_a03_signed"]==0
+          for k in ("v1_v2_native_supersession_or_tombstone_semantics_implemented",
+                    "provider_revision_sequence_independently_attested",
+                    "real_market_data_source_authority_or_entitlement_proven",
+                    "legal_google_drive_market_cache_or_durable_cas_proven",
+                    "g01_g08_oa01_oa06_closed",
+                    "production_release_or_trading_authorized"):
+              assert r[k] is False,k
+          print("A03: 40 tests and 54 synthetic untrusted revision/tombstone checks; no owner/production authority")
+          PY
+      - name: Retain synthetic fixture reports only for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-revision-tombstone-hypothesis-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-tombstone-source-lock.json
+            /tmp/mst-a03-tombstone-untrusted-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
