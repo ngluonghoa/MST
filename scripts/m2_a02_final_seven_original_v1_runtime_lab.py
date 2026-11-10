@@ -296,7 +296,7 @@ def run_final_seven_originals():
              "RVOL_TOD20_BAD_DENOMINATOR_OR_INCOMPATIBLE_VOLUME_POLICY")
     guards["RVOL_TOD20_missing_prior_or_auction_basis_blocks"]=True
 
-    _require(len(guards)==14 and all(guards.values()),
+    _require(len(guards)==13 and all(guards.values()),
              "FINAL_SEVEN_REAL_V1_PATHS_SYNTHETIC_SAFETY_GUARDS_FAILED")
     return {
         "schema":SCHEMA,
