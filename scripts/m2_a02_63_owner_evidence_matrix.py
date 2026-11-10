@@ -25,6 +25,16 @@ PACKETS=(
     ("B07","m2_a02_seventh_eight_engineering_custody_rollback_runtime_lab","m2-a02-seventh-eight-engineering-custody-rollback.yml",40),
     ("B08","m2_a02_final_seven_original_v1_runtime_lab","m2-a02-final-seven-original-v1-runtime.yml",40),
 )
+QA_DOCS=(
+    "MST_A02_EIGHT_INHERITED_BEHAVIOR_QA_20261110.md",
+    "MST_A02_SECOND_EIGHT_SOURCE_CUSTODY_RUNTIME_QA_20261110.md",
+    "MST_A02_THIRD_EIGHT_B5_CAUSAL_RUNTIME_QA_20261110.md",
+    "MST_A02_FOURTH_EIGHT_ROUTING_CALENDAR_QA_20261110.md",
+    "MST_A02_FIFTH_EIGHT_SSI_DNSE_VCBS_QA_20261110.md",
+    "MST_A02_SIXTH_EIGHT_REPLAY_EVIDENCE_MIGRATION_QA_20261110.md",
+    "MST_A02_SEVENTH_EIGHT_ENGINEERING_CUSTODY_ROLLBACK_QA_20261110.md",
+    "MST_A02_FINAL_SEVEN_ORIGINAL_V1_QA_20261110.md",
+)
 GAPS={
     "domain_and_reference":"official source/calendar, replay timing, complete decisions and out-of-sample behavior",
     "source_adapter_and_quality":"real licensed provider rights, retention, authenticated live endpoint data, freshness",
@@ -73,7 +83,8 @@ def read_evidence_packets(root=ROOT):
         lab=root/"scripts"/(stem+".py")
         test=root/"tests"/("test_"+stem+".py")
         wf=root/".github"/"workflows"/workflow
-        if not all(p.is_file() for p in (lab,test,wf)):
+        qa=root/"docs"/QA_DOCS[i]
+        if not all(p.is_file() for p in (lab,test,wf,qa)):
             raise ValueError("EVIDENCE_FILE_MISSING_"+batch)
         members=literal_module_tuple(lab,"FILES" if i==7 else "EIGHT")
         if len(members)!=(7 if i==7 else 8) or len(set(members))!=len(members):
@@ -92,12 +103,14 @@ def read_evidence_packets(root=ROOT):
                 "source_lab":"scripts/"+stem+".py",
                 "tests":"tests/test_"+stem+".py",
                 "workflow":".github/workflows/"+workflow,
+                "qa_report":"docs/"+QA_DOCS[i],
                 "packet_test_method_count_not_per_module":count,
                 "coverage_scope":"PACKAGE_IMPORT_METADATA_ONLY" if member=="__init__"
                     else "SELECTED_SYNTHETIC_ACTUAL_V1_FUNCTION_CALLS",
             }
         evidence.append({"batch":batch,"members":list(members),"tests":count,
-                         "lab":"scripts/"+stem+".py","workflow":".github/workflows/"+workflow})
+                         "lab":"scripts/"+stem+".py","workflow":".github/workflows/"+workflow,
+                         "qa_report":"docs/"+QA_DOCS[i]})
     if len(mapping)!=63 or mapping["__init__"]["coverage_scope"]!="PACKAGE_IMPORT_METADATA_ONLY":
         raise ValueError("63_PATH_COVERAGE_NOT_EXACT_OR_INIT_MISCLASSIFIED")
     return mapping,evidence
@@ -207,7 +220,7 @@ def markdown(result):
         if r["h3_static_flags"]!="none":
             prop+=" ("+r["h3_static_flags"].replace("|","/")+")"
         field=(b+name+b+" / "+r["source_sha256"][:10]+"/"+r["static_abi_sha256"][:10])
-        labs=r["batch"]+" [lab]("+r["source_lab"]+") [tests]("+r["tests"]+")"
+        labs=r["batch"]+" [lab]("+r["source_lab"]+") [tests]("+r["tests"]+") [QA]("+r["qa_report"]+")"
         if name=="__init__":
             labs+=" (IMPORT/METADATA ONLY)"
         deps=", ".join(r["direct_v2_importers"]) or "none directly observed"
