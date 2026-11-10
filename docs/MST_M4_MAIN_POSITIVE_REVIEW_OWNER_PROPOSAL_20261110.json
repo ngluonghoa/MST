@@ -1,0 +1,96 @@
+{
+  "schema": "mst.m4.main-positive-review.owner-unapproved.v1",
+  "repo": "ngluonghoa/MST",
+  "source_main": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "source_upstream": "cd90c1babae8912db31490ad614fc2ad2f868042",
+  "source_tree": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+  "ruleset_id": 26801439,
+  "option": "GITHUB_GOOGLE_DRIVE_ONLY",
+  "status": "OWNER_DECISION_REQUIRED_NO_POLICY_APPLY",
+  "baseline": {
+    "required_approvals": 0,
+    "codeowner_review": false,
+    "dismiss_stale_reviews": false,
+    "last_push_approval": false,
+    "thread_resolution": false,
+    "required_ci": [
+      "unittest (3.11)",
+      "unittest (3.12)",
+      "Contract, source-boundary and wheel checks"
+    ],
+    "main_delete_guard": true,
+    "main_force_push_guard": true
+  },
+  "proposal": {
+    "minimum_approvals": 1,
+    "codeowner_review": true,
+    "dismiss_stale_reviews": true,
+    "last_push_approval": true,
+    "thread_resolution": true,
+    "preserve_existing_ci": true,
+    "preserve_non_fast_forward": true,
+    "preserve_no_delete": true
+  },
+  "owner_conditions": [
+    {
+      "proof": "E01",
+      "decision": "OA01",
+      "gate": "G01",
+      "state": "NOT_RECEIVED"
+    },
+    {
+      "proof": "E02",
+      "decision": "OA02",
+      "gate": "G02",
+      "state": "NOT_RECEIVED"
+    },
+    {
+      "proof": "E03",
+      "decision": "OA01",
+      "gate": "G01",
+      "state": "NOT_RECEIVED"
+    },
+    {
+      "proof": "E06",
+      "decision": "OA03",
+      "gate": "G07",
+      "state": "NOT_RECEIVED"
+    },
+    {
+      "proof": "E10",
+      "decision": "OA05",
+      "gate": "G01",
+      "state": "NOT_RECEIVED"
+    },
+    {
+      "proof": "E12",
+      "decision": "OA06",
+      "gate": "G08",
+      "state": "NOT_RECEIVED"
+    },
+    {
+      "proof": "E14",
+      "decision": "OA05",
+      "gate": "G07",
+      "state": "NOT_RECEIVED"
+    }
+  ],
+  "permissions": {
+    "independent_reviewer_verified": false,
+    "owner_approved": false,
+    "private_evidence_channel_approved": false,
+    "policy_applied": false,
+    "codeowners_applied": false,
+    "main_updated": false,
+    "pr_merged": false,
+    "production_authorized": false,
+    "trading_authorized": false
+  },
+  "privacy": {
+    "no_private_ids": true,
+    "no_keys_or_tokens": true,
+    "no_real_vendor_data": true,
+    "no_local_or_third_cloud": true
+  },
+  "next": "OWNER_APPROVE_PRIVATE_EFFECTIVE_ROLE_AND_MAIN_RULESET_REVIEW_NO_APPLY"
+}
