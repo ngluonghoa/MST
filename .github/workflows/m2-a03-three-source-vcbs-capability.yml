@@ -140,7 +140,7 @@ jobs:
               assert r[k] is False,k
           print("DNSE WS RECONNECT AND CLOSE COVERAGE: NO REAL SOURCE AUTHORITY")
           PY
-      - name: Run 28 documented DNSE WS client lifecycle negative tests
+      - name: Run 48 corrected DNSE WS client lifecycle and source-document negative tests
         run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_ws_protocol_lifecycle_lab.py' -v
       - name: Verify fabricated handshake and reconnection NEVER qualify real source
         run: |
@@ -155,6 +155,11 @@ jobs:
           assert r["fake_subscribe_ack_count"]==2
           assert r["fake_closed_event_count"]==2
           assert r["fake_heartbeat_roundtrips"]==1
+          assert r["fake_proactive_pongs"]==0
+          assert r["fake_pongs_without_echo"]==0
+          assert r["fake_pong_echo_mismatches"]==0
+          assert r["fake_error_controls"]==0
+          assert r["actual_doc_control_action_model_used"] is True
           assert r["synthetic_trace_only"] is True
           for k in ("source_credentials_present","real_websocket_opened",
                     "source_issuer_authenticated","historical_backfill_proven",
