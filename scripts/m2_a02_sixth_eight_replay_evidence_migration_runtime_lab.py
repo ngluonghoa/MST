@@ -310,7 +310,6 @@ def execute_sixth_eight_runtime():
     head=cache.head(identity)
     reused=cache.commit(identity,bars,expected_head=head,
                         observed_at_utc=WEEKLY_NOW)
-    changed=(bars[0],replace(bars[1],close=Decimal("901.5")))+bars[2:]
     # The synthetic correction must preserve fixture OHLC invariants.
     modified=fake(1,price="901.5",revision="r2")
     corrected=bars[:1]+(modified,)+bars[2:]
