@@ -2,7 +2,7 @@
 
 QA ID: MST-A03-UNTRUSTED-LEDGER-CLOSURE-20261110
 Date: 10 November 2026 (Asia/Ho_Chi_Minh)
-Status: **PENDING exact-final-HEAD CI; OWNER and production NO-GO regardless of green synthetic tests**.
+Status: **PASS for bounded untrusted synthetic-only QA at code/report HEAD f6ae9171da261d1b1d30b077715df5f324fedce5: 39/39 hosted GitHub Actions SUCCESS.** Evidence-edit commit requires independent exact-HEAD verification. OWNER and production remain NO-GO.
 PR: https://github.com/ngluonghoa/MST/pull/8 (Draft only, never merge without separate owner governance).
 
 ## Baseline and gap
@@ -53,3 +53,8 @@ No Mac/MOCHI/local processing, third Cloud, vendor live APIs, license assumption
 At creation, exact-final-HEAD green has not yet been asserted. Require the 44 tests, 44 synthetic negative cases, independent GitHub live source lock, Foundation Python3.11 and 3.12/H2/H3/lint/wheel and ALL workflows at the same current PR8 commit to complete successfully. Any updated QA Markdown commit must receive fresh exact-HEAD CI verification.
 
 Even after green: G01–G08 and OA01–OA06 OPEN; real provider closure, source entitlement/retention, physical Drive market cache, signer/independent custody, durable floor and genuine two-principal server CAS all UNPROVEN. The original 16-zone detectors remain uncalibrated/UNVERIFIED; no full behavior parity, real backtest, production or trading approval. M3/M4/M5/M8 production and trading **NO-GO**.
+
+## Source-locked code/report CI evidence (verified)
+
+At Draft PR #8 code + QA report HEAD f6ae9171da261d1b1d30b077715df5f324fedce5, independently checked **39/39 GitHub Actions workflows SUCCESS**. Dedicated 44-test/44-case source-locked ledger/collusion falsification https://github.com/ngluonghoa/MST/actions/runs/42807777000 SUCCESS; Foundation Python3.11/Python3.12 and H2/H3/lint/wheel https://github.com/ngluonghoa/MST/actions/runs/42807777098 SUCCESS all three jobs; independent upstream/main/PR legacy 63+eight existing V2 source byte-lock https://github.com/ngluonghoa/MST/actions/runs/42807777014 SUCCESS. Earlier intermediate SHA e46230f61b2f349f189a222540134c6cd8ccc126 FAILED CI due to a mistyped test identifier; fixed by f6ae... and rerun, no waiver or bypass. Those earlier failures do not imply a source/trust gap was closed.
+Permanent Google Drive QA copy: https://docs.google.com/document/d/1njE0VfSisna3ELxE12nhs1OUa34FCwAxjXyEA34h2zE/edit . Protected MST main 4048f91beaaa3410116d97e35896c8b688384e19 and 63 V1/8 V2 sources unchanged; PR remains DRAFT/UNMERGED. Human owner 0/63 A02 and 0/8 A03; four new owner choices 11–14 and ten previous (14/14 total) UNSIGNED; G01–G08 OA01–OA06 and production/trading NO-GO. Any GitHub evidence-update HEAD following this paragraph must be independently checked before final checkpoint claims.
