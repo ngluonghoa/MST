@@ -16,7 +16,7 @@ from scripts.m2_a02_legacy_63_interface_review import inventory, TARGET_COUNT, _
 ROOT=Path(__file__).resolve().parents[1]
 SCHEMA="mst.a02.original-v1-63-owner-evidence-unapproved.v1"
 PACKETS=(
-    ("B01","m2_a02_eight_inherited_runtime_boundary_lab","m2-a02-eight-inherited-runtime-boundary.yml",48),
+    ("B01","m2_a02_eight_inherited_runtime_boundary_lab","m2-a02-eight-inherited-runtime-boundaries.yml",48),
     ("B02","m2_a02_source_custody_cache_eight_runtime_lab","m2-a02-source-custody-cache-eight-runtime.yml",42),
     ("B03","m2_a02_b5_causal_eight_runtime_lab","m2-a02-b5-causal-eight-runtime.yml",40),
     ("B04","m2_a02_fourth_eight_routing_calendar_runtime_lab","m2-a02-fourth-eight-routing-calendar-runtime.yml",40),
