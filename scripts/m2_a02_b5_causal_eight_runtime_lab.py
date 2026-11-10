@@ -183,7 +183,7 @@ def execute_b5_causal_matrix() -> dict:
         and short_atr.value is None
         and rvol.state is IndicatorState.COMPUTED_UNCALIBRATED
         and rvol.value == Decimal("1")
-        and rvol.used_bar_count == 20
+        and rvol.used_bar_count == 21
         and not rvol.actionable and not rvol.data_certified
         and rvol_missing.state is IndicatorState.BLOCKED
         and rvol_missing.value is None,
