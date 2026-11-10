@@ -427,7 +427,7 @@ def build() -> dict:
           not r3.verified_provider_signature and not r3.verified_independent_custody,
           "owner")
 
-    if len(cases)!=41 or len({row["case"] for row in cases})!=41:
+    if len(cases)!=42 or len({row["case"] for row in cases})!=42:
         raise AssertionError("A03_CLAIM_LEDGER_CASE_COUNT_DRIFT")
     snapshots=[{
         "as_of_utc":r.as_of_utc.isoformat(),"head_sequence":r.head_sequence,
