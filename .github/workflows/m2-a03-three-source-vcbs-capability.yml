@@ -9,13 +9,16 @@ on:
       - "scripts/m2_a03_documented_ohlc_transport_boundary_lab.py"
       - "scripts/m2_a03_dnse_ws_reconnect_coverage_lab.py"
       - "scripts/m2_a03_dnse_ws_protocol_lifecycle_lab.py"
+      - "scripts/m2_a03_dnse_rest_m5_backfill_contract_lab.py"
       - "tests/test_m2_a03_dnse_ws_reconnect_coverage_lab.py"
       - "tests/test_m2_a03_dnse_ws_protocol_lifecycle_lab.py"
+      - "tests/test_m2_a03_dnse_rest_m5_backfill_contract_lab.py"
       - "tests/test_m2_a03_documented_ohlc_transport_boundary_lab.py"
       - "tests/test_m2_a03_connected_source_freshness_lab.py"
       - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
       - "docs/MST_A03_THREE_SOURCE_VCBS_CAPABILITY_QA_20261110.md"
       - "docs/MST_A03_DNSE_WS_PROTOCOL_LIFECYCLE_QA_20261111.md"
+      - "docs/MST_A03_DNSE_REST_M5_BACKFILL_CONTRACT_QA_20261111.md"
 
 permissions:
   contents: read
@@ -168,6 +171,29 @@ jobs:
               assert r[k] is False,k
           print("DOCUMENTED DNSE WS CONTROL SEQUENCE: SYNTHETIC ONLY; NO GO")
           PY
+      - name: Run 23 DNSE public REST M5 history nextTime and WS closed overlap negative tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_rest_m5_backfill_contract_lab.py' -v
+      - name: Ensure public DNSE REST pagination does not grant source rights or history custody
+        run: |
+          python -m scripts.m2_a03_dnse_rest_m5_backfill_contract_lab --out /tmp/mst-dnse-rest-m5-backfill-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-dnse-rest-m5-backfill-NO-GO.json").read_text())
+          assert r["status"]=="PUBLIC_DNSE_M5_REST_BACKFILL_SHAPE_NOT_ISSUER_AUTHORITY_NO_GO"
+          assert r["documentation"]["resolution"]=="5"
+          assert r["documentation"]["historical_response_fields"]==["t","o","h","l","c","v","nextTime"]
+          assert r["fake_pagination"]["synthetic_pages_observed"]==2
+          assert r["fake_pagination"]["synthetic_rows_observed"]==3
+          assert r["fake_pagination"]["nexttime_zero_claimed_at_end"] is True
+          assert r["fake_closed_vs_rest"]["status"]=="IDENTICAL_NUMERIC_SHAPE_NOT_SOURCE_PROOF"
+          for k in ("source_lawful_entitlement_verified",
+                    "issuer_first_known_or_revision_ledger_verified",
+                    "official_exchange_calendar_verified","real_history_saved",
+                    "real_drive_market_cache_enabled","production_or_trading_allowed"):
+              assert r[k] is False,k
+          print("PUBLIC DNSE REST NEXTTIME IS NOT SOURCE FIRST-KNOWN OR LICENSE")
+          PY
       - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
         run: |
           python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
@@ -215,5 +241,6 @@ jobs:
             /tmp/mst-a03-documented-ohlc-NO-GO.json
             /tmp/mst-a03-dnse-ws-reconnect-NO-GO.json
             /tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json
+            /tmp/mst-dnse-rest-m5-backfill-NO-GO.json
           retention-days: 14
           if-no-files-found: error
