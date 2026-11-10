@@ -19,3 +19,24 @@ Current owner gates A03 0/14, A02 0/63, V2 0/8; E01/E02/E03/E06/E10/E12/E14 stil
 
 ### Owner-only next action, not performed
 Authorized independent GitHub reviewer enrollment, private effective permission/bypass readback, positive approval count and stale/last-push protection ruleset decisions, then controlled approval process. No reviewer identity or private evidence in this public artifact. Documentation/CI reference must be updated after exact final report HEAD is checked.
+
+## Implementation code-HEAD GitHub CI actual evidence (later report HEAD must be checked)
+
+At Draft PR #8 code HEAD b345ea2264070a88754bfdd62e2867c1a359e2ae, independently verified **41/41 GitHub Actions SUCCESS**.
+Existing GitHub-hosted M4 review governance workflow
+https://github.com/ngluonghoa/MST/actions/runs/42825461076
+returned SUCCESS for all steps, with GitHub job log explicitly reporting
+"Ran 22 tests" / OK (old policy) and "Ran 33 tests" / OK (new review
+freshness/dedup), live remote 63 inherited V1 and 8 V2 source byte lock,
+live GET-only main ruleset/PR/reviews/CODEOWNERS and sanitized fresh PR8
+review scan. PR8 live scan recorded review_events_seen=0 and
+PR_REVIEW_ACCOUNT_EVENTS_SCANNED_INDEPENDENT_AUTHORITY_NOT_PROVEN_NO_GO.
+No reviewer ID, login, review text or secrets copied to public artifact.
+
+This is a NEGATIVE observation at one token/time snapshot and public fixture
+proof, NOT official GitHub review merge eligibility, independently authenticated
+owner custody or protected external supplier origin. GitHub merge rules must
+be approved and applied by owner separately; source, vendor licenses and
+trading remain NO-GO. The appended report creates a new PR HEAD; revalidate
+all 41 workflows at that exact report-containing HEAD before final claim.
+Permanent Drive QA: https://docs.google.com/document/d/1iVpD157dM8favh_As6P_QaeZ-uAkOKnCUqk5OLgcYaE/edit .
