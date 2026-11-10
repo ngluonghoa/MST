@@ -26,3 +26,15 @@ Risk: if an actor controls PR fixture and verifier changes, current automated te
 - Provider licensing, official revisions, revocations, genuine cross-run floor, real server CAS and Drive physical licensed market-data cache must be independently qualified before any production gate.
 
 No main/ruleset/ref/ACL changes; no Mac/MOCHI/local/third Cloud; no real vendor API/cache, broker or trading. A02 owner 0/63, A03 full V2 0/8, A03 owner choices 0/14, G01–G08/OA01–OA06 remain OPEN; PR8 stays DRAFT/UNMERGED and all production/trading NO-GO.
+
+## Exact code HEAD CI evidence (report commit requires recheck)
+At Draft PR #8 code HEAD 8a26b384d453ba320800ea93b6a499460619ad82 all 40/40 GitHub Actions runs completed SUCCESS.
+Dedicated A03 workflow https://github.com/ngluonghoa/MST/actions/runs/42819131616 SUCCESS:
+GitHub job log showed `Ran 36 tests` and `Ran 16 tests`, both `OK`;
+3 co-mutated public-fixture false-trust counterexamples checked,
+original 63 V1 and eight pre-existing V2 source-lock step SUCCESS.
+Independent source signer, effective branch human-review policy, licensed vendor cache,
+owner and broker/trading remain NO-GO. No protected main or privilege changes.
+Permanent Google Drive native QA:
+https://docs.google.com/document/d/1BwtbzdGtqJ8jmkGYgA1r7SqwrI6DnFVQOiLoQS07j_E/edit
+The subsequent report-containing HEAD MUST be revalidated independently before claiming exact-final-HEAD CI.
