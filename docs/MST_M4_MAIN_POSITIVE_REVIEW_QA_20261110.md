@@ -21,3 +21,11 @@ Adds one public unapproved JSON candidate, one fail-closed Python preflight, 22 
 No ruleset/permissions/main/CODEOWNERS/witness mutation, provider API, real market data or Drive cache, Mac/MOCHI/local or third Cloud. A02 owner 0/63, A03 V2 0/8, A03 owner choices 0/14; G01–G08 OA01–OA06 remain OPEN; M3/M4/M5/M8 production/trading NO-GO.
 
 Exact report-containing HEAD CI pending verification; a code-HEAD PASS alone never certifies a later report commit.
+
+## Exact implementation commit CI evidence — report commit needs separate verification
+
+Draft PR8 implementation HEAD 92597dcc33977fc962ab2f4738ebd7ba602e02bd: independently checked **41/41** GitHub Actions workflow runs SUCCESS (one additional owner-governance workflow). Dedicated new read-only GitHub review audit https://github.com/ngluonghoa/MST/actions/runs/42822128609 SUCCESS, with **22/22** unit tests, original 63 V1+8 opt-in V2 source byte lock SUCCESS, GitHub actual GET-only ruleset/main/PR8/reviews and three CODEOWNERS paths SUCCESS, sanitized JSON artifact only. PR8 remains Draft/unmerged; protected main SHA 4048f91beaaa3410116d97e35896c8b688384e19 unchanged.
+
+Owner evidence requirements E01/E02/E03/E06/E10/E12/E14 remain unreceived; no positive independent review enforcement, private signer/controller identities, effective permission independence or release authority proven. The owner candidate is not applied. Permanent Google Drive QA: https://docs.google.com/document/d/1MURIfIWRrEyF0Huj7dD9zTGOYk5wqgY5SzfgEM200II/edit .
+
+The documentation update itself creates a new GitHub HEAD: repeat complete CI verification at the exact final report-containing commit before claiming final success.
