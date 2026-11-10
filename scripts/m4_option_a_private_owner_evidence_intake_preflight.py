@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 
 from scripts.m4_option_a_effective_authority_threat_preflight import (
     THREAT_PATH, evaluate_threats,
@@ -57,6 +58,25 @@ _REQUIREMENTS = (
      ("G03",), ("OA03",), ("T02", "T06")),
     ("E14", "EVIDENCE_PROVENANCE_TWO_VIEWER_RECONCILIATION",
      ("G07",), ("OA01", "OA05"), ("T08", "T12")),
+)
+_TOP_FIELDS = {
+    "schema", "repository", "dated_local", "architecture", "source_pin_main",
+    "upstream_pin", "source_tree", "existing_root_threat_register",
+    "existing_owner_bridge", "existing_role_matrix",
+    "existing_drive_acl_snapshot", "status",
+    "public_repository_has_private_owner_identifiers",
+    "actual_private_evidence_intake_channel_approved",
+    "independent_owner_or_signer_verified", "source_of_truth_source",
+    "existing_options_owner_decisions", "existing_security_gates",
+    "evidence_requirements", "ingestion_safety", "admissions",
+    "next_owner_action",
+}
+_UNSAFE_PUBLIC_ACCEPTANCE = (
+    re.compile(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\\.[A-Za-z]{2,}"),
+    re.compile(r"https?://", re.IGNORECASE),
+    re.compile(r"-----BEGIN[ -](?:RSA|OPENSSH|EC|PRIVATE)", re.IGNORECASE),
+    re.compile(r"(?:github_pat_|ghp_|gho_|ghs_|AIza)[A-Za-z0-9_-]{3,}"),
+    re.compile(r"(?:password|secret|private[_ -]?key|token)\\s*[:=]\\s*\\S+", re.IGNORECASE),
 )
 _META_FIELDS = {
     "id", "kind", "gates", "decisions", "threats", "acceptance", "state",
@@ -124,6 +144,8 @@ def verify_intake(
     )
     if type(intake) is not dict:
         raise TypeError("PRIVATE_INTAKE_PLAN_DICT_REQUIRED")
+    if set(intake) != _TOP_FIELDS:
+        raise PermissionError("PUBLIC_PRIVATE_INTAKE_ADDED_UNREVIEWED_TOP_LEVEL_FIELDS")
     for key, expected in (
         ("schema", SCHEMA),
         ("repository", "ngluonghoa/MST"),
@@ -165,6 +187,8 @@ def verify_intake(
             _equals(actual.get(name), expected, "INTAKE_REQUIRED_EVIDENCE_DRIFT_" + id_)
         if type(actual.get("acceptance")) is not str or len(actual["acceptance"]) < 60:
             raise ValueError("INDEPENDENT_ACCEPTANCE_EVIDENCE_DESCRIPTION_MISSING_" + id_)
+        if any(pattern.search(actual["acceptance"]) for pattern in _UNSAFE_PUBLIC_ACCEPTANCE):
+            raise PermissionError("PRIVATE_IDENTIFIER_OR_SECRET_IN_PUBLIC_ACCEPTANCE_" + id_)
         for sensitive in _NULL:
             if actual[sensitive] is not None:
                 raise PermissionError("PRIVATE_EVIDENCE_OR_IDENTITY_IN_PUBLIC_REPO_" + id_)
