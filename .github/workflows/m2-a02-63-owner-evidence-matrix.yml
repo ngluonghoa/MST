@@ -1,0 +1,85 @@
+name: MST A02 63 Original V1 Owner Evidence Sufficiency Matrix — UNSIGNED NO-GO
+
+# This cross-check is NOT a vote or an approval, and does not touch source,
+# main, privileged settings, external signer, live feed, Drive cache or broker.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-63-owner-evidence-matrix.yml"
+      - "scripts/m2_a02_63_owner_evidence_matrix.py"
+      - "tests/test_m2_a02_63_owner_evidence_matrix.py"
+      - "docs/MST_A02_63_ORIGINAL_V1_OWNER_EVIDENCE_MATRIX_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  source-locked-63-evidence-crosswalk:
+    name: 63 AST/module/scoped QA/owner NO-GO traceability and 30 integrity tests
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked inherited Python package
+        run: python -m pip install -e .
+      - name: Independently recheck LIVE Swing upstream/MST main/PR tree bytes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-63-owner-evidence-remote-source-lock.json
+      - name: Execute 30 original module matrix, tamper and status integrity tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_63_owner_evidence_matrix.py' -v
+      - name: Generate REAL source-hashed 63-row JSON CSV and Markdown artifacts
+        run: |
+          python -m scripts.m2_a02_63_owner_evidence_matrix \
+            --json /tmp/mst-a02-63-owner-matrix-UNSIGNED.json \
+            --csv /tmp/mst-a02-63-owner-matrix-UNSIGNED.csv \
+            --markdown /tmp/mst-a02-63-owner-matrix-UNSIGNED.md
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          lock=json.loads(Path("/tmp/mst-a02-63-owner-evidence-remote-source-lock.json").read_text())
+          r=json.loads(Path("/tmp/mst-a02-63-owner-matrix-UNSIGNED.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"]==63
+          assert lock["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["h3_ast_modules"]==63
+          assert r["v1_paths_with_scoped_synthetic_or_import"]==63
+          assert r["original_domain_file_paths_with_selected_tests"]==62
+          assert r["init_only_import_metadata_paths"]==1
+          assert len(r["packets"])==8
+          assert sum(len(p["members"]) for p in r["packets"])==63
+          assert r["full_behavior_acceptances"]==r["owner_signed"]==0
+          assert not r["a03_full_v1_v2_behavior_certified"]
+          assert all(x["human_owner_disposition"]=="NOT_SIGNED" for x in r["modules"])
+          assert all(not x["production_authorized"] and not x["trading_authorized"]
+                     for x in r["modules"])
+          assert all(len(x["source_sha256"])==64 and len(x["static_abi_sha256"])==64
+                     for x in r["modules"])
+          for field in ("real_vendor_licence_verified",
+                        "physical_google_drive_market_cache_certified",
+                        "security_g01_g08_independently_closed",
+                        "production_authorized","trading_authorized"):
+              assert r[field] is False,field
+          with open("/tmp/mst-a02-63-owner-matrix-UNSIGNED.csv",newline="") as fh:
+              assert len(list(csv.DictReader(fh)))==63
+          md=Path("/tmp/mst-a02-63-owner-matrix-UNSIGNED.md").read_text()
+          assert sum(line.endswith("| NOT_SIGNED |") for line in md.splitlines())==63
+          print("A02 OWNER MATRIX VALID: 63/63 FILE EVIDENCE ROWS, 62 DOMAIN PATHS, 1 __init__ METADATA, 0/63 SIGNED")
+          PY
+      - name: Publish nonauthorizing audit documents for 14 days only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-63-original-v1-owner-evidence-NOT-SIGNED
+          path: |
+            /tmp/mst-a02-63-owner-evidence-remote-source-lock.json
+            /tmp/mst-a02-63-owner-matrix-UNSIGNED.json
+            /tmp/mst-a02-63-owner-matrix-UNSIGNED.csv
+            /tmp/mst-a02-63-owner-matrix-UNSIGNED.md
+          retention-days: 14
+          if-no-files-found: error
