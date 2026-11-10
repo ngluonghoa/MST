@@ -1,0 +1,65 @@
+name: MST A02 Original V1 Zero-Overlap Exact-Close Boundary — OWNER GAP NO GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-refresh-zero-overlap-boundary.yml"
+      - "scripts/m2_a02_refresh_zero_overlap_boundary_lab.py"
+      - "tests/test_m2_a02_refresh_zero_overlap_boundary_lab.py"
+      - "docs/MST_A02_REFRESH_ZERO_OVERLAP_BOUNDARY_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-v1-planner-exact-close-characterization:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked original package
+        run: python -m pip install -e .
+      - name: Verify upstream main PR original 63 V1 and eight opt-in V2 unchanged
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-a02-refresh-source-lock.json
+      - name: Run existing inherited planner regressions
+        run: python -m unittest discover -s tests -p 'test_cache_fetch_planner.py' -v
+      - name: Run 32 exact-close zero-overlap branch and negative tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_refresh_zero_overlap_boundary_lab.py' -v
+      - name: Read original zero-overlap bug and 18 unaffected neighbor scenarios
+        run: |
+          python -m scripts.m2_a02_refresh_zero_overlap_boundary_lab --out /tmp/mst-a02-refresh-zero-overlap-NEGATIVE.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("/tmp/mst-a02-refresh-zero-overlap-NEGATIVE.json").read_text())
+          s=json.loads(Path("/tmp/mst-a02-refresh-source-lock.json").read_text())
+          assert s["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert s["original_python_module_count"] == 63
+          assert s["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert a["scenario_count"] == 22
+          assert a["reproduced_original_value_error_cases"] == 4
+          assert a["unaffected_neighbor_scenario_count"] == 18
+          assert a["status"] == "ORIGINAL_V1_EMPTY_WINDOW_BUG_REPRODUCED_OWNER_DISPOSITION_OPEN"
+          assert all(x["actual"]==x["expected"] for x in a["cases"])
+          for k in ("original_v1_source_modified","a02_owner_approved","a03_v2_full_parity_approved",
+                    "vendor_entitlement_and_source_verified","official_market_calendar_verified",
+                    "real_drive_market_cache_authorized","external_floor_cas_proven",
+                    "production_release_authorized","trading_authorized"):
+              assert a[k] is False,k
+          print("ORIGINAL V1 VALID-INPUT EMPTY REQUEST BUG REPRODUCED; OWNER NO GO")
+          PY
+      - name: Retain only synthetic source lock and NO-GO bug receipt for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-original-v1-zero-overlap-exact-close-NO-GO
+          path: |
+            /tmp/mst-a02-refresh-source-lock.json
+            /tmp/mst-a02-refresh-zero-overlap-NEGATIVE.json
+          retention-days: 14
+          if-no-files-found: error
