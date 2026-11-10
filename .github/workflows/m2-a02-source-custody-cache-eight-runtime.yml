@@ -1,0 +1,71 @@
+name: MST A02 Eight Original Source Rights and Cache Runtime Guards - READONLY NO GO
+
+# Hosted GitHub CI executes real original V1 code against fabricated
+# response metadata, ephemeral two-in-one-controller signing keys, offline
+# reference journal / snapshot and in-memory partition chunks. There is
+# NO licensed provider, real Drive API, signer enrollment or live market cache.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-source-custody-cache-eight-runtime.yml"
+      - "scripts/m2_a02_source_custody_cache_eight_runtime_lab.py"
+      - "tests/test_m2_a02_source_custody_cache_eight_runtime_lab.py"
+      - "docs/MST_A02_SECOND_EIGHT_SOURCE_CUSTODY_RUNTIME_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  source-custody-no-go:
+    name: Real eight V1 source/chain/journal/cache modules; owner grants 0
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package and verifier-only crypto in CI
+        run: python -m pip install -e ".[custody]"
+      - name: Verify REAL remote source byte tree upstream/main/PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-source-eight-remote-tree-proof.json
+      - name: Exercise real V1 rights/metadata/event chain/custody/cache negatives
+        run: python -m unittest discover -s tests -p 'test_m2_a02_source_custody_cache_eight_runtime_lab.py' -v
+      - name: Validate linked actual module runtime NO-GO report
+        run: |
+          python -m scripts.m2_a02_source_custody_cache_eight_runtime_lab \
+            --out /tmp/mst-a02-source-eight-runtime-unapproved.json
+          python - <<'PY'
+          import json
+          tree=json.load(open("/tmp/mst-a02-source-eight-remote-tree-proof.json"))
+          run=json.load(open("/tmp/mst-a02-source-eight-runtime-unapproved.json"))
+          assert tree["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert tree["original_python_module_count"] == 63
+          assert tree["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert run["executed_count"] == 8 and run["scenario_count"] == 8
+          assert all(run["scenarios"].values())
+          assert run["a02_owner_signed_modules"] == 0
+          for k in ("two_independently_controlled_real_signers",
+                    "actual_private_source_identity_or_vendor_auth",
+                    "external_monotonic_floor_proven",
+                    "physical_google_drive_cache_read_write",
+                    "production_market_data_read_authorized",
+                    "production_market_data_write_authorized",
+                    "trading_authorized"):
+              assert run[k] is False, k
+          print("EIGHT SOURCE+RIGHTS+CUSTODY+CACHE V1 MODULES PASS; NO INDEPENDENT VENDOR ROOT; NO PRODUCTION")
+          PY
+      - name: Review-only 14-day fixture receipts no market bytes or keys
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-eight-source-custody-local-fixture-NO-GO
+          path: |
+            /tmp/mst-a02-source-eight-remote-tree-proof.json
+            /tmp/mst-a02-source-eight-runtime-unapproved.json
+          retention-days: 14
+          if-no-files-found: error
