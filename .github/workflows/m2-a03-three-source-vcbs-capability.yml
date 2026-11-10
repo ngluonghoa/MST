@@ -6,6 +6,8 @@ on:
       - ".github/workflows/m2-a03-three-source-vcbs-capability.yml"
       - "scripts/m2_a03_three_source_vcbs_capability_lab.py"
       - "scripts/m2_a03_connected_source_freshness_lab.py"
+      - "scripts/m2_a03_documented_ohlc_transport_boundary_lab.py"
+      - "tests/test_m2_a03_documented_ohlc_transport_boundary_lab.py"
       - "tests/test_m2_a03_connected_source_freshness_lab.py"
       - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
       - "docs/MST_A03_THREE_SOURCE_VCBS_CAPABILITY_QA_20261110.md"
@@ -58,6 +60,42 @@ jobs:
               assert d[k] is False,k
           print("CONNECTOR META ASOF != PUBLISHER FIRST-KNOWN; CROSS-MODE M5 NO-GO")
           PY
+      - name: Test 26 DNSE documented WebSocket forming/closed and SSI REST 30m facts
+        run: python -m unittest discover -s tests -p 'test_m2_a03_documented_ohlc_transport_boundary_lab.py' -v
+      - name: Verify published source transport never becomes authenticated M5 signal
+        run: |
+          python -m scripts.m2_a03_documented_ohlc_transport_boundary_lab --out /tmp/mst-a03-documented-ohlc-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a03-documented-ohlc-NO-GO.json").read_text())
+          assert r["status"]=="DOCUMENTED_SOURCE_TRANSPORT_IS_NOT_CONNECTED_OR_LICENSED_NO_GO"
+          assert r["ssi_public_rest_v3_m30"]["rest_v3_public_timeFrame_30m"] is True
+          assert r["ssi_public_rest_v3_m30"]["current_connected_mcp_supports_rest_v3_30m"] is False
+          assert r["dnse_public_ws_start_label_documented"] is True
+          assert r["dnse_public_ws_ohlc_closed_channel_documented"] is True
+          assert r["dnse_connected_mcp_is_d1_history_not_live_ws"] is True
+          assert r["dnse_qualified_closed_M5_signal"] is False
+          assert len(r["fabricated_channel_observations"])==2
+          assert r["fabricated_channel_observations"][0]["source_payload_self_declares_closed_channel"] is True
+          assert r["fabricated_channel_observations"][1]["source_payload_self_declares_closed_channel"] is False
+          assert all(x["can_emit_signal"] is False for x in r["fabricated_channel_observations"])
+          for k in ("connected_mcp_exposes_this_native_ws_stream",
+                    "connected_mcp_exposes_rest_v3_30m",
+                    "vendor_channel_origin_authenticated",
+                    "provider_entitlement_and_retention_authorized",
+                    "signed_source_first_known_history_verified",
+                    "official_exchange_calendar_and_auction_verified",
+                    "native_bar_feed_closed_and_complete_independently_verified",
+                    "real_historical_revision_ledger_verified",
+                    "real_market_data_cached_on_google_drive",
+                    "original_v1_or_v2_source_changed",
+                    "a02_owner_63_approved","a03_v2_owner_8_approved",
+                    "a03_owner_14_approved","production_release_authorized",
+                    "trading_authorized"):
+              assert r[k] is False,k
+          print("DNSE CLOSED VS FORMING DOCUMENTED TRANSPORT: SIMULATED ONLY; NO LIVE SOURCE")
+          PY
       - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
         run: |
           python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
@@ -102,5 +140,6 @@ jobs:
             /tmp/mst-three-source-lock.json
             /tmp/mst-three-source-vcbs-NO-GO.json
             /tmp/mst-source-clock-NO-GO.json
+            /tmp/mst-a03-documented-ohlc-NO-GO.json
           retention-days: 14
           if-no-files-found: error

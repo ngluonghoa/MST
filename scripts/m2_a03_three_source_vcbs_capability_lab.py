@@ -21,7 +21,7 @@ SCHEMA="mst.a03.three-provider-six-timeframe-capability.untrusted.v1"
 TF=("M5","M15","M30","H1","H4","D1")
 PROVIDERS=(Provider.SSI,Provider.DNSE,Provider.VCBS)
 PUBLIC_API={
-    Provider.SSI: frozenset(("M5","M15","H1","D1")),
+    Provider.SSI: frozenset(("M5","M15","M30","H1","D1")),
     Provider.DNSE: frozenset(("M5","M15","M30","H1","D1")),
     Provider.VCBS: frozenset(),
 }

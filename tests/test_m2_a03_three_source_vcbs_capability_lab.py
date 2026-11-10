@@ -21,7 +21,7 @@ class ThreeSourceVCBS(TestCase):
     def test_07_all_no_signal_permission(self):self.assertTrue(all(not x.signal_eligible for x in self.all))
     def test_08_ssi_m5_public_unconnected(self):self.assertTrue(self.by[P.SSI,"M5"].public_native_api_documented_unconnected)
     def test_09_ssi_m15_public_unconnected(self):self.assertTrue(self.by[P.SSI,"M15"].public_native_api_documented_unconnected)
-    def test_10_ssi_m30_not_verified(self):self.assertFalse(self.by[P.SSI,"M30"].public_native_api_documented_unconnected)
+    def test_10_ssi_m30_public_rest_v3_not_connected(self):self.assertTrue(self.by[P.SSI,"M30"].public_native_api_documented_unconnected)
     def test_11_ssi_h1_public_unconnected(self):self.assertTrue(self.by[P.SSI,"H1"].public_native_api_documented_unconnected)
     def test_12_ssi_h4_derived(self):self.assertIn("DERIVED_H4",self.by[P.SSI,"H4"].status)
     def test_13_ssi_d1_connected(self):self.assertIs(self.by[P.SSI,"D1"].connected_endpoint,E.SSI_D1_DETAILED)
