@@ -1,0 +1,65 @@
+name: MST A02 V1 Late Correction Session Membership - NEGATIVE NO GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-v1-cross-session-first-known-negative.yml"
+      - "scripts/m2_a02_v1_cross_session_first_known_lab.py"
+      - "tests/test_m2_a02_v1_cross_session_first_known_lab.py"
+      - "docs/MST_A02_V1_CROSS_SESSION_FIRST_KNOWN_NEGATIVE_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-v1-first-known-cross-session:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install original synthetic V1 package
+        run: python -m pip install -e .
+      - name: Lock source original Swing 63 V1 plus eight V2, main and PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-a02-cross-source-lock.json
+      - name: Run 28 targeted session and first-known tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_v1_cross_session_first_known_lab.py' -v
+      - name: Execute unmodified inherited SQLite correction and session-mislabel case
+        run: |
+          python -m scripts.m2_a02_v1_cross_session_first_known_lab --out /tmp/mst-a02-cross-session-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a02-cross-session-NO-GO.json").read_text())
+          s=json.loads(Path("/tmp/mst-a02-cross-source-lock.json").read_text())
+          assert s["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert s["original_python_module_count"] == 63
+          assert s["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert r["assertion_count"] == 21
+          assert r["counts"]["a_revised_checkpoint_tail"] == 3
+          assert r["counts"]["a_after_mislabeled_b"] == 5
+          assert r["wrong_session_candle_can_be_written_into_caller_labeled_partition"] is True
+          assert r["distinct_proper_session_keys_remain_isolated"] is True
+          for k in ("original_v1_modified","real_vendor_revision_attested",
+                    "official_session_calendar_verified","signed_source_first_known_verified",
+                    "historical_asof_reader_qualified","independent_session_membership_verified",
+                    "real_google_drive_cache_authorized","a02_63_owner_signed",
+                    "a03_v2_8_owner_signed","a03_14_owner_signed",
+                    "production_authorized","trading_authorized"):
+              assert r[k] is False,k
+          print("INHERITED NEGATIVE: source session and as-of gates remain unqualified")
+          PY
+      - name: Retain synthetic-only no-authority QA receipt and live source lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-v1-firstknown-crosssession-NO-GO
+          path: |
+            /tmp/mst-a02-cross-source-lock.json
+            /tmp/mst-a02-cross-session-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
