@@ -9,6 +9,9 @@ on:
       - "scripts/m2_a03_v2_full_policy_manifest_draft.py"
       - "tests/test_m2_a03_v2_full_policy_manifest_draft.py"
       - "docs/MST_A03_V2_FULL_POLICY_MANIFEST_CHAIN_QA_20261109.md"
+      - "scripts/m4_v21_layered_invalidation_lab.py"
+      - "tests/test_m4_v21_layered_invalidation_lab.py"
+      - "docs/MST_M4_CACHE_V21_OWNER_APPROVED_ROADMAP_20261111.md"
 
 permissions:
   contents: read
@@ -29,10 +32,30 @@ jobs:
         run: |
           python -m scripts.m2_a03_v2_full_policy_manifest_draft \
             --out /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
+      - name: Run 28 test-only Cache V2.1 full-policy layered recompute controls
+        run: python -m unittest discover -s tests -p 'test_m4_v21_layered_invalidation_lab.py' -v
+      - name: Demonstrate bounded dependent-only recompute, lineage-only reuse and unknown quarantine
+        run: |
+          python -m scripts.m4_v21_layered_invalidation_lab --out /tmp/mst-v21-layer-impact-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/tmp/mst-v21-layer-impact-NO-GO.json").read_text())
+          assert d["status"]=="FULL_POLICY_LAYER_INVALIDATION_PREVIEW_SOURCE_AND_DRIVE_NO_GO"
+          assert len(d["fixture_value_correction"]["impacted_nodes"])==6
+          assert len(d["fixture_metadata_revision"]["impacted_nodes"])==2
+          assert len(d["unqualified_change_quarantine"]["impacted_nodes"])==9
+          assert d["provider_market_source_verified"] is False
+          assert d["actual_drive_cache_published"] is False
+          assert d["governance_p0_owner_release_approved"] is False
+          print("V2.1 P0 PLAN PASS SYNTHETIC; MARKET DATA AND DRIVE NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
           name: mst-a03-manifest-full-policy-local-chain-NO-AUTH
-          path: /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
+          path: |
+            /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
+            /tmp/mst-v21-layer-impact-NO-GO.json
           retention-days: 14
           if-no-files-found: error
