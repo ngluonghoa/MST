@@ -17,3 +17,12 @@ Owner must separately decide to preserve the original valid-input exception for 
 
 ## CI / evidence
 PENDING exact report-containing commit CI and Drive readback. A green *negative reproduction* indicates a known source behavior gap, not defect remediation or signed owner approval.
+
+## Exact implementation code-head GitHub Actions receipt
+
+Draft PR8 code HEAD `1664fd7814172e53f1fe653c1b0ab08697f730ce`: independently checked all **42/42 GitHub Actions workflows SUCCESS** (new A02 exact-close regression workflow is the 42nd). Dedicated A02 boundary run https://github.com/ngluonghoa/MST/actions/runs/42834701234 SUCCESS; GitHub-hosted job logs show `Ran 19 tests` / OK for pre-existing original planner regressions and `Ran 32 tests` / OK for the additional original-source 22-case boundary experiment. Original upstream Swing/main/PR 63 V1 plus eight opt-in V2 source lock ran SUCCESS before tests; report index b1cf29c62fbd1a251d87234ad3e12f7685285177b8bb924fe85926c3bfc576d1 is synthetic QA metadata, NOT an authenticated signer. Both existing V1 exception and valid neighboring source behavior reproduced.
+No original V1 bug fix was applied, no signed 1:1 parity owner disposition, no external vendor source/data rights or actual Drive market cache, no production release/trade.
+
+Permanent native Google Drive QA: https://docs.google.com/document/d/1rNfMWr_etQAFFNjDSpgdU8eqw_UMaRqKln68-GqJG3I/edit .
+
+**This QA append creates a NEW report-containing PR HEAD; full 42/42 CI at that final SHA must be rechecked separately before any final-head PASS statement.**
