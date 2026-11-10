@@ -33,3 +33,12 @@ At implementation PR8 HEAD `780d41f99024fb0252d82123c930e65de2162be6`, **47/47 G
 Native Google Drive QA: https://docs.google.com/document/d/1Zrcsug5mQ50GAULPYdxwMy54MarTNS790jKBc3MJtbs/edit. Existing 63 V1 and 8 V2 source bytes, protected MST main and original Swing pin unchanged, PR8 remains DRAFT/unmerged. A02 0/63, A03 V2 0/8 and A03 0/14 owner signoffs remain pending, all real market/source licensing/production/trading NO-GO.
 
 This documentation append creates a new report-containing HEAD; its 47 GitHub Actions workflows must be checked on that exact SHA separately before declaring the final report checkpoint PASS.
+
+
+## Connected SSI and DNSE date/clock source-mode observation — 2026-11-10
+
+Actual read-only connected SSI intraday FULL-DAY returned 226 OHLCV-shaped timestamped rows; 223 adjacent gaps were 60 seconds, and two gaps were larger. These are row shapes and apparent one-minute cadence, not a vendor-attested native M1 or M5 contract, exact START/END, bar closure, historical first-known, or lawful retention. A historical request for a day numbered greater than 12 had a single day-first interpretation; a latest-mode date token had both numeric components <=12, so DD/MM versus MM/DD could not be independently resolved with a single universal parser. There is no source-authorized proof that the two modes share a uniform date format. Raw live quotes and timestamps were inspected in memory, NOT saved here, in GitHub, or in Google Drive.
+
+Connected DNSE price_get_history returned 248 daily-shaped OHLCV observations in columns t/o/h/l/c/v across approximately a year, with 1-day and weekend-sized spacing. The connected MCP accepts only symbol; it has NO native resolution=5 query selector. Separate public HTTP documentation for native minute OHLC does not automatically qualify connected DNSE MCP as M5.
+
+The existing A03 scripts-only three-provider lab now adds a candidate-only strict SSI date parser: both DD/MM and MM/DD date interpretations are enumerated, and ambiguous tokens are rejected EVEN if the requested day or current date appears to resolve one. An unambiguous token passes only shape-level validation, not issuer/timeframe rights. Original C2 in-memory shape checks are exercised on manufactured SSI and D1 DNSE payloads. DNSE connected minute OHLCV request remains BLOCKED. The existing dedicated PR8 workflow is expanded from 48 to 64 unit tests; no additional workflow, no source-module change, no real vendor data in test artifacts. Exact GitHub CI pending after this update.

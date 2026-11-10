@@ -1,4 +1,4 @@
-"""48 SSI/DNSE/VCBS six-timeframe classification and VCBS no-bar checks."""
+"""64 SSI/DNSE/VCBS six-timeframe classification and VCBS no-bar checks."""
 from unittest import TestCase
 from swing_trading.incremental_cache import Provider as P
 from swing_trading.c2_source_capability_audit import (
@@ -83,3 +83,55 @@ class ThreeSourceVCBS(TestCase):
     def test_48_deterministic_receipt_only(self):
         self.assertEqual(self.result["synthetic_receipt_sha256"],m.evaluate()["synthetic_receipt_sha256"])
         self.assertFalse(self.result["vcbs_fabricated_probe"]["retains_real_source_rows"])
+
+    def test_49_unambiguous_history_day13(self):
+        x=m.ssi_date_candidates("13/10/2026 09:15:00")
+        self.assertEqual(len(x),1)
+        self.assertEqual(x[0][0],"DD_MM_YYYY")
+    def test_50_latest_like_11_10_ambiguous(self):
+        self.assertEqual(len(m.ssi_date_candidates("11/10/2026 14:45:00")),2)
+    def test_51_equal_day_month_still_two_formats(self):
+        self.assertEqual(len(m.ssi_date_candidates("11/11/2026 14:45:00")),2)
+    def test_52_expected_day_cannot_resolve_ambiguous(self):
+        from datetime import date
+        with self.assertRaisesRegex(PermissionError,"AMBIGUOUS"):
+            m.strict_ssi_day_candidate_only("11/10/2026 14:45:00",date(2026,11,10))
+    def test_53_other_expected_day_cannot_resolve_either(self):
+        from datetime import date
+        with self.assertRaises(PermissionError):
+            m.strict_ssi_day_candidate_only("11/10/2026 14:45:00",date(2026,10,11))
+    def test_54_unambiguous_history_still_no_source_proof(self):
+        from datetime import date
+        r=m.strict_ssi_day_candidate_only("13/10/2026 09:15:00",date(2026,10,13))
+        self.assertTrue(r["parser_shape_only"])
+        self.assertFalse(r["vendor_date_convention_verified"])
+    def test_55_unambiguous_day_mismatch_rejected(self):
+        from datetime import date
+        with self.assertRaises(ValueError):
+            m.strict_ssi_day_candidate_only("13/10/2026 09:15:00",date(2026,11,13))
+    def test_56_impossible_calendar_day_rejected(self):
+        with self.assertRaises(ValueError):m.ssi_date_candidates("31/02/2026 09:15:00")
+    def test_57_invalid_hms_rejected(self):
+        with self.assertRaises(ValueError):m.ssi_date_candidates("13/10/2026 25:15:00")
+    def test_58_wrong_date_shape_rejected(self):
+        with self.assertRaises(ValueError):m.ssi_date_candidates("13/10/2026")
+    def test_59_ssi_original_c2_synthetic_shape(self):
+        r=m.ssi_dnse_synthetic_source_modes()
+        self.assertEqual(r["ssi_original_c2_shape"],"SHAPE_RETURNED")
+        self.assertEqual(r["ssi_synthetic_rows"],3)
+    def test_60_ssi_minute_shape_not_source_semantic(self):
+        r=m.ssi_dnse_synthetic_source_modes()
+        self.assertFalse(r["ssi_raw_date_semantic_authenticated"])
+        self.assertFalse(r["ssi_m5_close_and_interval_authenticated"])
+    def test_61_dnse_connected_d1_original_c2_shape(self):
+        r=m.ssi_dnse_synthetic_source_modes()
+        self.assertEqual(r["dnse_original_c2_shape"],"SHAPE_RETURNED")
+        self.assertEqual(r["dnse_synthetic_d1_rows"],3)
+    def test_62_dnse_connected_minute_ohlcv_denied(self):
+        self.assertTrue(m.ssi_dnse_synthetic_source_modes()["dnse_connected_minute_ohlcv_blocked"])
+    def test_63_no_real_source_payload_retained(self):
+        self.assertFalse(m.ssi_dnse_synthetic_source_modes()["real_source_payload_persisted"])
+        self.assertFalse(self.result["native_minute_ohlcv_connected_and_qualified"])
+    def test_64_source_mode_receipt_repeatable(self):
+        self.assertEqual(self.result["ssi_dnse_synthetic_mode_probe"],
+                         m.ssi_dnse_synthetic_source_modes())

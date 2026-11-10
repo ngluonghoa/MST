@@ -129,6 +129,84 @@ def require_approved_signal_source(row):
         raise TypeError("TYPED_SOURCE_STATUS_REQUIRED")
     raise PermissionError("NO_SIGNED_SOURCE_RIGHTS_NATIVE_BARS_AND_OWNER_APPROVAL")
 
+
+# Additional connector-mode shape probe. Synthetic only, no SSI/DNSE I/O.
+from datetime import date as CalendarDate
+import re as _date_regex
+
+def ssi_date_candidates(raw):
+    if type(raw) is not str:
+        raise TypeError("STRICT_SSI_DATE_STRING_REQUIRED")
+    match=_date_regex.fullmatch(
+        r"(\d{2})/(\d{2})/(\d{4}) (\d{2}):(\d{2}):(\d{2})",raw)
+    if match is None:
+        raise ValueError("EXACT_DATE_HMS_REQUIRED")
+    a,b,year,hh,minute,seconds=map(int,match.groups())
+    if hh>23 or minute>59 or seconds>59:
+        raise ValueError("IMPOSSIBLE_SOURCE_CLOCK")
+    choices=[]
+    for fmt,month,day in (("DD_MM_YYYY",b,a),("MM_DD_YYYY",a,b)):
+        try:
+            value=CalendarDate(year,month,day)
+        except ValueError:
+            continue
+        choices.append((fmt,value))
+    if not choices:
+        raise ValueError("INVALID_CALENDAR_DATE")
+    return tuple(choices)
+
+def strict_ssi_day_candidate_only(raw,expected_day):
+    if type(expected_day) is not CalendarDate:
+        raise TypeError("EXPLICIT_EXPECTED_DAY_REQUIRED")
+    options=ssi_date_candidates(raw)
+    if len(options)!=1:
+        raise PermissionError("AMBIGUOUS_DD_MM_VS_MM_DD_SOURCE_FIELD")
+    if options[0][1]!=expected_day:
+        raise ValueError("SOURCE_DATE_EXPECTATION_MISMATCH")
+    return {"day_shape":expected_day.isoformat(),
+            "parser_shape_only":True,"vendor_date_convention_verified":False}
+
+def ssi_dnse_synthetic_source_modes():
+    """Exercise original C2 on invented source rows, never a live snapshot."""
+    fake_ssi={"status":"ok","data":{"ticks":[
+        {"symbol":"SYN","trading_date":"13/10/2026 "+time,
+         "open":100,"high":102,"low":99,"close":101,"volume":10}
+        for time in ("09:15:00","09:16:00","09:17:00")
+    ]}}
+    fake_dnse={"data":{
+        "t":[int(datetime(2026,11,day,tzinfo=timezone.utc).timestamp())
+             for day in (6,9,10)],
+        "o":[100,101,102],"h":[103,104,105],"l":[98,99,100],
+        "c":[101,102,103],"v":[10,11,12],
+    }}
+    now=datetime(2026,11,10,17,0,tzinfo=timezone.utc)
+    ss=audit_transient_response(E.SSI_INTRADAY_SESSION,fake_ssi,
+                                checked_at_utc=now)
+    dn=audit_transient_response(E.DNSE_D1_HISTORY,fake_dnse,
+                                checked_at_utc=now)
+    if ss.state is not ProbeState.SHAPE_RETURNED or dn.state is not ProbeState.SHAPE_RETURNED:
+        raise AssertionError("C2_SOURCE_MODE_SHAPE_CHANGED")
+    if ss.observed_rows!=3 or dn.observed_rows!=3:
+        raise AssertionError("MANUFACTURED_ROW_COUNT_CHANGED")
+    if advise_connected_refresh(E.DNSE_D1_HISTORY,DataNeed.MINUTE_OHLCV).verdict is not RefreshVerdict.BLOCKED:
+        raise AssertionError("DNSE_D1_FALSELY_QUALIFIED_M5")
+    if advise_connected_refresh(E.SSI_INTRADAY_SESSION,DataNeed.MINUTE_OHLCV).verdict is not RefreshVerdict.REFETCH_WHOLE_SESSION:
+        raise AssertionError("SSI_CONNECTED_SESSION_REFRESH_DRIFT")
+    if len(ssi_date_candidates("13/10/2026 09:15:00"))!=1 or len(ssi_date_candidates("11/10/2026 09:15:00"))!=2:
+        raise AssertionError("SSI_SOURCE_MODE_DATE_DISAMBIGUATION_DRIFT")
+    return {
+        "ssi_original_c2_shape":ss.state.value,
+        "ssi_synthetic_rows":ss.observed_rows,
+        "ssi_raw_date_semantic_authenticated":False,
+        "ssi_m5_close_and_interval_authenticated":False,
+        "ssi_ambiguous_latest_token_inferred":False,
+        "dnse_original_c2_shape":dn.state.value,
+        "dnse_synthetic_d1_rows":dn.observed_rows,
+        "dnse_mcp_m5_parameter_present":False,
+        "dnse_connected_minute_ohlcv_blocked":True,
+        "real_source_payload_persisted":False,
+    }
+
 def evaluate():
     rows=matrix()
     vcbs=vcbs_probe(fabricated_vcbs(),"M5")
@@ -153,6 +231,7 @@ def evaluate():
             "signal_eligible":False,
         } for x in rows],
         "vcbs_fabricated_probe":vcbs,
+        "ssi_dnse_synthetic_mode_probe":ssi_dnse_synthetic_source_modes(),
         "source_legal_first_known_and_auction_not_proven":True,
         **{k:False for k in GATES},
     }

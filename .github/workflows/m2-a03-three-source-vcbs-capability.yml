@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-three-source-lock.json
-      - name: Run 48 source capabilities and VCBS negative unit tests
+      - name: Run 64 SSI DNSE source-mode and VCBS source-capability tests
         run: python -m unittest discover -s tests -p 'test_m2_a03_three_source_vcbs_capability_lab.py' -v
       - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
         run: |
@@ -45,6 +45,15 @@ jobs:
           assert r["vcbs_fabricated_probe"]["synthetic_points"] == 3
           assert r["vcbs_fabricated_probe"]["source_has_per_candle_ohlcv"] is False
           assert r["vcbs_fabricated_probe"]["valid_for_signal_indicators"] is False
+          p=r["ssi_dnse_synthetic_mode_probe"]
+          assert p["ssi_original_c2_shape"]=="SHAPE_RETURNED"
+          assert p["ssi_synthetic_rows"]==3
+          assert p["ssi_raw_date_semantic_authenticated"] is False
+          assert p["ssi_ambiguous_latest_token_inferred"] is False
+          assert p["dnse_original_c2_shape"]=="SHAPE_RETURNED"
+          assert p["dnse_synthetic_d1_rows"]==3
+          assert p["dnse_connected_minute_ohlcv_blocked"] is True
+          assert p["real_source_payload_persisted"] is False
           assert all(row["qualified_native_ohlcv"] is False and
                      row["signal_eligible"] is False for row in r["rows"])
           for key in ("native_minute_ohlcv_connected_and_qualified",
