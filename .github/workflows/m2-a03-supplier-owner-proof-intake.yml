@@ -5,9 +5,12 @@ on:
     paths:
       - ".github/workflows/m2-a03-supplier-owner-proof-intake.yml"
       - "scripts/m2_a03_supplier_owner_proof_packet.py"
+      - "scripts/m2_a03_self_anchor_falsification_lab.py"
       - "tests/test_m2_a03_supplier_owner_proof_packet.py"
+      - "tests/test_m2_a03_self_anchor_falsification_lab.py"
       - "docs/MST_A03_SUPPLIER_OWNER_PROOF_PACKET_UNAPPROVED_20261110.json"
       - "docs/MST_A03_SUPPLIER_OWNER_PROOF_ACCEPTANCE_QA_20261110.md"
+      - "docs/MST_A03_SELF_ANCHOR_NEGATIVE_QA_20261110.md"
       - "docs/MST_M4_OPTION_A_PRIVATE_OWNER_EVIDENCE_INTAKE_20261110.json"
 
 permissions:
@@ -33,6 +36,8 @@ jobs:
         run: |
           python -m unittest discover -s tests \
             -p 'test_m2_a03_supplier_owner_proof_packet.py' -v
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_self_anchor_falsification_lab.py' -v
       - name: Validate reviewed text, case-to-gate mapping, M4 kinds and all NO-GO flags
         run: |
           python -m scripts.m2_a03_supplier_owner_proof_packet \
@@ -60,6 +65,28 @@ jobs:
               assert r[k] is False, k
           print("Public proof requirements verified, still no independent vendor proof / production / trading")
           PY
+      - name: Demonstrate co-edited public verifier and fixture can appear green
+        run: |
+          python -m scripts.m2_a03_self_anchor_falsification_lab \
+            --out /tmp/mst-a03-self-anchor-falsification-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-a03-self-anchor-falsification-NO-GO.json").read_text())
+          assert x["case_count"] == 3
+          assert all(c["unmodified_validator_rejects"] and
+                     c["co_modified_public_validator_accepts"] and
+                     c["legacy_coarse_index_still_matches"] and
+                     c["recomputed_semantic_index_differs"] and
+                     not c["independent_root_or_owner_authority_proven"] and
+                     not c["production_or_trading_authorized"]
+                     for c in x["cases"])
+          assert x["owner_gates_approved"] == 0
+          assert x["independent_protected_commit_or_signer_attestation"] is False
+          assert x["licensed_drive_market_cache_authorized"] is False
+          assert x["trading_authorized"] is False
+          print("EXPECTED falsification: three locally green co-rebased proofs remain NO-GO")
+          PY
       - name: Retain public unapproved checklist receipt and source byte lock 14 days
         uses: actions/upload-artifact@v4
         with:
@@ -67,5 +94,6 @@ jobs:
           path: |
             /tmp/mst-a03-owner-proof-source-lock.json
             /tmp/mst-a03-supplier-owner-proof-NO-GO.json
+            /tmp/mst-a03-self-anchor-falsification-NO-GO.json
           retention-days: 14
           if-no-files-found: error
