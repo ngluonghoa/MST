@@ -133,6 +133,9 @@ def build() -> dict:
     record("V1_MARKET_PORT_REJECTS_V2_MAJOR",
            not check_port(V1_MARKET_PORT, V2_MARKET_PORT, market).compatible,
            "consumer_ports")
+    record("V2_MARKET_PORT_REJECTS_V1_MAJOR",
+           not check_port(V2_MARKET_PORT, V1_MARKET_PORT, market).compatible,
+           "consumer_ports")
     record("V2_RULE_PORT_REJECTS_V1_MAJOR",
            not check_port(V2_RULES_PORT, V1_RULES_PORT, v2_rules).compatible,
            "consumer_ports")
