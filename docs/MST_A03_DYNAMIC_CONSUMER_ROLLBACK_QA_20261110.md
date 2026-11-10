@@ -2,7 +2,7 @@
 
 QA ID: MST-A03-DYNAMIC-CONSUMER-NMINUS1-20261110  
 Date: 2026-11-10 Asia/Ho_Chi_Minh  
-Status: **PENDING exact-head GitHub Actions** until readback verifies all runs. This is a targeted differential/falsification packet, not broad ABI parity certification.
+Status: **PASS at code+QA-report commit fe94b6525a08dd6a6a856676cb04a02d44df1b29, 36/36 GitHub Actions SUCCESS (bounded synthetic only)**. The subsequent evidence-update commit must receive its own exact-head CI readback. This is targeted differential/falsification, NOT broad ABI parity certification.
 
 ## Baseline and scope
 
@@ -45,8 +45,8 @@ Human A02 full module approvals **0/63**, A03 V2 full owner approvals **0/8**. `
 
 ## Evidence checklist (must be updated after exact-head CI readback)
 
-- Dedicated dynamic-consumer workflow: PENDING as written.
-- Foundation Python 3.11 and Python 3.12, engineering source/wheel: PENDING as written.
-- Independent live upstream/main/PR source-lock: PENDING as written.
-- All exact-current-head PR workflow runs: PENDING as written.
-- Four MST canonical Docs updated only after QA is green; owner and production NO-GO must stay explicit.
+- Dedicated dynamic-consumer workflow: [run #42799083198](https://github.com/ngluonghoa/MST/actions/runs/42799083198) SUCCESS (37 methods, 42 fixture cases, two runtime differences).
+- Foundation Python 3.11 and Python 3.12, engineering source/wheel: [run #42799083260](https://github.com/ngluonghoa/MST/actions/runs/42799083260) SUCCESS, all three jobs.
+- Independent live upstream/main/PR source-lock: [run #42799083151](https://github.com/ngluonghoa/MST/actions/runs/42799083151) SUCCESS; no original 63 V1 or eight existing V2 source edits.
+- All 36 workflow runs at code/report HEAD fe94b6525a08dd6a6a856676cb04a02d44df1b29 SUCCESS. Final evidence-update HEAD requires separate readback.
+- Permanent QA mirror: https://docs.google.com/document/d/1zCpxySSXJSjqKOHNyt3n5DWe3aVPnKuQ7DpgDpgWuhY/edit . Four MST canonical Docs will be updated after current evidence HEAD green; owner and production NO-GO stay explicit.
