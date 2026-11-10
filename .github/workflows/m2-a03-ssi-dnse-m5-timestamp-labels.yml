@@ -46,7 +46,7 @@ jobs:
                     "dnse_start_end_semantic_proven","licensed_vendor_source_proven",
                     "official_calendar_and_auction_proven","first_known_origin_proven",
                     "drive_market_cache_authorized","v1_v2_original_modified",
-                    "owner_a02_63_approved","owner_a03_v2_8_owner_approved",
+                    "owner_a02_63_approved","owner_a03_v2_8_approved",
                     "owner_a03_14_approved","production_authorized",
                     "trading_authorized"):
               assert r[k] is False,k
