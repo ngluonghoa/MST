@@ -91,9 +91,8 @@ class SixTimeframeCausalWindowTests(unittest.TestCase):
     def test_20_changed_calendar_fingerprint_denied(self):
         old=self.grid.scope.scope.legacy
         newer=replace(old,calendar_version="FAKE.NEW.CALENDAR")
-        newgrid=replace(self.grid,scope=FullPolicyFixture(fixture_scope(newer)))
         with self.assertRaisesRegex(PermissionError,"FOREIGN_RIGHTS"):
-            _=newgrid
+            self.grid_with(scope=FullPolicyFixture(fixture_scope(newer)))
     def test_21_changed_rights_fingerprint_denied(self):
         old=self.grid.scope.scope.legacy
         newer=replace(old,source_rights_policy_version="RIGHTS.REVOKED")
