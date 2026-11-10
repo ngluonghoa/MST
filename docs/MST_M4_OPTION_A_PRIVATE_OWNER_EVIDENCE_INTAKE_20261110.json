@@ -1,0 +1,372 @@
+{
+  "schema": "mst.m4.option-a.private-owner-evidence-intake.plan.unapproved.v1",
+  "repository": "ngluonghoa/MST",
+  "dated_local": "2026-11-10",
+  "architecture": "OPTION_A_GITHUB_GOOGLE_DRIVE_ONLY",
+  "source_pin_main": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "upstream_pin": "cd90c1babae8912db31490ad614fc2ad2f868042",
+  "source_tree": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+  "existing_root_threat_register": "docs/MST_M4_OPTION_A_EFFECTIVE_AUTHORITY_THREAT_REGISTER_20261110.json",
+  "existing_owner_bridge": "docs/MST_M4_OPTION_A_G01_G03_OWNER_DECISION_BRIDGE_20261110.json",
+  "existing_role_matrix": "docs/MST_M4_OPTION_A_ROLE_SEPARATION_PROPOSAL_20261109.json",
+  "existing_drive_acl_snapshot": "docs/MST_M4_OPTION_A_DRIVE_ACL_OBSERVATION_20261109.json",
+  "status": "PRIVATE_OWNER_EVIDENCE_REQUIREMENTS_NOT_COLLECTED_PRODUCTION_BLOCKED",
+  "public_repository_has_private_owner_identifiers": false,
+  "actual_private_evidence_intake_channel_approved": false,
+  "independent_owner_or_signer_verified": false,
+  "source_of_truth_source": "EXISTING_OWNER_BRIDGE_AND_ROLE_MATRIX_NOT_AN_INDEPENDENT_AUTHORITY",
+  "existing_options_owner_decisions": [
+    "OA01",
+    "OA02",
+    "OA03",
+    "OA04",
+    "OA05",
+    "OA06"
+  ],
+  "existing_security_gates": [
+    "G01",
+    "G02",
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07",
+    "G08"
+  ],
+  "evidence_requirements": [
+    {
+      "id": "E01",
+      "kind": "GITHUB_EFFECTIVE_ADMIN_BYPASS_INVENTORY",
+      "gates": [
+        "G01"
+      ],
+      "decisions": [
+        "OA01",
+        "OA05"
+      ],
+      "threats": [
+        "T01",
+        "T08",
+        "T12"
+      ],
+      "acceptance": "Independent owner-authorized effective GitHub admin/policy/bypass inventory from at least two separately authenticated viewers, including scope and omitted-field record.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E02",
+      "kind": "PROTECTED_WITNESS_REF_RULESET_OWNER_READBACK",
+      "gates": [
+        "G02"
+      ],
+      "decisions": [
+        "OA02"
+      ],
+      "threats": [
+        "T02"
+      ],
+      "acceptance": "Owner-approved witness ref scope and protected ruleset effective state with non-delete/no-force/no-unreviewed-bypass owner-only readback; not merely a test ref.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E03",
+      "kind": "SIGNER_ROOT_INDEPENDENT_ENROLLMENT",
+      "gates": [
+        "G01"
+      ],
+      "decisions": [
+        "OA01",
+        "OA02"
+      ],
+      "threats": [
+        "T03",
+        "T09"
+      ],
+      "acceptance": "Independently controlled root key enrollment and policy governance with reviewer/challenge and unauthorized signer rejection proof; no signing secrets in this ledger.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E04",
+      "kind": "EPOCH_REVOCATION_ADMIN_RECOVERY",
+      "gates": [
+        "G02",
+        "G06"
+      ],
+      "decisions": [
+        "OA02",
+        "OA05"
+      ],
+      "threats": [
+        "T04"
+      ],
+      "acceptance": "Cross-run key epoch, revocation and admin recovery must preserve accepted high-water, independently witnessed by an authorized verifier.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E05",
+      "kind": "TWO_INDEPENDENT_AUTHENTICATED_WRITERS",
+      "gates": [
+        "G03"
+      ],
+      "decisions": [
+        "OA03"
+      ],
+      "threats": [
+        "T06"
+      ],
+      "acceptance": "Two genuinely separate, narrowly scoped non-admin GitHub publisher principals and independent verifier, not two labels or one caller credential.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E06",
+      "kind": "PR_ACTIONS_SECRET_AND_ROLE_ISOLATION",
+      "gates": [
+        "G01",
+        "G07"
+      ],
+      "decisions": [
+        "OA01",
+        "OA03"
+      ],
+      "threats": [
+        "T07"
+      ],
+      "acceptance": "Independent proof untrusted PR CI cannot access signer keys, vendor rights or publisher credentials and cannot approve its own privilege graph.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E07",
+      "kind": "GOOGLE_DRIVE_EFFECTIVE_OWNER_ACL_AND_RETENTION",
+      "gates": [
+        "G05"
+      ],
+      "decisions": [
+        "OA04"
+      ],
+      "threats": [
+        "T05"
+      ],
+      "acceptance": "Separately scoped Drive administrator ACL and inheritance readback, real data custody, retention/deletion test and byte digest verification after vendor rights approval.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E08",
+      "kind": "RESTART_PROOF_EXTERNAL_MONOTONIC_FLOOR",
+      "gates": [
+        "G02"
+      ],
+      "decisions": [
+        "OA02"
+      ],
+      "threats": [
+        "T10"
+      ],
+      "acceptance": "Fresh reader obtains highest independently accepted floor after reset and rejected stale signed/valid G1; cross-run rollback/restore/key change challenge.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E09",
+      "kind": "TWO_SERVICE_COMMIT_RECOVERY_READ_BARRIER",
+      "gates": [
+        "G03",
+        "G05"
+      ],
+      "decisions": [
+        "OA04"
+      ],
+      "threats": [
+        "T11"
+      ],
+      "acceptance": "Real GitHub ref and Google Drive byte correlation across PREPARED/COMMITTED/VISIBLE, crash/timeouts and fail-closed quarantine.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E10",
+      "kind": "OWNER_SIGNED_SHARED_ROOT_RISK_DECISION",
+      "gates": [
+        "G01",
+        "G02",
+        "G08"
+      ],
+      "decisions": [
+        "OA05"
+      ],
+      "threats": [
+        "T01",
+        "T04"
+      ],
+      "acceptance": "Explicit independently reviewed acceptance or rejection of residual shared administrator root compromise under Option A; no silent threat-model weakening.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E11",
+      "kind": "LICENSED_VENDOR_FIRST_KNOWN_RIGHTS_RETENTION",
+      "gates": [
+        "G04"
+      ],
+      "decisions": [
+        "OA04"
+      ],
+      "threats": [
+        "T05"
+      ],
+      "acceptance": "Vendor-supplied permitted feed rights, historical correction/first-known timestamps and license/retention evidence, owner reviewed.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E12",
+      "kind": "OWNER_SIGNED_A02_A03_RELEASE_APPROVALS",
+      "gates": [
+        "G08"
+      ],
+      "decisions": [
+        "OA06"
+      ],
+      "threats": [],
+      "acceptance": "63 source-module dispositions, V2 ABI/behavior parity and G01-G08/M3/M4/M5/M8 release approvals separately signed by owner.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E13",
+      "kind": "INDEPENDENT_TWO_PRINCIPAL_SERVER_CAS_PROOF",
+      "gates": [
+        "G03"
+      ],
+      "decisions": [
+        "OA03"
+      ],
+      "threats": [
+        "T02",
+        "T06"
+      ],
+      "acceptance": "Separate authenticated writer requests race sibling heads on protected server ref, exactly one winner and loser readback, no admin bypass.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    },
+    {
+      "id": "E14",
+      "kind": "EVIDENCE_PROVENANCE_TWO_VIEWER_RECONCILIATION",
+      "gates": [
+        "G07"
+      ],
+      "decisions": [
+        "OA01",
+        "OA05"
+      ],
+      "threats": [
+        "T08",
+        "T12"
+      ],
+      "acceptance": "Independent provenance links viewer identity/permission scopes and signed readbacks without exposing PII; omitted bypass fields remain unknown.",
+      "state": "NOT_RECEIVED",
+      "private_evidence_uri": null,
+      "principal_binding": null,
+      "signer_fingerprint": null,
+      "verifier_attestation_uri": null,
+      "independently_verified": false,
+      "owner_reviewed": false
+    }
+  ],
+  "ingestion_safety": {
+    "public_git_contains_requirements_only": true,
+    "public_git_cannot_hold_private_evidence_uri_or_identity": true,
+    "no_private_signer_keys_or_provider_tokens": true,
+    "never_export_raw_credential_or_personal_identity": true,
+    "access_controlled_external_evidence_store_proven": false,
+    "private_owner_channel_provisioned": false,
+    "evidence_from_single_connected_account_not_independent": true,
+    "two_viewer_attestation_not_currently_available": true
+  },
+  "admissions": {
+    "live_github_bypass_inventory_independent": false,
+    "protected_witness_ref_exists": false,
+    "drive_independent_readonly_custody": false,
+    "externally_authenticated_signer": false,
+    "cross_run_nonresettable_floor": false,
+    "independent_multiwriter_server_cas": false,
+    "owner_signed_decision_available": false,
+    "effective_control_plane_separation_proven": false,
+    "physical_licensed_drive_market_cache_verified": false,
+    "production_cache_read_authorized": false,
+    "production_cache_write_authorized": false,
+    "production_release_authorized": false,
+    "trading_authorized": false
+  },
+  "next_owner_action": "PRIVATE_ROLE_AND_BYPASS_EVIDENCE_INTAKE_APPROVAL_THEN_INDEPENDENT_READ_ONLY_VERIFICATION_NO_APPLY"
+}
