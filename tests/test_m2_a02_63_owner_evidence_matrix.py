@@ -186,5 +186,35 @@ class OriginalV1OwnerEvidenceMatrixTests(unittest.TestCase):
         self.assertEqual(len(files-set(m.SIDECARS)),63)
 
 
+    def test_31_published_63_row_review_index_exists(self):
+        p=m.ROOT/"docs"/"MST_A02_63_ORIGINAL_V1_OWNER_EVIDENCE_MATRIX_20261110.md"
+        self.assertTrue(p.is_file())
+
+    def test_32_published_index_contains_exact_63_unsigned_module_rows(self):
+        src=(m.ROOT/"docs"/"MST_A02_63_ORIGINAL_V1_OWNER_EVIDENCE_MATRIX_20261110.md").read_text()
+        index=[line for line in src.splitlines() if re.match(r"^\| \d+ \|",line)]
+        self.assertEqual(len(index),63)
+        self.assertTrue(all(line.endswith("| **NOT_SIGNED** |") for line in index))
+
+    def test_33_published_index_module_membership_matches_AST(self):
+        src=(m.ROOT/"docs"/"MST_A02_63_ORIGINAL_V1_OWNER_EVIDENCE_MATRIX_20261110.md").read_text()
+        index=[line for line in src.splitlines() if re.match(r"^\| \d+ \|",line)]
+        for r in self.rows:
+            with self.subTest(module=r["module"]):
+                path="src/swing_trading/"+r["module"]+".py"
+                self.assertEqual(sum("("+("../"+path)+")" in line for line in index),1)
+
+    def test_34_published_index_fingerprints_match_generated_inventory(self):
+        src=(m.ROOT/"docs"/"MST_A02_63_ORIGINAL_V1_OWNER_EVIDENCE_MATRIX_20261110.md").read_text()
+        self.assertIn(self.report["module_evidence_fingerprint"],src)
+        self.assertIn(self.report["static_abi_inventory_fingerprint"],src)
+
+    def test_35_published_evidence_does_not_approve_owner_or_trade(self):
+        src=(m.ROOT/"docs"/"MST_A02_63_ORIGINAL_V1_OWNER_EVIDENCE_MATRIX_20261110.md").read_text()
+        self.assertIn("A02 owner closure 0/63",src)
+        self.assertIn("G01–G08 OPEN",src)
+        self.assertIn("IMPORT/METADATA ONLY",src)
+        self.assertNotIn("OWNER APPROVED 63/63",src)
+
 if __name__=="__main__":
     unittest.main()
