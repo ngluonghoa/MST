@@ -137,7 +137,7 @@ class V2SyntheticSessionPitScreenTests(TestCase):
 
     def test_30_duplicate_sequence_denied(self):
         second=replace(self.rows[1],revision=replace(
-            self.rows[1].revision,sequence=1))
+            self.rows[1].revision,sequence=1,supersedes_revision_id=None))
         with self.assertRaisesRegex(ValueError,"REVISION_PREFIX"):
             self.decision(rows=(self.rows[0],second))
 
