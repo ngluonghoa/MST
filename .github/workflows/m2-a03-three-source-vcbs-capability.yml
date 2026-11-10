@@ -8,11 +8,14 @@ on:
       - "scripts/m2_a03_connected_source_freshness_lab.py"
       - "scripts/m2_a03_documented_ohlc_transport_boundary_lab.py"
       - "scripts/m2_a03_dnse_ws_reconnect_coverage_lab.py"
+      - "scripts/m2_a03_dnse_ws_protocol_lifecycle_lab.py"
       - "tests/test_m2_a03_dnse_ws_reconnect_coverage_lab.py"
+      - "tests/test_m2_a03_dnse_ws_protocol_lifecycle_lab.py"
       - "tests/test_m2_a03_documented_ohlc_transport_boundary_lab.py"
       - "tests/test_m2_a03_connected_source_freshness_lab.py"
       - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
       - "docs/MST_A03_THREE_SOURCE_VCBS_CAPABILITY_QA_20261110.md"
+      - "docs/MST_A03_DNSE_WS_PROTOCOL_LIFECYCLE_QA_20261111.md"
 
 permissions:
   contents: read
@@ -137,6 +140,29 @@ jobs:
               assert r[k] is False,k
           print("DNSE WS RECONNECT AND CLOSE COVERAGE: NO REAL SOURCE AUTHORITY")
           PY
+      - name: Run 28 documented DNSE WS client lifecycle negative tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_ws_protocol_lifecycle_lab.py' -v
+      - name: Verify fabricated handshake and reconnection NEVER qualify real source
+        run: |
+          python -m scripts.m2_a03_dnse_ws_protocol_lifecycle_lab --out /tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json").read_text())
+          assert r["status"]=="DOCUMENTED_WEBSOCKET_PROTOCOL_SIMULATED_NO_LIVE_AUTHORITY"
+          assert r["imaginary_session_count"]==2
+          assert r["fake_auth_attempts"]==2
+          assert r["fake_subscribe_ack_count"]==2
+          assert r["fake_closed_event_count"]==2
+          assert r["fake_heartbeat_roundtrips"]==1
+          assert r["synthetic_trace_only"] is True
+          for k in ("source_credentials_present","real_websocket_opened",
+                    "source_issuer_authenticated","historical_backfill_proven",
+                    "closed_delivery_completeness_proven","real_m5_source_qualified",
+                    "google_drive_market_cache_enabled","production_or_trading_authorized"):
+              assert r[k] is False,k
+          print("DOCUMENTED DNSE WS CONTROL SEQUENCE: SYNTHETIC ONLY; NO GO")
+          PY
       - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
         run: |
           python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
@@ -183,5 +209,6 @@ jobs:
             /tmp/mst-source-clock-NO-GO.json
             /tmp/mst-a03-documented-ohlc-NO-GO.json
             /tmp/mst-a03-dnse-ws-reconnect-NO-GO.json
+            /tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json
           retention-days: 14
           if-no-files-found: error
