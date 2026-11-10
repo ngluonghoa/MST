@@ -1,0 +1,67 @@
+name: MST A03 Three Sources Six TF VCBS Minute Price Negative QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-three-source-vcbs-capability.yml"
+      - "scripts/m2_a03_three_source_vcbs_capability_lab.py"
+      - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
+      - "docs/MST_A03_THREE_SOURCE_VCBS_CAPABILITY_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  vcbs-source-capability-original-bytes-unmodified:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install unchanged inherited and opt-in package
+        run: python -m pip install -e .
+      - name: Lock original Swing 63 V1 plus 8 V2 source bytes against upstream main PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-three-source-lock.json
+      - name: Run 48 source capabilities and VCBS negative unit tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_three_source_vcbs_capability_lab.py' -v
+      - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
+        run: |
+          python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-three-source-vcbs-NO-GO.json").read_text())
+          lock=json.loads(Path("/tmp/mst-three-source-lock.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert r["provider_count"] == 3 and r["timeframe_count"] == 6
+          assert r["rows_count"] == 18 and len(r["rows"]) == 18
+          assert r["vcbs_fabricated_probe"]["synthetic_points"] == 3
+          assert r["vcbs_fabricated_probe"]["source_has_per_candle_ohlcv"] is False
+          assert r["vcbs_fabricated_probe"]["valid_for_signal_indicators"] is False
+          assert all(row["qualified_native_ohlcv"] is False and
+                     row["signal_eligible"] is False for row in r["rows"])
+          for key in ("native_minute_ohlcv_connected_and_qualified",
+                      "independent_vendor_issuer_verified","publisher_first_known_verified",
+                      "official_calendar_and_timestamp_semantics_verified",
+                      "source_rights_and_retention_approved","real_drive_market_cache_authorized",
+                      "upstream_v1_or_v2_modified","a02_63_approved","a03_v2_8_approved",
+                      "a03_14_approved","production_release_authorized","trading_authorized"):
+              assert r[key] is False,key
+          print("VCBS PRICE POINTS REMAIN REFERENCE ONLY; ALL 18 TF CELLS NO GO")
+          PY
+      - name: Retain fabricated-only source lock and six-TF receipt for fourteen days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-three-source-six-tf-vcbs-NO-GO
+          path: |
+            /tmp/mst-three-source-lock.json
+            /tmp/mst-three-source-vcbs-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
