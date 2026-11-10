@@ -78,6 +78,12 @@ class UntrustedSessionSlot:
             raise ValueError("CANDLE_START_NOT_WITHIN_FIXTURE_SESSION")
         if tuple(sorted(set(starts))) != starts:
             raise ValueError("UNIQUE_SORTED_FIXTURE_GRID_REQUIRED")
+        # This small synthetic interval is *exactly* four contiguous M5 bars.
+        # Real VN calendars contain session boundaries/breaks and must come
+        # from an independently qualified owner-approved provider, not here.
+        if (starts[0] != start or starts[-1] + FIVE != end or
+            any(right-left != FIVE for left,right in zip(starts,starts[1:]))):
+            raise ValueError("EXACT_CONTIGUOUS_M5_FIXTURE_GRID_REQUIRED")
         if self.independently_calendar_verified is not False:
             raise PermissionError("SELF_REPORTED_CALENDAR_AUTHORITY_NOT_ACCEPTED")
 
@@ -178,8 +184,8 @@ def fixtures():
     scope=fixture_scope()
     start=instant(0)
     slot=UntrustedSessionSlot(
-        scope.candidate,start,instant(20),
-        tuple(instant(k) for k in (0,5,10,15)),
+        scope.candidate,start,instant(4),
+        tuple(instant(k) for k in (0,1,2,3)),
     )
     original=fabricated_bar(0)
     late_at=instant(0)+timedelta(days=1,minutes=15)

@@ -2,7 +2,7 @@
 
 QA ID: MST-A03-V2-SESSION-PIT-UNTRUSTED-COMPOSITION-20261110
 Date: 2026-11-10 Asia/Ho_Chi_Minh
-Status: 34 synthetic unittest and 16 original/V2 integration assertions, exact GitHub CI pending.
+Status: 38 synthetic unittest and 16 original/V2 integration assertions, exact GitHub CI pending.
 
 ## Precise scope and relevance
 This is the next checkpoint after §91/§92 original V1 late-first-known and wrong-session cache boundary. It is NOT another copy of A03 revision supersession or of A02 five-generation as-of archive: it composes the existing original V1 SyntheticIncrementalStore, existing A03 V1→V2 FixtureV2ConsumerScope, existing V2 FixturePartitionV2 and A03 typed FixtureRevision/resolve_untrusted_fixture, using a completely **new, opt-in QA-only screening layer under scripts/** (not a ninth V2 src module). The new layer adds the missing *single-bar session membership and payload-binding decision* before an as-of candidate can be selected in a strictly untrusted fixture.
@@ -19,3 +19,8 @@ A02 owner 0/63, A03 V2 0/8, A03 owner choices 0/14; G01–G08 and OA01–OA06 OP
 
 ## QA status
 Pending GitHub-hosted exact implementation and final report HEAD checks. When it runs green it proves ONLY the stated synthetic negative interface characterization, not an owner signoff or production-ready feature.
+
+## Fixture-grid tightening and pre-final CI history
+Initial A03 synthetic code commit 9405f59b4f16c2e3da1addb820a48f06518e9584 had one malformed test fixture: duplicate sequence 1 was constructed with a non-root predecessor, so the existing revision dataclass rejected construction early. The correction in 87110c28e7b79d22916fdf8989aade7d1df8a349 caused 34/34 targeted unit tests to pass, and did not modify original V1/V2.
+Before finalization, the test-only session slot also required an explicit contiguous and complete M5 fixture interval, not merely individually bounded unordered bar starts; four new negative cases target a gap, mismatched trailing end, duplicate and missing initial start. This new exact-interval rule is still NOT an official VN exchange calendar and cannot authorize data.
+Final exact report HEAD and complete CI will be recorded in Drive only after real GitHub readback; no claimed PASS in advance.

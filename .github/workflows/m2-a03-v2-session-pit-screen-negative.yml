@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-v2-session-pit-source-lock.json
-      - name: Run 34 untrusted session and point-in-time screening tests
+      - name: Run 38 untrusted session and point-in-time screening tests
         run: python -m unittest discover -s tests -p 'test_m2_a03_v2_session_pit_screen_lab.py' -v
       - name: Execute original V1 plus existing V2 consumer and revision hypotheses
         run: |

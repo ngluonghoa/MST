@@ -160,3 +160,22 @@ class V2SyntheticSessionPitScreenTests(TestCase):
 
     def test_34_deterministic_fixtures(self):
         self.assertEqual(self.report["synthetic_sha256"],m.build()["synthetic_sha256"])
+
+    def test_35_gapped_m5_grid_fails_closed(self):
+        with self.assertRaisesRegex(ValueError,"CONTIGUOUS_M5"):
+            replace(self.slot,permitted_bar_starts_utc=(
+                m.instant(0),m.instant(2),m.instant(3)))
+
+    def test_36_extra_unlisted_session_end_fails_closed(self):
+        with self.assertRaisesRegex(ValueError,"CONTIGUOUS_M5"):
+            replace(self.slot,ends_at_utc=m.instant(5))
+
+    def test_37_duplicate_m5_grid_start_fails_closed(self):
+        with self.assertRaisesRegex(ValueError,"UNIQUE_SORTED"):
+            replace(self.slot,permitted_bar_starts_utc=(
+                m.instant(0),m.instant(1),m.instant(1),m.instant(3)))
+
+    def test_38_grid_omits_first_expected_start_fails_closed(self):
+        with self.assertRaisesRegex(ValueError,"CONTIGUOUS_M5"):
+            replace(self.slot,permitted_bar_starts_utc=(
+                m.instant(1),m.instant(2),m.instant(3)))
