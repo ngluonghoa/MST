@@ -1,0 +1,73 @@
+name: MST A03 Dynamic Consumers and N-minus-1 Rollback — Synthetic Owner NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-dynamic-consumer-rollback.yml"
+      - "scripts/m2_a03_dynamic_consumer_rollback_lab.py"
+      - "tests/test_m2_a03_dynamic_consumer_rollback_lab.py"
+      - "docs/MST_A03_DYNAMIC_CONSUMER_ROLLBACK_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  source-locked-dynamic-consumer:
+    name: 37 actual-source consumer and N/N-1 synthetic regression tests
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package on ephemeral GitHub runner
+        run: python -m pip install -e .
+      - name: Independently lock live upstream/main/PR original 63 V1 + eight V2 before tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-dynamic-source-lock.json
+      - name: Test 37 direct original/V2 consumer rollback assertions
+        run: |
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_dynamic_consumer_rollback_lab.py' -v
+      - name: Produce falsification findings and verify no authority flags
+        run: |
+          python -m scripts.m2_a03_dynamic_consumer_rollback_lab \
+            --out /tmp/mst-a03-dynamic-consumer-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path("/tmp/mst-a03-dynamic-source-lock.json").read_text())
+          r=json.loads(Path("/tmp/mst-a03-dynamic-consumer-NO-GO.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"]==63
+          assert lock["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["case_count"]==42
+          assert len({x["case"] for x in r["cases"]})==42
+          assert len(r["new_compatibility_findings"])==2
+          assert all(x["owner_disposition"]=="NOT_SIGNED"
+                     for x in r["new_compatibility_findings"])
+          assert r["rollback_scope"]=="IN_MEMORY_SYNTHETIC_SEMVER_2_0_TO_2_1_TO_2_0_ONLY"
+          assert r["a02_owner_signed"]==r["a03_owner_signed"]==0
+          for key in ("automatic_compatibility_adapter_authorized",
+                      "full_v1_v2_abi_or_behavior_certified",
+                      "G01_G08_OA01_OA06_closed",
+                      "real_source_rights_or_physical_drive_cache_proven",
+                      "real_N_Nminus1_release_rollback_tested",
+                      "production_or_trading_authorized"):
+              assert r[key] is False,key
+          print("A03: 37 tests, 42 dynamic cases; two runtime divergences; owner NO-GO")
+          PY
+      - name: Retain only synthetic source-lock and case report for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-dynamic-consumer-rollback-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-dynamic-source-lock.json
+            /tmp/mst-a03-dynamic-consumer-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
