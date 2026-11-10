@@ -31,3 +31,16 @@ Future work after approved full-policy schema and real M3 issuer/legal proof: ve
 
 ## Github remote CI receipt
 PENDING: exact implementation HEAD remote 44/44 tests, existing 28/28 + 217 source focused checks, exact all-workflow PASS, and subsequent report-containing HEAD readback. Never claim 289 targeted or production eligibility before those checks are observed.
+
+
+## 2026-11-11 — Actual CI, negative correction and exact implementation-head receipt
+
+Initial submitted implementation SHA \`cee3f052a6a7b5d1fa31e4570bfe906fd152c0d1\` did NOT pass: 45/47 workflows successful, dedicated/Foudation red because test_20_changed_calendar_fingerprint_denied placed a class-constructor raise *before* its \`assertRaises\` context. The production-facing guard itself denied the altered calendar binding correctly. Changed ONLY the test to construct inside \`assertRaises\` at GitHub commit \`554995c9943c97399331d17791535ba79cc9abd0\`; no weakening of policy guards or change to inherited V1 or eight original opt-in V2 business source.
+
+**Corrected implementation exact HEAD independently read:** 47/47 GitHub Actions completed SUCCESS, no failures.
+- [Six-TF dedicated QA run #42892050469](https://github.com/ngluonghoa/MST/actions/runs/42892050469): **44/44** new six-TF synthetic source-window and causal-suffix tests PASS; no-go receipt PASS.
+- [Foundation CI #42892050477](https://github.com/ngluonghoa/MST/actions/runs/42892050477): contract/wheel checks, unittest Python 3.11 and Python 3.12 all SUCCESS. The corresponding earlier red run had one test error among 3697 repo tests on 3.11; corrected run is green on both versions.
+- All 63 inherited V1 and eight pre-existing opt-in V2 Python module byte-lock checks retain their PASS at this SHA.
+- Prior 245 focused synthetic tests are unchanged. New total **289 targeted focused tests** (245 + 44), which is not all-repository unittest count.
+
+**Important:** 132 is only the number of *candidate checkpoints* in this fictional six-TF no-break session; the code did not calculate EMA/ATR values or prove actual VN D1/4H closing. Unknown issuer state quarantines all 155 toy windows, and every live-data/Drive/trading flag remains FALSE. This report-containing commit has not yet been independently re-checked and cannot inherit the implementation-HEAD CI claim until the final exact SHA completes.
