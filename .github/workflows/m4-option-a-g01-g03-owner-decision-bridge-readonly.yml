@@ -1,0 +1,54 @@
+name: MST M4 Option A G01-G03 Owner Custody Decision Bridge - READ ONLY
+
+# Green means NO-GO remains enforced; cannot sign, provision or authorize.
+# Live GitHub REST observations only under contents:read token, Drive ACL
+# snapshot historical. Never expose owner identities, private keys or tokens.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-g01-g03-owner-decision-bridge-readonly.yml"
+      - "scripts/m4_option_a_g01_g03_owner_packet_preflight.py"
+      - "tests/test_m4_option_a_g01_g03_owner_packet_preflight.py"
+      - "docs/MST_M4_OPTION_A_G01_G03_OWNER_DECISION_BRIDGE_20261110.json"
+      - "docs/MST_M4_OPTION_A_G01_G03_OWNER_DECISION_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  owner-g01-g03-no-go-proof:
+    name: Prove roles, signer, floor and real CAS still require owner
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install existing unmodified source package
+        run: python -m pip install -e ".[custody]"
+      - name: Fail-closed Owner G01-G03 regression tests (mocked receipts only)
+        run: python -m unittest discover -s tests -p 'test_m4_option_a_g01_g03_owner_packet_preflight.py' -v
+      - name: Read actual GitHub ruleset, protected main and witness using read-only token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m scripts.m4_option_a_live_custody_audit \
+            > /tmp/mst-m4-g01-g03-github-token-readonly-and-drive-historical.json
+          python -m scripts.m4_reader_readiness_preflight \
+            > /tmp/mst-m4-g01-g03-github-token-readiness-block.json
+      - name: Cross-check blocked owner packet with BOTH read-only GitHub receipts
+        run: |
+          python -m scripts.m4_option_a_g01_g03_owner_packet_preflight \
+            --live-custody /tmp/mst-m4-g01-g03-github-token-readonly-and-drive-historical.json \
+            --live-readiness /tmp/mst-m4-g01-g03-github-token-readiness-block.json \
+            --out /tmp/mst-m4-g01-g03-owner-packet-NO-AUTH.json
+      - name: Retain 14-day review metadata only, not independent custody
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-option-a-owner-g01-g03-OPEN-NO-AUTH
+          path: |
+            /tmp/mst-m4-g01-g03-owner-packet-NO-AUTH.json
+            /tmp/mst-m4-g01-g03-github-token-readiness-block.json
+          retention-days: 14
+          if-no-files-found: error
