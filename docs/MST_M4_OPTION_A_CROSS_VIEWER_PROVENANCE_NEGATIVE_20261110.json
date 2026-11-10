@@ -1,0 +1,141 @@
+{
+  "schema": "mst.m4.option-a.cross-viewer-provenance.synthetic-negative.v1",
+  "status": "TWO_VIEWER_CONSISTENCY_REVIEW_ONLY_ZERO_INDEPENDENT_CUSTODIANS",
+  "source_main": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "source_tree": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+  "upstream": "cd90c1babae8912db31490ad614fc2ad2f868042",
+  "repository": "ngluonghoa/MST",
+  "scope": "OPTION_A_GITHUB_AND_GOOGLE_DRIVE_ONLY",
+  "prior_private_intake": "docs/MST_M4_OPTION_A_PRIVATE_OWNER_EVIDENCE_INTAKE_20261110.json",
+  "prior_owner_security_bridge": "docs/MST_M4_OPTION_A_G01_G03_OWNER_DECISION_BRIDGE_20261110.json",
+  "relevant_evidence": [
+    "E01",
+    "E05",
+    "E07",
+    "E10",
+    "E14"
+  ],
+  "evidence_channels": [
+    {
+      "id": "GH_CONNECTED_VIEW",
+      "source": "CONNECTED_GITHUB_REPO_METADATA",
+      "surface": "repository_permissions",
+      "visible_admin": true,
+      "source_is_actual_current_connected_viewer": true,
+      "viewer_controller_independence_verified": false,
+      "owner_bypass_graph_complete": false,
+      "signed_root_proven": false,
+      "may_disclose_subject_identity": false
+    },
+    {
+      "id": "GH_ACTIONS_TOKEN_VIEW",
+      "source": "GITHUB_ACTIONS_READONLY_REST",
+      "surface": "main_ruleset_and_witness",
+      "visible_admin": false,
+      "source_is_actual_current_connected_viewer": false,
+      "viewer_controller_independence_verified": false,
+      "owner_bypass_graph_complete": false,
+      "signed_root_proven": false,
+      "may_disclose_subject_identity": false
+    },
+    {
+      "id": "DRIVE_CONNECTED_VIEW",
+      "source": "CONNECTED_GOOGLE_DRIVE_PERMISSION_METADATA",
+      "surface": "five_mst_folders",
+      "visible_admin": false,
+      "source_is_actual_current_connected_viewer": true,
+      "viewer_controller_independence_verified": false,
+      "owner_bypass_graph_complete": false,
+      "signed_root_proven": false,
+      "may_disclose_subject_identity": false
+    }
+  ],
+  "consent_and_custody": {
+    "owner_approved_second_verifier": false,
+    "second_authenticated_person_or_controller_exists_in_evidence": false,
+    "verified_identity_control_disjointness": false,
+    "verified_distinct_credentials": false,
+    "verified_cross_account_signer_root": false,
+    "verified_cross_account_nonresettable_floor": false,
+    "publicly_disclosed_account_ids": false,
+    "publicly_disclosed_secrets": false,
+    "private_owner_evidence_channel_approved": false
+  },
+  "protocol": {
+    "simulation_only": true,
+    "compare_same_domain_only": true,
+    "independent_evidence_requires_external_attestation": true,
+    "same_viewer_alias_is_not_two_credential_proof": true,
+    "different_aliases_do_not_prove_independent_control": true,
+    "unknown_bypass_is_not_empty": true,
+    "concurrent_snapshot_drift_blocks": true,
+    "explicitly_empty_bypass_list_is_not_future_policy_integrity": true,
+    "github_drive_views_are_not_transactional": true,
+    "no_github_api_mutations": true,
+    "no_drive_api_mutations": true,
+    "no_vendor_data_ingestion": true,
+    "no_secrets_in_pr_logs": true
+  },
+  "owner_required_experiments": [
+    {
+      "id": "V01",
+      "topic": "TWO_VERIFIED_ACCOUNT_CONTROLLERS",
+      "state": "NOT_AUTHORIZED",
+      "owner_decision": "OA01",
+      "gate": "G01"
+    },
+    {
+      "id": "V02",
+      "topic": "ADMIN_BYPASS_SCOPE_AND_RECOVERY",
+      "state": "NOT_AUTHORIZED",
+      "owner_decision": "OA05",
+      "gate": "G01"
+    },
+    {
+      "id": "V03",
+      "topic": "FRESH_READER_PROTECTED_WITNESS_AND_FLOOR",
+      "state": "NOT_AUTHORIZED",
+      "owner_decision": "OA02",
+      "gate": "G02"
+    },
+    {
+      "id": "V04",
+      "topic": "REAL_TWO_WRITER_CAS_IDENTITY",
+      "state": "NOT_AUTHORIZED",
+      "owner_decision": "OA03",
+      "gate": "G03"
+    },
+    {
+      "id": "V05",
+      "topic": "GOOGLE_DRIVE_OWNER_INHERITANCE_AND_RIGHTS",
+      "state": "NOT_AUTHORIZED",
+      "owner_decision": "OA04",
+      "gate": "G05"
+    },
+    {
+      "id": "V06",
+      "topic": "INDEPENDENT_EVIDENCE_PROVENANCE_NO_SELF_APPROVAL",
+      "state": "NOT_AUTHORIZED",
+      "owner_decision": "OA05",
+      "gate": "G07"
+    }
+  ],
+  "security_gates_open": [
+    "G01",
+    "G02",
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07",
+    "G08"
+  ],
+  "independently_verified_controller_count": 0,
+  "actual_credential_pair_verified": false,
+  "owner_approval_received": false,
+  "witness_provisioned": false,
+  "production_cache_read_authorized": false,
+  "production_cache_write_authorized": false,
+  "production_trading_authorized": false,
+  "next_owner_action": "APPROVE_PRIVATE_TWO_CONTROLLER_READ_ONLY_EVIDENCE_PROCEDURE_BEFORE_ANY_REAL_PROOF"
+}
