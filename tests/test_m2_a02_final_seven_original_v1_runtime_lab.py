@@ -85,7 +85,7 @@ class FinalSevenOriginalV1Tests(unittest.TestCase):
         self.assertIn("not a validated trading system",swing_trading.__doc__)
 
     def test_03_56_plus_seven_is_63_scoped_only(self):
-        self.assertEqual(self.receipt["previous_distinct_scoped_v1"],56)
+        self.assertEqual(self.receipt["prior_distinct_scoped_v1"],56)
         self.assertEqual(self.receipt["cumulative_scoped_original_v1_files"],63)
         self.assertEqual(self.receipt["remaining_original_v1_files_without_scoped_test"],0)
         self.assertEqual(self.receipt["full_behavioral_module_acceptances"],0)
