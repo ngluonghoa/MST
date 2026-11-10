@@ -254,7 +254,7 @@ def execute_seventh_eight_runtime():
     _require(view.changed_layers == (RollbackLayer.R2_RULE_PARAMS,)
              and view.invalidate_derived_cache
              and not view.can_activate
-             and not view.trading_authorized
+             and not view.can_place_orders
              and not over_sell.can_activate
              and "SELL_EXCEEDS_SETTLED_SELLABLE_SHARES" in over_sell.reasons
              and "LKG_INDEPENDENT_APPROVAL_AND_RESTORE_PROOF_UNVERIFIED"
