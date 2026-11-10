@@ -22,9 +22,29 @@ MAX_PONG_SECONDS = 60
 MAX_SESSION_SECONDS = 8 * 3600
 CONTROL_KINDS = frozenset((
     "welcome", "auth", "auth_success", "subscribe", "subscribed",
-    "forming_data", "closed_data", "ping", "pong", "expired", "disconnect",
+    "forming_data", "closed_data", "ping", "pong", "connection_expired", "disconnect", "error",
 ))
 CLOSE_CODES = frozenset(("1000", "1001", "1006", "1008", "1011", "1012", "1013"))
+ERROR_CODES = frozenset(("AUTH_FAILED", "AUTH_TIMEOUT", "MAX_CONNECTIONS_EXCEEDED"))
+INBOUND_CONTROL_ACTIONS = frozenset(("welcome", "auth_success", "subscribed",
+    "unsubscribed", "ping", "pong", "connection_expired", "error"))
+
+def classify_untrusted_inbound(payload: dict) -> str:
+    """Shape only: known control action wins; other data may have action and T."""
+    if type(payload) is not dict:
+        raise TypeError("TYPED_INBOUND_DICT_REQUIRED")
+    action = payload.get("action")
+    if type(action) is str and action in INBOUND_CONTROL_ACTIONS:
+        return "CONTROL_SHAPE_UNTRUSTED"
+    if type(payload.get("T")) is str and payload["T"].strip():
+        return "DATA_SHAPE_UNTRUSTED"
+    return "UNKNOWN_SHAPE_UNTRUSTED"
+
+def synthetic_backoff_seconds(attempt: int) -> int:
+    """Public documented exponential sequence; no timers or reconnect calls."""
+    if type(attempt) is not int or attempt < 0:
+        raise ValueError("NONNEGATIVE_INTEGER_RETRY_INDEX_REQUIRED")
+    return min(60, 2 ** min(attempt, 6))
 
 @dataclass(frozen=True)
 class ToyEvent:
@@ -46,6 +66,10 @@ def inspect_trace(events: tuple[ToyEvent, ...]) -> dict:
     auth_nonces = set()
     count = {k: 0 for k in CONTROL_KINDS}
     sessions = 0
+    completed_heartbeat_roundtrips = 0
+    proactive_pong_count = 0
+    no_echo_pong_count = 0
+    mismatched_echo_count = 0
     for e in events:
         if type(e) is not ToyEvent or type(e.seconds) is not int or e.seconds < 0:
             raise TypeError("EXACT_TYPED_MONOTONE_SYNTHETIC_EVENT_REQUIRED")
@@ -59,7 +83,7 @@ def inspect_trace(events: tuple[ToyEvent, ...]) -> dict:
             raise ValueError("CLOCK_CLAIM_ONLY_ALLOWED_ON_FAKE_AUTH")
         if state != "DISCONNECTED":
             if (e.seconds - session_started > MAX_SESSION_SECONDS and
-                e.kind not in ("expired", "disconnect")):
+                e.kind not in ("connection_expired", "disconnect")):
                 raise ValueError("EIGHT_HOUR_CONNECTION_LIMIT_NOT_RENEWAL")
             if (ping_at is not None and e.seconds - ping_at > MAX_PONG_SECONDS
                 and e.kind != "disconnect"):
@@ -91,6 +115,8 @@ def inspect_trace(events: tuple[ToyEvent, ...]) -> dict:
         elif e.kind == "auth_success":
             if state != "AUTH_SENT":
                 raise ValueError("AUTH_SUCCESS_WITHOUT_PRIOR_FAKE_AUTH")
+            if e.seconds - session_started > MAX_AUTH_SECONDS:
+                raise ValueError("AUTH_SUCCESS_30_SECOND_DEADLINE_MISSED")
             state = "AUTHENTICATED_CLAIM"
         elif e.kind == "subscribe":
             if state != "AUTHENTICATED_CLAIM" or e.detail != CHANNELS:
@@ -111,17 +137,32 @@ def inspect_trace(events: tuple[ToyEvent, ...]) -> dict:
             ping_at = e.seconds
             ping_token = e.detail
         elif e.kind == "pong":
-            if (state != "SUBSCRIBED_CLAIM" or ping_at is None or
-                e.detail != ping_token):
-                raise ValueError("PONG_MUST_ECHO_PENDING_FAKE_PING")
-            if e.seconds - ping_at > MAX_PONG_SECONDS:
-                raise ValueError("PONG_HEARTBEAT_DEADLINE_MISSED")
-            ping_at = None
-            ping_token = None
-        elif e.kind == "expired":
+            if state != "SUBSCRIBED_CLAIM":
+                raise ValueError("PONG_ONLY_WHILE_SUBSCRIBED")
+            # The official DNSE client document allows proactive PONG and
+            # responses without echoed timestamps; echo only enables RTT.
+            if ping_at is None:
+                if e.detail:
+                    raise ValueError("PROACTIVE_PONG_WITHOUT_PENDING_PING_NO_ECHO")
+                proactive_pong_count += 1
+            else:
+                if e.seconds - ping_at > MAX_PONG_SECONDS:
+                    raise ValueError("PONG_HEARTBEAT_DEADLINE_MISSED")
+                if not e.detail:
+                    no_echo_pong_count += 1
+                elif e.detail != ping_token:
+                    mismatched_echo_count += 1
+                completed_heartbeat_roundtrips += 1
+                ping_at = None
+                ping_token = None
+        elif e.kind == "connection_expired":
             if state != "SUBSCRIBED_CLAIM":
                 raise ValueError("EXPIRY_ONLY_FOR_STREAMING_SESSION")
             state = "EXPIRED_CLAIM"
+        elif e.kind == "error":
+            if state == "DISCONNECTED" or e.detail not in ERROR_CODES:
+                raise ValueError("SOURCE_DOCUMENT_ERROR_CONTROL_CODE_REQUIRED")
+            state = "ERROR_CLAIM"
         elif e.kind == "disconnect":
             if state == "DISCONNECTED" or e.detail not in CLOSE_CODES:
                 raise ValueError("DOCUMENTED_CLOSE_CODE_AND_ACTIVE_SESSION_REQUIRED")
@@ -138,7 +179,12 @@ def inspect_trace(events: tuple[ToyEvent, ...]) -> dict:
         "fake_subscribe_ack_count": count["subscribed"],
         "fake_closed_event_count": count["closed_data"],
         "fake_forming_event_count": count["forming_data"],
-        "fake_heartbeat_roundtrips": count["pong"],
+        "fake_heartbeat_roundtrips": completed_heartbeat_roundtrips,
+        "fake_proactive_pongs": proactive_pong_count,
+        "fake_pongs_without_echo": no_echo_pong_count,
+        "fake_pong_echo_mismatches": mismatched_echo_count,
+        "fake_error_controls": count["error"],
+        "actual_doc_control_action_model_used": True,
         "ending_state": state,
         "synthetic_trace_only": True,
         "source_credentials_present": False,
@@ -178,6 +224,8 @@ def build() -> dict:
     assert result["fake_subscribe_ack_count"] == 2
     assert result["fake_closed_event_count"] == 2
     assert result["fake_heartbeat_roundtrips"] == 1
+    assert result["fake_proactive_pongs"] == 0
+    assert result["fake_error_controls"] == 0
     assert not result["source_issuer_authenticated"]
     payload = json.dumps(result, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     result["synthetic_receipt_sha256"] = sha256(payload.encode("ascii")).hexdigest()
