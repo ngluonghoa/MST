@@ -27,7 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-multisegment-source-lock.json
-      - name: Run 31 strict gapped interval/phase and PIT negative tests
+      - name: Run 32 strict gapped interval/phase and PIT negative tests
         run: python -m unittest discover -s tests -p 'test_m2_a03_multi_segment_session_gap_lab.py' -v
       - name: Compare before/at correction and deny lunch-crossing fake M5 candles
         run: |

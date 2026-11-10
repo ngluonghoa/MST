@@ -142,3 +142,11 @@ class SessionGapLabTests(TestCase):
 
     def test_31_repeatable_synthetic_receipt(self):
         self.assertEqual(m.build()["synthetic_sha256"],self.report["synthetic_sha256"])
+
+    def test_32_candle_ending_exactly_at_lunch_start_is_valid(self):
+        # An M5 candle [11:25, 11:30) is valid and must not be
+        # confused with a crossing candle [11:27, 11:32).
+        v=m.records_at(m.vn_utc(11,25),self.day.scope,event="AM_LAST_FIVE")
+        result=self.view((v,),at=v.bar.first_known_utc)
+        self.assertEqual(result["candidate_revision_id"],"r1")
+        self.assertFalse(result["calendar_issuer_authenticated"])
