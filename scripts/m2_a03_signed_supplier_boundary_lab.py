@@ -312,7 +312,7 @@ def build():
           and not forged.independent_custody_and_witness_verified,
           "owner")
 
-    if len(cases)!=29 or len({x["case"] for x in cases})!=29:
+    if len(cases)!=31 or len({x["case"] for x in cases})!=31:
         raise AssertionError("A03_SIGNED_CROSS_BOUNDARY_CASE_COVERAGE_DRIFT")
     canonical_cases=json.dumps(cases,sort_keys=True,separators=(",",":"),
                                ensure_ascii=True,allow_nan=False)
