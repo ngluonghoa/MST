@@ -25,3 +25,11 @@ The only workflow is read-only GitHub PR8 with remote source-byte lock 63 origin
 Original owner A02 0/63, opt-in V2 0/8, A03 owner choices 0/14; G01–G08/OA01–OA06 OPEN. Licensed true native minute data, SSI/DNSE timestamp/closure, exchange calendars/ATO/ATC, true first-known, revision source, authorized Drive physical cache, independent floor/CAS, production and trades still NO-GO.
 
 Next real evidence: confirm privately licensed native M5 source and timestamp policy per provider. VCBS intraday stays reference/price verification only, unless publisher directly supplies a separately qualified per-bar product.
+
+## Confirmed GitHub-hosted QA at implementation code HEAD
+
+At implementation PR8 HEAD `780d41f99024fb0252d82123c930e65de2162be6`, **47/47 GitHub Actions SUCCESS**. Dedicated three-source/VCBS test workflow https://github.com/ngluonghoa/MST/actions/runs/42857184915 PASS: source-byte lock 63 original V1 + 8 opt-in V2, **48/48 Python unittest methods**, exact 18 provider/timeframe cells, three fabricated VCBS price points and fail-closed minute OHLCV guard. The SHA256 `60ea091f6f5515c6e862392d4e2c4556bc0c847becafba7581cca2afc8db6a68` is a deterministic synthetic QA receipt only (not an issuer/provider signature). No live VCBS quote values or timestamps are included in the committed files or Drive cache.
+
+Native Google Drive QA: https://docs.google.com/document/d/1Zrcsug5mQ50GAULPYdxwMy54MarTNS790jKBc3MJtbs/edit. Existing 63 V1 and 8 V2 source bytes, protected MST main and original Swing pin unchanged, PR8 remains DRAFT/unmerged. A02 0/63, A03 V2 0/8 and A03 0/14 owner signoffs remain pending, all real market/source licensing/production/trading NO-GO.
+
+This documentation append creates a new report-containing HEAD; its 47 GitHub Actions workflows must be checked on that exact SHA separately before declaring the final report checkpoint PASS.
