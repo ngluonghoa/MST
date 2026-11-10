@@ -1,0 +1,79 @@
+name: MST A03 Eight V2 Opt-in ABI/Dependency Trace — Owner NO-GO
+
+# Maps eight existing V2 sidecars to 63 untouched original V1 modules.
+# AST direct/transitive dependency graph is not a runtime call graph.
+# 128 synthetic UNVERIFIED differential decisions do not certify full parity.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-eight-v2-abi-dependency-trace.yml"
+      - "scripts/m2_a03_eight_v2_abi_dependency_trace.py"
+      - "tests/test_m2_a03_eight_v2_abi_dependency_trace.py"
+      - "docs/MST_A03_EIGHT_V2_ABI_DEPENDENCY_TRACE_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  source-locked-eight-v2-original-v1-abi:
+    name: 35 A03 original-to-V2 ABI/import and safe UNVERIFIED tests
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package on ephemeral GitHub hosted runner
+        run: python -m pip install -e .
+      - name: Independently verify LIVE upstream/main/PR source-byte identity first
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-v1-v2-source-tree-lock.json
+      - name: Execute 35 source-locked V1-V2 API trace, divergences and negative cases
+        run: python -m unittest discover -s tests -p 'test_m2_a03_eight_v2_abi_dependency_trace.py' -v
+      - name: Build eight-sidecar ABI/transitive AST trace with prior 128 safe comparisons
+        run: |
+          python -m scripts.m2_a03_eight_v2_abi_dependency_trace \
+            --json /tmp/mst-a03-eight-v2-abi-trace-OWNER-NO-GO.json \
+            --markdown /tmp/mst-a03-eight-v2-abi-trace-OWNER-NO-GO.md
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path("/tmp/mst-a03-v1-v2-source-tree-lock.json").read_text())
+          r=json.loads(Path("/tmp/mst-a03-eight-v2-abi-trace-OWNER-NO-GO.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"]==63
+          assert lock["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["original_v1_module_count"]==63
+          assert r["opt_in_v2_sidecar_count"]==8
+          assert len(r["v2_sidecars"])==8
+          assert r["prior_safe_unverified_fixture_differential"]["comparisons"]==128
+          assert r["prior_safe_unverified_fixture_differential"]["snapshots"]==4
+          assert len(r["legacy_contract_divergences"])==2
+          assert r["a02_owner_signed_module_dispositions"]==0
+          assert r["a03_owner_signed_abi_behavior_approvals"]==0
+          assert all(not row["legacy_v1_abi_interchangeable"] and not row["owner_a03_approved"]
+                     for row in r["v2_sidecars"])
+          for k in ("a03_full_abi_and_behavior_interchangeability_proven",
+                    "full_v2_detector_formula_parity_proven",
+                    "real_provider_market_data_or_licence_proven",
+                    "real_google_drive_market_cache_or_distributed_cas_proven",
+                    "all_g01_g08_independent_security_gates_closed",
+                    "production_release_authorized","trading_authorized"):
+              assert r[k] is False,k
+          print("A03: 8/8 V2 ABI SOURCE TRACES, 128 UNVERIFIED COMPARISONS, 2 KNOWN NONINTERCHANGEABLE CONTRACTS; OWNER/PRODUCTION NO-GO")
+          PY
+      - name: Retain synthetic metadata only 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-eight-v2-abi-transitive-import-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-v1-v2-source-tree-lock.json
+            /tmp/mst-a03-eight-v2-abi-trace-OWNER-NO-GO.json
+            /tmp/mst-a03-eight-v2-abi-trace-OWNER-NO-GO.md
+          retention-days: 14
+          if-no-files-found: error
