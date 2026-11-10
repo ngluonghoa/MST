@@ -14,7 +14,7 @@ class DocumentedSourceTransportTests(TestCase):
         cls.closed=m.fabricated()
         cls.forming=m.fabricated(m.DocumentedTransport.DNSE_WS_FORMING,
                                  update_after_start_seconds=350)
-        cls.observer=datetime.fromtimestamp(cls.closed.lastUpdated+20,tz=timezone.utc)
+        cls.observer=datetime.fromtimestamp(max(cls.closed.lastUpdated,cls.forming.lastUpdated)+20,tz=timezone.utc)
         cls.result=m.build()
     def read(self,w):
         return m.documented_channel_observation(w,observed_at_utc=self.observer)

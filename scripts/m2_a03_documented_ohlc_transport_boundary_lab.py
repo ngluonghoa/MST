@@ -152,7 +152,7 @@ def build():
     closed=fabricated()
     forming=fabricated(DocumentedTransport.DNSE_WS_FORMING,
                        update_after_start_seconds=350)
-    obs=datetime.fromtimestamp(closed.lastUpdated+10, tz=timezone.utc)
+    obs=datetime.fromtimestamp(max(closed.lastUpdated,forming.lastUpdated)+10, tz=timezone.utc)
     a=documented_channel_observation(closed,observed_at_utc=obs)
     b=documented_channel_observation(forming,observed_at_utc=obs)
     if not a["claimed_closed_channel_shape_after_end"]:
