@@ -1,0 +1,76 @@
+name: MST A03 Untrusted Ledger Closure and Two-Claim Falsification — OWNER NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-revision-ledger-closure.yml"
+      - "scripts/m2_a03_revision_ledger_closure_lab.py"
+      - "tests/test_m2_a03_revision_ledger_closure_lab.py"
+      - "docs/MST_A03_UNTRUSTED_LEDGER_CLOSURE_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  ledger-declarations-only:
+    name: 44 negative tests - no real signer, source, floor or Drive rights
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install GitHub-hosted original source package
+        run: python -m pip install -e .
+      - name: Live original Swing 63 V1 and eight existing V2 source byte parity gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a03-ledger-source-lock.json
+      - name: Execute 44 independent ledger-closure and colluding-claim falsification tests
+        run: |
+          python -m unittest discover -s tests \
+            -p 'test_m2_a03_revision_ledger_closure_lab.py' -v
+      - name: Produce 44 synthetic-only untrusted receipt cases
+        run: |
+          python -m scripts.m2_a03_revision_ledger_closure_lab \
+            --out /tmp/mst-a03-ledger-closure-OWNER-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          tree=json.loads(Path("/tmp/mst-a03-ledger-source-lock.json").read_text())
+          r=json.loads(Path("/tmp/mst-a03-ledger-closure-OWNER-NO-GO.json").read_text())
+          assert tree["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert tree["original_python_module_count"]==63
+          assert tree["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["case_count"]==44
+          assert len({x["case"] for x in r["cases"]})==44
+          assert all(x["result"]=="PASS_FIXTURE_NO_AUTHORITY" for x in r["cases"])
+          assert [x["head_sequence"] for x in r["snapshots"]]==[1,1,2,3,3]
+          assert len(r["new_unsigned_owner_gates"])==4
+          assert all(x["owner_signed"] is False for x in r["new_unsigned_owner_gates"])
+          assert r["owner_a02_signed"]==r["owner_a03_signed"]==0
+          assert r["fresh_run_self_claim_rollback_vulnerability_demonstrated"] is True
+          assert r["colluding_self_claim_rehash_vulnerability_demonstrated"] is True
+          for k in ("provider_signature_cryptographically_verified",
+                    "independent_trust_root_or_custody_verified",
+                    "cross_run_nonresettable_floor_verified",
+                    "source_closed_head_or_complete_history_verified",
+                    "real_provider_entitlement_or_google_drive_cache_authorized",
+                    "g01_g08_oa01_oa06_closed",
+                    "production_release_or_trading_authorized"):
+              assert r[k] is False,k
+          print("A03: 44 tests, 44 bounded untrusted claim cases, 2 crucial rollback/collusion counterexamples. OWNER NO-GO")
+          PY
+      - name: Retain only non-authorizing synthetic JSON receipts for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-ledger-closure-OWNER-NO-GO
+          path: |
+            /tmp/mst-a03-ledger-source-lock.json
+            /tmp/mst-a03-ledger-closure-OWNER-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error
