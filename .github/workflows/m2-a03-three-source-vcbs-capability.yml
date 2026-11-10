@@ -7,6 +7,8 @@ on:
       - "scripts/m2_a03_three_source_vcbs_capability_lab.py"
       - "scripts/m2_a03_connected_source_freshness_lab.py"
       - "scripts/m2_a03_documented_ohlc_transport_boundary_lab.py"
+      - "scripts/m2_a03_dnse_ws_reconnect_coverage_lab.py"
+      - "tests/test_m2_a03_dnse_ws_reconnect_coverage_lab.py"
       - "tests/test_m2_a03_documented_ohlc_transport_boundary_lab.py"
       - "tests/test_m2_a03_connected_source_freshness_lab.py"
       - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
@@ -96,6 +98,45 @@ jobs:
               assert r[k] is False,k
           print("DNSE CLOSED VS FORMING DOCUMENTED TRANSPORT: SIMULATED ONLY; NO LIVE SOURCE")
           PY
+      - name: Run 32 DNSE WS reconnect/gap/duplicate and chronology tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_ws_reconnect_coverage_lab.py' -v
+      - name: Confirm synthetic reconnect cannot prove vendor source or complete M5 history
+        run: |
+          python -m scripts.m2_a03_dnse_ws_reconnect_coverage_lab --out /tmp/mst-a03-dnse-ws-reconnect-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a03-dnse-ws-reconnect-NO-GO.json").read_text())
+          assert r["status"]=="DNSE_WS_REPLAY_AND_GAP_COVERAGE_SYNTHETIC_NO_SOURCE_AUTHORITY"
+          assert r["scenario_count"]==10
+          x=r["cases"]
+          assert x["COMPLETE_UNTRUSTED"]["status"]=="STRUCTURALLY_COVERED_BUT_UNTRUSTED"
+          assert x["NO_CLOSED_MIDDLE"]["missing"]==1
+          assert x["FORMING_NOT_CLOSED"]["missing"]==1
+          assert x["CLOSED_OUT_OF_ORDER"]["reordered"]==1
+          assert x["EXACT_DUPLICATE_NOT_PROOF"]["duplicate"]==1
+          assert x["CONFLICTING_DUPLICATE"]["conflicts"]==1
+          assert x["RECONNECT_COMPLETE_STILL_UNTRUSTED"]["reconnect"]==1
+          assert x["FORMING_AFTER_CLOSED"]["signal_eligible"] is False
+          assert all(z["signal_eligible"] is False for z in x.values())
+          assert r["fake_grid_not_official_session_holiday_auction"] is True
+          assert r["fake_local_connection_generation_not_issuer_sequence"] is True
+          assert r["no_real_ws_rows_or_source_timestamps_saved"] is True
+          for k in ("actual_ws_access_ever_used","actual_exchange_calendar_qualified",
+                   "publisher_issuer_authenticated",
+                   "source_sequence_or_resumption_contract_verified",
+                   "provider_history_backfill_authenticated",
+                   "closed_feed_history_complete_verified",
+                   "source_revision_first_known_verified",
+                   "independent_source_ledger_verified",
+                   "licensed_market_data_retention_authorized",
+                   "real_drive_market_cache_active","original_63_v1_or_8_v2_changed",
+                   "a02_63_owner_approved","a03_v2_8_owner_approved",
+                   "a03_14_owner_approved","production_release_authorized",
+                   "trading_authorized"):
+              assert r[k] is False,k
+          print("DNSE WS RECONNECT AND CLOSE COVERAGE: NO REAL SOURCE AUTHORITY")
+          PY
       - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
         run: |
           python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
@@ -141,5 +182,6 @@ jobs:
             /tmp/mst-three-source-vcbs-NO-GO.json
             /tmp/mst-source-clock-NO-GO.json
             /tmp/mst-a03-documented-ohlc-NO-GO.json
+            /tmp/mst-a03-dnse-ws-reconnect-NO-GO.json
           retention-days: 14
           if-no-files-found: error
