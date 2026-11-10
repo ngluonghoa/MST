@@ -329,8 +329,9 @@ def build():
                as_of_utc=TIMES[2]),"chain")
     fail("DUPLICATE_REVISION_ID_BLOCKED",ValueError,
          lambda:resolve_untrusted_fixture(PARTITION,"BAR1",
-             (UP1,mk(sequence=2,revision_id="r1",supersedes_revision_id="r1",
-                      first_known_utc=TIMES[2])),as_of_utc=TIMES[2]),
+             (UP1,UP2,mk(sequence=3,revision_id="r1",
+                      supersedes_revision_id="r2",first_known_utc=TIMES[3])),
+             as_of_utc=TIMES[3]),
          "chain")
     fail("GAPPED_CHAIN_BLOCKED",ValueError,
          lambda:resolve_untrusted_fixture(PARTITION,"BAR1",(UP1,TOMB),
@@ -370,11 +371,11 @@ def build():
     check("FOUR_NEW_OWNER_DECISIONS_REMAIN_UNSIGNED",
           len(OWNER_CHOICES)==4 and all(x["owner_signed"] is False
               for x in OWNER_CHOICES),"governance")
-    check("NO_IMPORTED_PROVIDER_TRUTH",
-          all("Who " in OWNER_CHOICES[0]["open_question"]
-              for _ in (0,)),"governance")
+    check("NO_EXTERNAL_SEQUENCE_ATTESTATION_IN_FIXTURE",
+          PARTITION.provider_id=="SSI" and not any(
+              x["owner_signed"] for x in OWNER_CHOICES),"governance")
 
-    if len(cases)<40 or len({x["case"] for x in cases})!=len(cases):
+    if len(cases)!=54 or len({x["case"] for x in cases})!=54:
         raise AssertionError("A03_REVISION_TOMBSTONE_COVERAGE_TOO_SMALL")
     fingerprint=sha256(json.dumps(
         {"cases":cases,"snapshots":observations,"owner_choices":OWNER_CHOICES},
