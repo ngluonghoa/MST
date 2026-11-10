@@ -403,6 +403,19 @@ def build() -> dict:
             lambda:intake_untrusted_claims(PARTITION,"BAR1",tampered_s2,
                   claims_for(tampered_s2,TIMES[3]),as_of_utc=TIMES[3],
                   prior=r2),"rollback")
+    # Deliberate falsification of self-declared independence: if no durable
+    # prior receipt survives restart, both claimed actors can agree on an old
+    # head or a rehashed old prefix. Structural agreement never equals trust.
+    unanchored_old=intake_untrusted_claims(PARTITION,"BAR1",s1,
+                 claims_for(s1,TIMES[4]),as_of_utc=TIMES[4],prior=None)
+    check("FRESH_RUN_CAN_ACCEPT_ROLLED_BACK_SELF_CLAIM",
+          unanchored_old.head_sequence==1
+          and not unanchored_old.trusted_nonresettable_floor,"authority")
+    unanchored_tamper=intake_untrusted_claims(PARTITION,"BAR1",tampered_s2,
+                 claims_for(tampered_s2,TIMES[3]),as_of_utc=TIMES[3],prior=None)
+    check("TWO_SELF_CLAIMS_CAN_AGREE_ON_REHASHED_TAMPER",
+          unanchored_tamper.ledger_digest!=r2.ledger_digest
+          and not unanchored_tamper.verified_independent_custody,"authority")
     rejects("CROSS_EVENT_PRIOR_HEAD_DENIED",ValueError,
             lambda:intake_untrusted_claims(PARTITION,"BAR2",s2,
                   claims_for(s2,TIMES[3]),as_of_utc=TIMES[3],prior=r2),"scope")
@@ -427,7 +440,7 @@ def build() -> dict:
           not r3.verified_provider_signature and not r3.verified_independent_custody,
           "owner")
 
-    if len(cases)!=42 or len({row["case"] for row in cases})!=42:
+    if len(cases)!=44 or len({row["case"] for row in cases})!=44:
         raise AssertionError("A03_CLAIM_LEDGER_CASE_COUNT_DRIFT")
     snapshots=[{
         "as_of_utc":r.as_of_utc.isoformat(),"head_sequence":r.head_sequence,
@@ -448,6 +461,8 @@ def build() -> dict:
         "provider_signature_cryptographically_verified":False,
         "independent_trust_root_or_custody_verified":False,
         "cross_run_nonresettable_floor_verified":False,
+        "fresh_run_self_claim_rollback_vulnerability_demonstrated":True,
+        "colluding_self_claim_rehash_vulnerability_demonstrated":True,
         "source_closed_head_or_complete_history_verified":False,
         "real_provider_entitlement_or_google_drive_cache_authorized":False,
         "owner_a02_signed":0,"owner_a03_signed":0,
