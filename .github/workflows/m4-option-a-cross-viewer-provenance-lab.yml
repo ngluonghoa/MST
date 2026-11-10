@@ -1,0 +1,53 @@
+name: MST M4 Option A Cross-Viewer Control Provenance - SYNTHETIC NO GO
+
+# The two GitHub Actions REST readbacks below use THE SAME GITHUB_TOKEN.
+# The connected GitHub and Drive observations are separate non-authenticated
+# historical metadata. None of them attests two distinct human controllers.
+# No real account identity, private proof URL, signer key or licensed feed.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-cross-viewer-provenance-lab.yml"
+      - "scripts/m4_option_a_cross_viewer_provenance_lab.py"
+      - "tests/test_m4_option_a_cross_viewer_provenance_lab.py"
+      - "docs/MST_M4_OPTION_A_CROSS_VIEWER_PROVENANCE_NEGATIVE_20261110.json"
+      - "docs/MST_M4_OPTION_A_CROSS_VIEWER_PROVENANCE_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  reject-fake-independent-controllers:
+    name: Test 59 two-viewer negative controls and deny all G01-G03 authority
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install existing source in cloud-runner only
+        run: python -m pip install -e ".[custody]"
+      - name: Run synthetic two-viewer collision and missing-bypass tests
+        run: python -m unittest discover -s tests -p 'test_m4_option_a_cross_viewer_provenance_lab.py' -v
+      - name: Read actual GitHub metadata using one unprivileged token only
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m scripts.m4_option_a_live_custody_audit \
+            > /tmp/mst-m4-cross-viewer-one-token-custody.json
+          python -m scripts.m4_reader_readiness_preflight \
+            > /tmp/mst-m4-cross-viewer-one-token-readiness.json
+      - name: Prove public ledger cannot falsely claim independent human controllers
+        run: |
+          python -m scripts.m4_option_a_cross_viewer_provenance_lab \
+            --live-custody /tmp/mst-m4-cross-viewer-one-token-custody.json \
+            --live-readiness /tmp/mst-m4-cross-viewer-one-token-readiness.json \
+            --out /tmp/mst-m4-cross-viewer-ZERO-ROOT-AUTHORITY.json
+      - name: Store temporary denial metadata only - not owner proof or floor
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-cross-viewer-unattested-no-go
+          path: /tmp/mst-m4-cross-viewer-ZERO-ROOT-AUTHORITY.json
+          retention-days: 14
+          if-no-files-found: error
