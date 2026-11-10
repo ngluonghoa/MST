@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/m2-a03-three-source-vcbs-capability.yml"
       - "scripts/m2_a03_three_source_vcbs_capability_lab.py"
+      - "scripts/m2_a03_connected_source_freshness_lab.py"
+      - "tests/test_m2_a03_connected_source_freshness_lab.py"
       - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
       - "docs/MST_A03_THREE_SOURCE_VCBS_CAPABILITY_QA_20261110.md"
 
@@ -29,6 +31,33 @@ jobs:
         run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-three-source-lock.json
       - name: Run 64 SSI DNSE source-mode and VCBS source-capability tests
         run: python -m unittest discover -s tests -p 'test_m2_a03_three_source_vcbs_capability_lab.py' -v
+      - name: Run 24 SSI latest/session clock and cross-provider comparability tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_connected_source_freshness_lab.py' -v
+      - name: Validate synthetic source clock, asof and last-M5 comparability NO GO
+        run: |
+          python -m scripts.m2_a03_connected_source_freshness_lab --out /tmp/mst-source-clock-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/tmp/mst-source-clock-NO-GO.json").read_text())
+          assert d["status"]=="CONNECTOR_ASOF_IS_NOT_VENDOR_FIRST_KNOWN_NO_GO"
+          assert d["synthetic_ssi"]["syntactic_lag_seconds"]==900
+          assert d["synthetic_ssi"]["signal_eligible"] is False
+          assert d["exchange_calendar_freshness_age_limit"] is None
+          assert d["source_bar_rows_persisted"] is False
+          assert len(d["cross_mode_pairs"])==3
+          assert all(p["permitted_to_confirm_latest_m5"] is False for p in d["cross_mode_pairs"])
+          for k in ("source_issuer_clock_authenticated","source_first_known_authenticated",
+                   "official_calendar_and_session_open_verified",
+                   "native_m5_closed_bar_verified",
+                   "cross_provider_same_native_timeframe_verified",
+                   "source_rights_verified","physical_google_drive_cache_authorized",
+                   "owner_a02_63_approved","owner_a03_v2_8_approved",
+                   "owner_a03_14_approved","production_release_authorized",
+                   "trading_authorized"):
+              assert d[k] is False,k
+          print("CONNECTOR META ASOF != PUBLISHER FIRST-KNOWN; CROSS-MODE M5 NO-GO")
+          PY
       - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
         run: |
           python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
@@ -72,5 +101,6 @@ jobs:
           path: |
             /tmp/mst-three-source-lock.json
             /tmp/mst-three-source-vcbs-NO-GO.json
+            /tmp/mst-source-clock-NO-GO.json
           retention-days: 14
           if-no-files-found: error
