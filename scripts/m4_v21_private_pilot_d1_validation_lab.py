@@ -12,7 +12,7 @@ finality, auto-refresh, CAS, production cache, trade signals or orders.
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 import json
@@ -131,7 +131,7 @@ def validate_snapshot(obj:dict,*, expected_provider:str,
             ts=row.get("source_unix_time")
             if type(ts) is not int:
                 raise TypeError("DNSE_SOURCE_UNIX_TIMESTAMP_REQUIRED")
-            if datetime.fromtimestamp(ts).date()!=day:
+            if datetime.fromtimestamp(ts,timezone.utc).date()!=day:
                 raise PermissionError("DNSE_SOURCE_UNIX_DATE_MISMATCH")
         elif expected_provider=="VCBS":
             if row.get("provisional") is not False or row.get("priceBasis")!="adjusted" or row.get("price_unit")!="VND" or row.get("volumeScope")!="matched":
