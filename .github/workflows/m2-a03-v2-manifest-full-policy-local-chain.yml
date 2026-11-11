@@ -54,6 +54,9 @@ on:
       - "scripts/m4_private_d1_dual_schema_manifest_quarantine_lab.py"
       - "tests/test_m4_private_d1_dual_schema_manifest_quarantine_lab.py"
       - "docs/MST_M4_REAL_PRIVATE_D1_180_DUAL_SCHEMA_UNIT_MANIFEST_CONFLICT_QA_20261111.md"
+      - "scripts/m4_dnse_documented_stock_unit_overlay_guard.py"
+      - "tests/test_m4_dnse_documented_stock_unit_overlay_guard.py"
+      - "docs/MST_M4_DNSE_OFFICIAL_UNIT_WIF_REAL_BLOCKER_QA_20261111.md"
       - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
@@ -466,6 +469,30 @@ jobs:
           assert x['production_admission']=='DENIED_UNIT_LABEL_CONFLICT_AND_EXTERNAL_RIGHTS'
           print('TWO LEGACY PRIVATE PILOT SCHEMAS, THREE FAKE DNSE ALIASES QUARANTINED; REAL DRIVE/PRODUCTION NO GO')
           PY
+      - name: Run 40 fake DNSE official generic price-unit / connected OHLC scope and WIF no-go gates
+        run: python -m unittest discover -s tests -p 'test_m4_dnse_documented_stock_unit_overlay_guard.py' -v
+      - name: Prove generic official stock thousand-VND evidence does not grant versioned OHLC / Cloud Cache
+        run: |
+          python -m scripts.m4_dnse_documented_stock_unit_overlay_guard --out /tmp/mst-m4-dnse-unit-documentation-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-dnse-unit-documentation-SYNTHETIC-NO-GO.json').read_text())
+          assert x['status']=='DOCUMENTED_STOCK_UNIT_GENERAL_ONLY_DNSE_NATIVE_MCP_OHLC_UNATTESTED_PRODUCTION_NO_GO'
+          assert x['three_snapshot_manifest_unit_aliases_quarantined']==3
+          assert x['official_general_stock_unit_in_thousand_vnd_documented'] is True
+          for k in ('historical_ohlc_effective_unit_or_price_basis_issuer_verified',
+                    'historical_connected_mcp_effective_api_version_verified',
+                    'any_source_unit_alias_resolved_for_publishing',
+                    'origin_source_docs_or_manifests_mutated',
+                    'real_drive_or_gcp_connectors_called_by_this_script',
+                    'actual_workflow_dispatch_main_ready',
+                    'dnse_native_ohlc_closed_m5_authenticated',
+                    'licensed_source_cloud_retention_or_production_cache',
+                    'trading_authorized'):
+              assert x[k] is False,k
+          print('GENERAL DNSE STOCK K-VND DOCUMENTARY EVIDENCE RECOGNIZED; SPECIFIC HISTORICAL SOURCE/WIF/CACHE NO-GO')
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -487,5 +514,6 @@ jobs:
             /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
             /tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json
             /tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-dnse-unit-documentation-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
