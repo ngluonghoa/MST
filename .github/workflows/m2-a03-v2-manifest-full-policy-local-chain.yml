@@ -45,6 +45,9 @@ on:
       - "scripts/m2_a03_vcbs_adjusted_wm_crosscheck_lab.py"
       - "tests/test_m2_a03_vcbs_adjusted_wm_crosscheck_lab.py"
       - "docs/MST_A03_VCBS_REAL_D1_W1_MN1_ADJUSTED_PRICE_QA_20261111.md"
+      - "scripts/m2_a03_vcbs_ssi_minute_reference_audit_lab.py"
+      - "tests/test_m2_a03_vcbs_ssi_minute_reference_audit_lab.py"
+      - "docs/MST_A03_VCBS_SSI_REAL_INTRADAY_REFERENCE_ONLY_QA_20261111.md"
       - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
@@ -375,6 +378,32 @@ jobs:
               assert x[k] is False,k
           print("VCBS W1/MN1 FULLY FAKE PRICE-ADJUSTMENT QA PASS; NO ACTUAL MARKET DATA OR PRODUCTION APPROVAL")
           PY
+      - name: Run 50 synthetic VCBS minute price versus SSI OHLCV-shaped source nonpromotion tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_vcbs_ssi_minute_reference_audit_lab.py' -v
+      - name: Deny native M5/Cache authority from coincident VCBS minute prices
+        run: |
+          python -m scripts.m2_a03_vcbs_ssi_minute_reference_audit_lab --out /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json').read_text())
+          assert x['schema']=='mst.a03.vcbs-ssi-minute-price-reference-boundary.synthetic.v1'
+          assert x['status']=='UNTRUSTED_MINUTE_PRICE_REFERENCE_ONLY_NATIVE_VCBS_M5_TO_H4_NO_GO'
+          assert (x['clock_labels_aligned'],x['identical_reference_prices'],x['unequal_reference_prices'])==(3,2,1)
+          assert x['reference_comparison']=='UNTRUSTED_PRICE_MISMATCH_QUARANTINE'
+          assert x['vcbs_top_level_volume_is_session_cumulative_only'] is True
+          for k in ('vcbs_per_minute_open_high_low_close_volume_available',
+                    'ssi_provider_m1_timestamp_start_end_authenticated',
+                    'vcbs_native_m5_m15_m30_h1_h4_ohlcv_verified',
+                    'vcbs_m1_to_m5_aggregation_authorized',
+                    'calendar_auctions_halts_trading_sessions_verified',
+                    'correction_first_known_source_clock_authenticated',
+                    'vendor_google_drive_retention_license_proven',
+                    'github_runner_authenticated_source_access_proven',
+                    'cloud_cache_or_trading_authorized'):
+              assert x[k] is False,k
+          print('VCBS MINUTE PRICE REFERENCE-ONLY SYNTHETIC GUARD PASS, NEVER AUTHORIZE NATIVE M5 OR LIVE CACHE')
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -393,5 +422,6 @@ jobs:
             /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
             /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
             /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
+            /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
