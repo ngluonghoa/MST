@@ -1,0 +1,58 @@
+name: MST OAuth My Drive Folder Bootstrap - MANUAL NO MARKET DATA
+
+# Draft only: NOT triggerable until separately approved on default main.
+# Does NOT run automatically (no cron, push, pull_request, pull_request_target).
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'probe = read-only metadata; bootstrap = create isolated app folders (separate owner gate required)'
+        required: true
+        type: choice
+        default: probe
+        options:
+          - probe
+          - bootstrap
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-oauth-owner-private-appfolder-manual
+  cancel-in-progress: false
+
+jobs:
+  bootstrap-private-appowned-folders:
+    name: Main-only OAuth read-only probe or separately accepted bootstrap
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Fail closed on partial private OAuth trio
+        env:
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$MST_GDRIVE_OAUTH_CLIENT_ID"
+          test -n "$MST_GDRIVE_OAUTH_CLIENT_SECRET"
+          test -n "$MST_GDRIVE_OAUTH_REFRESH_TOKEN"
+      - name: Checkout approved main only without persistent GitHub credential
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 MFX precedent
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6 MFX precedent
+        with:
+          python-version: '3.12'
+      - name: Install only pinned OAuth and HTTPS runtime
+        run: python -m pip install --disable-pip-version-check google-auth==2.43.0 requests==2.32.5
+      - name: Read-only OAuth metadata probe (default) or separately gated app-folder bootstrap
+        env:
+          MST_OAUTH_MODE: ${{ inputs.mode }}
+          MST_OAUTH_BOOTSTRAP_ACCEPTED: ${{ vars.MST_OAUTH_BOOTSTRAP_ACCEPTED }}
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: python -m scripts.mst_oauth_manual_drive_bootstrap
