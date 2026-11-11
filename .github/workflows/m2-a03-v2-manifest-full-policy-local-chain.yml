@@ -39,6 +39,9 @@ on:
       - "scripts/m4_drive_oidc_readonly_preflight.py"
       - "tests/test_m4_drive_oidc_readonly_preflight.py"
       - "docs/MST_M4_GOOGLE_DRIVE_OIDC_READONLY_IDENTITY_GATE_QA_20261111.md"
+      - "scripts/m4_wif_immutable_trust_policy_lab.py"
+      - "tests/test_m4_wif_immutable_trust_policy_lab.py"
+      - "docs/MST_M4_WIF_IMMUTABLE_ID_TRUST_SETUP_QA_20261111.md"
       - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
@@ -323,6 +326,31 @@ jobs:
               assert x[k] is False,k
           print('M4 OIDC CLOUD DRIVE CLOUD IDENTITY SYNTHETIC CONTRACT PASS; NO LIVE AUTH/GDRIVE READ DONE')
           PY
+      - name: Run 50 immutable GitHub numeric identity and exact WIF trust conditions
+        run: python -m unittest discover -s tests -p 'test_m4_wif_immutable_trust_policy_lab.py' -v
+      - name: Audit fake repo claims and main-only WIF workflow static safety
+        run: |
+          python -m scripts.m4_wif_immutable_trust_policy_lab --out /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json').read_text())
+          assert x['status']=='GCP_WIF_IMMUTABLE_REPO_WORKFLOW_TRUST_PREVIEW_NO_REAL_BINDING'
+          assert x['github_immutable_repository_id']=='1450356304'
+          assert x['github_immutable_owner_id']=='353049266'
+          assert x['synthetic_accepted_claims']['synthetic_claims_satisfy_candidate_condition'] is True
+          assert x['synthetic_wrong_repo_id_rejection']['synthetic_claims_satisfy_candidate_condition'] is False
+          assert x['static_workflow_audit']['static_workflow_contract_pass'] is True
+          assert x['candidate_workflow_ref']=='ngluonghoa/MST/.github/workflows/m4-drive-wif-metadata-only-manual.yml@refs/heads/main'
+          for k,v in x['cloud_readiness'].items():
+              assert v is False,k
+          for k in ('actual_google_cloud_or_github_settings_modified',
+                    'real_gcp_oidc_credentials_or_drive_metadata_accessed',
+                    'real_market_data_or_private_quote_cache_retrieved',
+                    'production_cache_and_trading_enabled'):
+              assert x[k] is False,k
+          print('IMMUTABLE GITHUB NUMERIC REPOSITORY WIF PREVIEW PASS; REAL GOOGLE IAM/DRIVE AND LIVE CACHE NO-GO')
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -339,5 +367,6 @@ jobs:
             /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
             /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
             /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
