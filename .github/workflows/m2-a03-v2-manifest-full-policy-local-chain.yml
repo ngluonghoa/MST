@@ -18,6 +18,9 @@ on:
       - "scripts/m4_v21_gap_v1_numeric_parity_lab.py"
       - "tests/test_m4_v21_gap_v1_numeric_parity_lab.py"
       - "docs/MST_M4_V21_GAP_V1_NUMERIC_PARITY_QA_20261111.md"
+      - "scripts/m4_v21_multiday_all_tf_atr14_oracle_lab.py"
+      - "tests/test_m4_v21_multiday_all_tf_atr14_oracle_lab.py"
+      - "docs/MST_M4_V21_16DAY_SIX_TF_ATR14_ORACLE_QA_20261111.md"
 
 permissions:
   contents: read
@@ -106,6 +109,32 @@ jobs:
               assert x[k] is False,k
           print("GAPPED V1 NUMERIC/INDEPENDENT ORACLE PASS; ALL REAL MARKET GATES NO-GO")
           PY
+      - name: Run 54 full six-TF numerical ATR14 16-day synthetic replay tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_multiday_all_tf_atr14_oracle_lab.py' -v
+      - name: Validate 16-day actual inherited V1 six-TF ATR14 numeric oracle and no-go
+        run: |
+          python -m scripts.m4_v21_multiday_all_tf_atr14_oracle_lab --out /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("/tmp/mst-v21-16day-six-tf-atr14-NO-GO.json").read_text())
+          assert a["status"]=="SIX_TF_ALL_ATR14_NUMERIC_ORACLE_MULTIDAY_FIXTURE_ONLY_NO_GO"
+          assert a["window_counts"]=={"M5":768,"M15":256,"M30":128,"H1":64,"H4":16,"D1":16}
+          assert a["total_toy_closed_derived_windows"]==1248
+          assert a["actual_v1_indicator_checkpoint_suffix_recomputed"]==204
+          assert a["all_six_tf_atr14_has_numerical_values_after_fourteen_closed_bars"] is True
+          assert a["all_six_tf_independent_ema20_atr14_oracle_equal"] is True
+          assert a["metadata_only_zero_numeric_indicator_recompute_all_six"] is True
+          assert {k:v["numeric_checkpoint_suffix_recomputed"] for k,v in a["per_tf"].items()}=={"M5":124,"M15":42,"M30":21,"H1":11,"H4":3,"D1":3}
+          for k in ("history_source_issuer_verified","official_vn_exchange_historical_calendar_verified",
+                    "official_h4_d1_provider_aggregation_verified",
+                    "licensed_market_data_retention_or_cache_approved",
+                    "google_drive_market_ohlcv_io_performed",
+                    "independent_multiwriter_cas_signer_highwater_floor_verified",
+                    "release_or_trading_authorized"):
+              assert a[k] is False,k
+          print("MULTIDAY SIX-TF ATR14 V1 NUMERIC ORACLE PASS; NO REAL MARKET CACHE/TRADE RIGHTS")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -115,5 +144,6 @@ jobs:
             /tmp/mst-v21-layer-impact-NO-GO.json
             /tmp/mst-v21-six-tf-slices-NO-GO.json
             /tmp/mst-v21-gap-v1-numeric-NO-GO.json
+            /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
           retention-days: 14
           if-no-files-found: error
