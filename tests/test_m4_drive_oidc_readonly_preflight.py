@@ -301,8 +301,8 @@ class DriveOidcReadOnlyPreflightTests(unittest.TestCase):
 
     def test_51_exact_immutable_git_hub_repository_id_job_guard(self):
         s=self._workflow_source()
-        self.assertIn("github.repository_id == 1450356304",s)
-        self.assertIn("github.repository_owner_id == 353049266",s)
+        self.assertIn("github.repository_id == '1450356304'",s)
+        self.assertIn("github.repository_owner_id == '353049266'",s)
         self.assertIn("github.repository == 'ngluonghoa/MST'",s)
 
     def test_52_manual_default_branch_job_guard(self):
@@ -348,7 +348,7 @@ class DriveOidcReadOnlyPreflightTests(unittest.TestCase):
     def test_58_wif_google_attribute_trust_is_external_to_workflow(self):
         s=self._workflow_source()
         self.assertIn("GCP WIF provider MUST independently enforce matching numeric IDs",s)
-        self.assertIn("github.repository_owner_id == 353049266",s)
+        self.assertIn("github.repository_owner_id == '353049266'",s)
         self.assertNotIn("principalSet://",s)
 
 if __name__=="__main__":
