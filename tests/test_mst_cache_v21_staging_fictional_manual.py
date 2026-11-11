@@ -92,6 +92,11 @@ class FakeSession:
         self.share_stage_after_media_reads = False
         self.revoke_stage_app_after_media_reads = False
         self.reparent_stage_after_media_reads = False
+        self.late_named_duplicate = False
+        self.late_named_absent = False
+        self.late_named_wrong_mime = False
+        self.late_named_new_identity = False
+        self.late_named_wrong_parent = False
 
     def folder(self, name):
         root = name == m.ROOT
@@ -149,6 +154,18 @@ class FakeSession:
                                 "trashed": False}]
                 else:
                     payload = [self.file()] if self.media_bytes is not None else []
+            if (self.read_calls >= 2 and
+                    f"name = 'MST_FAKE_V21_RUN_" in query):
+                if self.late_named_duplicate and payload:
+                    payload.append({**payload[0], "id": "FAKE_LATE_OTHER_FILE_ID"})
+                elif self.late_named_absent:
+                    payload = []
+                elif self.late_named_wrong_mime and payload:
+                    payload[0] = {**payload[0], "mimeType": "text/plain"}
+                elif self.late_named_new_identity and payload:
+                    payload[0] = {**payload[0], "id": "FAKE_LATE_NEW_FILE_ID"}
+                elif self.late_named_wrong_parent and payload:
+                    payload[0] = {**payload[0], "parents": ["FAKE_OTHER_PARENT"]}
             if self.duplicate_list and payload:
                 payload.append(payload[0])
             response = {"files": payload,
@@ -553,7 +570,40 @@ class CloudFakeDriveTests(unittest.TestCase):
 
     def test_68_success_rechecks_both_folder_chain_metadata(self):
         m.run(self.s, self.name, "synthetic-write")
-        self.assertEqual(self.s.list_calls, 5)
+        # Root+stage preflight (2), filename preflight (1), folder
+        # postcondition (2), and independent final same-name check (1).
+        self.assertEqual(self.s.list_calls, 6)
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_69_duplicate_name_appears_after_media_reads_denied(self):
+        self.s.late_named_duplicate = True
+        with self.assertRaisesRegex(m.StagingDenied, "AMBIGUOUS_DRIVE_LIST"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+        self.assertEqual(self.s.upload_calls, 1)
+
+    def test_70_original_name_disappears_after_media_reads_denied(self):
+        self.s.late_named_absent = True
+        with self.assertRaisesRegex(m.StagingDenied, "FILE_IDENTITY_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_71_original_name_changes_mime_after_media_reads_denied(self):
+        self.s.late_named_wrong_mime = True
+        with self.assertRaisesRegex(m.StagingDenied, "LIST_METADATA_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_72_same_name_new_id_after_media_reads_denied(self):
+        self.s.late_named_new_identity = True
+        with self.assertRaisesRegex(m.StagingDenied, "FILE_IDENTITY_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_73_file_reparented_after_media_reads_denied(self):
+        self.s.late_named_wrong_parent = True
+        with self.assertRaisesRegex(m.StagingDenied, "WRONG_PARENT"):
+            m.run(self.s, self.name, "synthetic-write")
         self.assertEqual(self.s.read_calls, 2)
 
 
