@@ -254,16 +254,16 @@ def verify_chain(history: FakeHistory | None, tf: str, chain: tuple[DayLink, ...
             raise PermissionError("PARENT_LINK_MISMATCH_OR_REWIND")
         if item.incoming_checkpoint_sha256 != state_digest(None if prior is None else prior.checkpoints[-1]):
             raise PermissionError("INCOMING_CARRY_HASH_OR_POLICY_DRIFT")
-        if (item.normalized_bars_sha256 != bar_digest(item.bars)
-                or item.source_revision_lineage_sha256 != provenance_digest(item.bars)
-                or item.outgoing_checkpoint_sha256 != state_digest(item.checkpoints[-1])
-                or item.self_sha256 != link_digest(item.values())):
-            raise PermissionError("CONTENT_LINEAGE_OR_CHECKPOINT_LINK_TAMPER")
         if history is not None and item.scope.binding_sha256 != daily_scope(
             tf, history.days[index]
         ).binding_sha256:
             # No real provenance can be derived from a caller claiming V2 rights.
             raise PermissionError("FULL_LEGACY_POLICY_SCOPE_DRIFT")
+        if (item.normalized_bars_sha256 != bar_digest(item.bars)
+                or item.source_revision_lineage_sha256 != provenance_digest(item.bars)
+                or item.outgoing_checkpoint_sha256 != state_digest(item.checkpoints[-1])
+                or item.self_sha256 != link_digest(item.values())):
+            raise PermissionError("CONTENT_LINEAGE_OR_CHECKPOINT_LINK_TAMPER")
         if history is not None:
             expected = daily_bars(history.days[index], tf)
             if item.bars != expected:
