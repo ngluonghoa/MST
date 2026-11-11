@@ -27,8 +27,7 @@ Fabricated single local day 2026-11-09:
 ## Implementation and governance
 Add scripts/m4_v21_gap_v1_numeric_parity_lab.py and tests/test_m4_v21_gap_v1_numeric_parity_lab.py and this document. Extend existing .github/workflows/m2-a03-v2-manifest-full-policy-local-chain.yml (do not create workflow). Preserve exact upstream source pin cd90c1babae8912db31490ad614fc2ad2f868042 and MST main 4048f91beaaa3410116d97e35896c8b688384e19; 63 V1 and 8 existing opt-in V2 source modules untouched; Draft PR #8 unmerged.
 
-NOTE: technical source pin above MUST be checked against canonical full SHA; canonical previous QA uses cd90c1babae8912db31490ad614fc2ad2f868042? Actual pinned source is cd90c1babae8912db31490ad614fc2ad2f868042 (review exact public Git before acceptance).
-Canonical source pin verified as cd90c1babae8912db31490ad614fc2ad2f868042. The unit and parity scope do not change it.
+Canonical upstream SHA verified: `cd90c1babae8912db31490ad614fc2ad2f868042`; the original V1 modules remain untouched.
 
 ## Pending CI and next gate
 New tests: 46; prior focused tests: 289. Expected targeted count after successful CI: 335. No PASS claim until exact PR code/report HEAD CI readback. Actual historical exchange calendar by venue/source, corporate action adjustment, correction issuer as-of record and legal Drive market data retention remain pending M3. Physical Drive test only after M4 protected independent witness/high-water/CAS and owner signoff, not by unit tests.
@@ -36,3 +35,9 @@ New tests: 46; prior focused tests: 289. Expected targeted count after successfu
 PR https://github.com/ngluonghoa/MST/pull/8
 M3 https://github.com/ngluonghoa/MST/issues/9
 M4 https://github.com/ngluonghoa/MST/issues/10
+
+## Remote implementation-head verification — 2026-11-11
+
+Code commit `97c267f4155c7917839e5780beb5251a5850fe2a` independently has **47/47 pull-request workflows COMPLETED SUCCESS**, including [dedicated P0 gap + actual inherited-V1 numerical parity CI #42948700215](https://github.com/ngluonghoa/MST/actions/runs/42948700215), which ran **46/46 new test methods PASS** and executed the actual_v1_numeric_fixture() report validation. [Foundation CI #42948700242](https://github.com/ngluonghoa/MST/actions/runs/42948700242) finished SUCCESS on Python 3.11, Python 3.12, engineering/contract/wheel. Prior **289** targeted tests unchanged, cumulative **335 targeted** (not the whole repository test count). The submitted full-policy original-source 63 V1 / 8 prior opt-in V2 bytes and protected main stayed unchanged.
+
+Important scientific scope: original V1 fixture-generated M5/M15 EMA20/ATR14 numeric checkpoint output matches an independent Decimal oracle, with 48 causal checkpoints across six TFs. ATR14 is seeded on M5/M15 only in this tiny synthetic day; M30/H1/H4/D1 have fewer than 14 observations and preserve the correct `None` (not validated numerical ATR values). H4/D1 cross-gap groups are explicitly fictional, not official market bars. No source license/calendar/issuer, real Drive persistence, external monotonic signer/CAS or production rights. **This report-containing follow-on commit requires separate exact-head 47/47 readback before it is independently accepted.**
