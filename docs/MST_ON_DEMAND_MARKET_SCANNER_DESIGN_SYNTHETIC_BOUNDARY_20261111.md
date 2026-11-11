@@ -39,8 +39,8 @@ There is no additional standalone repository. No full-market automatic refresh i
 
 ## Exactly what is implemented in this isolated draft
 
-- scripts/mst_market_scanner_manual_contract_lab.py: stdlib-only synthetic-freeze plan, deterministic SHA-256 snapshot, invented eligible-listing data, injected fictional probe-score ranking, no external I/O, safe no-price receipt.
-- tests/test_mst_market_scanner_manual_contract_lab.py: 55 intentionally synthetic functional/negative/static boundary tests, including missing/master overflow, as-of eligibility, wrong venues, duplicate symbols, manual-only workflow and zero Watchlist mutations.
+- scripts/mst_market_scanner_manual_contract_lab.py: stdlib-only synthetic-freeze plan, deterministic SHA-256 snapshot, invented eligible-listing data, injected fictional probe-score ranking, strictly fenced Scanner-only synthetic object keys, no external I/O, safe no-price receipt.
+- tests/test_mst_market_scanner_manual_contract_lab.py: 63 intentionally synthetic functional/negative/static boundary tests, including missing/master overflow, as-of eligibility, wrong venues, duplicate symbols, manual-only workflow and zero Watchlist mutations.
 - .github/workflows/mst-market-scanner-synthetic-manual.yml: a separate **manual-only** synthetic contract QA workflow, restricted to protected main, pinned GitHub actions, read-only repository token, no Google OIDC, secrets, vendor calls, live source data, persistent scanner cache or schedule.
 
 These new files are strictly **additive** and do not replace Swing V1 sources, existing opt-in Cache V2 architecture, or the separate WIF manual-readiness PR #17. This new manual workflow is on a draft PR, not protected main; therefore it is NOT currently dispatchable there. Foundation CI on the draft may verify fictional code, not real market eligibility/licensing or Cloud data operations.
