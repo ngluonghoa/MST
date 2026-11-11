@@ -21,6 +21,9 @@ on:
       - "scripts/m4_v21_multiday_all_tf_atr14_oracle_lab.py"
       - "tests/test_m4_v21_multiday_all_tf_atr14_oracle_lab.py"
       - "docs/MST_M4_V21_16DAY_SIX_TF_ATR14_ORACLE_QA_20261111.md"
+      - "scripts/m4_v21_daily_partition_checkpoint_chain_lab.py"
+      - "tests/test_m4_v21_daily_partition_checkpoint_chain_lab.py"
+      - "docs/MST_M4_V21_DAILY_PARTITION_CARRY_QA_20261111.md"
 
 permissions:
   contents: read
@@ -137,6 +140,33 @@ jobs:
               assert a[k] is False,k
           print("MULTIDAY SIX-TF ATR14 V1 NUMERIC ORACLE PASS; NO REAL MARKET CACHE/TRADE RIGHTS")
           PY
+      - name: Run 35 daily V2 candidate partition chain and inherited V1 carry guard tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_daily_partition_checkpoint_chain_lab.py' -v
+      - name: Verify 96 one-date links and six-TF EMA/ATR rolling state without source authorization
+        run: |
+          python -m scripts.m4_v21_daily_partition_checkpoint_chain_lab --out /tmp/mst-v21-daily-carry-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-daily-carry-NO-GO.json").read_text())
+          assert x["status"]=="SINGLE_DATE_V2_SCOPE_CHAIN_SYNTHETIC_ONLY_ALL_LIVE_GATES_NO_GO"
+          assert x["fake_days"]==16
+          assert x["candidate_single_date_partition_links"]==96
+          assert x["total_cold_checkpoints"]==1248
+          assert x["actual_price_replayed_checkpoint_positions"]==204
+          assert x["metadata_only_replayed_checkpoint_positions"]==0
+          assert x["cross_date_carry_numerically_equal_original_v1"] is True
+          assert x["one_day_v1_v2_guard_unmodified"] is True
+          assert x["multi_day_composite_v2_scope_allowed"] is False
+          for flag in ("official_exchange_calendar_authenticated",
+                       "provider_issued_first_known_revision_authenticated",
+                       "market_data_or_cloud_retention_licensed",
+                       "physical_google_drive_market_cache_read_write",
+                       "protected_external_monotonic_floor_or_two_writer_cas",
+                       "production_release_or_trading_authorized"):
+              assert x[flag] is False,flag
+          print("P0 SINGLE-DATE V2 CARRY FIXTURE PASS, LIVE SOURCE AND DRIVE NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -147,5 +177,6 @@ jobs:
             /tmp/mst-v21-six-tf-slices-NO-GO.json
             /tmp/mst-v21-gap-v1-numeric-NO-GO.json
             /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
+            /tmp/mst-v21-daily-carry-NO-GO.json
           retention-days: 14
           if-no-files-found: error
