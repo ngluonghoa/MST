@@ -112,10 +112,17 @@ def find_one(session: Any, name: str, parent: str | None, mime: str) -> dict | N
     if name not in (ROOT, CHILD) and not re.fullmatch(r"MST_FAKE_V21_RUN_[1-9][0-9]{5,19}_[1-9][0-9]{0,5}\.json", name):
         raise StagingDenied("MST_STAGING_FIXED_NAME_ONLY")
     parent_part = "'root'" if parent is None else "'" + validate_id(parent) + "'"
+    # Folder preflights still select the fixed root/child names. For the
+    # fictional JSON, inspect the *entire* authorized STAGING_ONLY folder:
+    # another prior dispatch's different filename must block a second write
+    # even if the owner accidentally leaves the repository write gate true.
+    # Google Drive drive.file may hide files outside the OAuth app's access.
+    fixture = name not in (ROOT, CHILD)
+    query = f"{parent_part} in parents and trashed = false"
+    if not fixture:
+        query += f" and name = '{name}'"
     result = google_get_json(session, DRIVE, {
-        # Name-only lookup: a same-name object with another MIME type is
-        # a conflict, not proof that our expected object does not exist.
-        "q": f"{parent_part} in parents and name = '{name}' and trashed = false",
+        "q": query,
         "pageSize": 100,
         "fields": "nextPageToken,incompleteSearch,files(id,name,mimeType,parents,trashed,appProperties)",
     })
@@ -132,6 +139,8 @@ def find_one(session: Any, name: str, parent: str | None, mime: str) -> dict | N
     if type(f) is not dict:
         raise StagingDenied("MST_STAGING_INVALID_LISTED_FILE")
     validate_id(f.get("id"))
+    # An unrelated item in STAGING_ONLY blocks the one-fixture proof.
+    # For root/child, a mismatched object is also never accepted.
     if f.get("name") != name or f.get("mimeType") != mime or f.get("trashed") is not False:
         raise StagingDenied("MST_STAGING_LIST_METADATA_DRIFT")
     if parent is not None and f.get("parents") != [parent]:
@@ -304,6 +313,9 @@ def run(session: Any, name: str, mode: str) -> dict:
         raise StagingDenied("MST_STAGING_INVALID_MODE")
     content = fixed_fixture(name)
     sha = hashlib.sha256(content).hexdigest()
+    # A full-folder census allows only (a) empty staging, or (b) the one
+    # identical same-run fictional file. A prior distinct run is a conflict.
+    # This is best-effort sequential protection, never server-side CAS.
     existing = find_one(session, name, stage_id, "application/json")
     if existing is None:
         file_id, before_version = upload_one(session, stage_id, name, content, sha)
@@ -320,10 +332,10 @@ def run(session: Any, name: str, mode: str) -> dict:
     # best-effort drift fence, not atomic permission locking.
     if exact_staging(session) != stage_id:
         raise StagingDenied("MST_STAGING_FOLDER_ID_DRIFT")
-    # The first name lookup is only a preflight: files may be added, removed
-    # or renamed during the two media reads. Re-list the exact staging/name
-    # after verifying root/stage privacy, and require the SAME unique file ID.
-    # This is not transactional uniqueness or a CAS lock.
+    # The first folder census is only a preflight: files may be added, removed
+    # or renamed during the two media reads. Re-list ALL visible staging
+    # contents after verifying root/stage privacy, and require the SAME
+    # unique fictional file ID. This is not transactional uniqueness or CAS.
     final_object = find_one(session, name, stage_id, "application/json")
     if final_object is None or final_object["id"] != file_id:
         raise StagingDenied("MST_STAGING_FILE_IDENTITY_DRIFT")
