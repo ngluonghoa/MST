@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 from decimal import Decimal, InvalidOperation
+from datetime import date
 from pathlib import Path
 import json
 import re
@@ -51,6 +52,14 @@ def clock_time(value):
     return value,int(match[1])*3600+int(match[2])*60+int(match[3])
 
 
+def _valid_calendar_ymd(year,month,day):
+    try:
+        date(year,month,day)
+        return True
+    except ValueError:
+        return False
+
+
 def observed_date_contract(day_token):
     if type(day_token) is not str:
         raise ValueError("EXACT_RAW_VENDOR_DATE_TOKEN_REQUIRED")
@@ -60,6 +69,13 @@ def observed_date_contract(day_token):
     a,b,year=map(int,m.groups())
     if not (1<=a<=31 and 1<=b<=31 and 2000<=year<=2100):
         raise ValueError("DATE_TOKEN_OUT_OF_RANGE")
+    candidate_dates=[]
+    if 1<=a<=12:
+        candidate_dates.append((year,a,b)) # MM/dd
+    if 1<=b<=12:
+        candidate_dates.append((year,b,a)) # DD/MM
+    if not any(_valid_calendar_ymd(*candidate) for candidate in candidate_dates):
+        raise ValueError("SOURCE_CALENDAR_DATE_IMPOSSIBLE_IN_EITHER_FORMAT")
     if a>12 and b<=12:
         return "OBSERVED_LITERAL_CONFLICTS_WITH_MMDY_CONNECTOR_DESCRIPTION"
     if a<=12 and b>12:
