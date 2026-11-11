@@ -15,6 +15,9 @@ on:
       - "scripts/m4_v21_six_tf_causal_slices.py"
       - "tests/test_m4_v21_six_tf_causal_slices.py"
       - "docs/MST_M4_V21_SIX_TF_CAUSAL_SLICES_QA_20261111.md"
+      - "scripts/m4_v21_gap_v1_numeric_parity_lab.py"
+      - "tests/test_m4_v21_gap_v1_numeric_parity_lab.py"
+      - "docs/MST_M4_V21_GAP_V1_NUMERIC_PARITY_QA_20261111.md"
 
 permissions:
   contents: read
@@ -79,6 +82,30 @@ jobs:
           assert r["release_and_trading_no_go"] is True
           print("SIX TF 44 CASES SYNTHETIC, CALENDAR AND DRIVE NO-GO")
           PY
+      - name: Run 46 strict gap-aware six-TF V1 numeric EMA20 ATR14 parity tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_gap_v1_numeric_parity_lab.py' -v
+      - name: Validate inherited V1 incremental vs independent actual Decimal oracle on gap
+        run: |
+          python -m scripts.m4_v21_gap_v1_numeric_parity_lab --out /tmp/mst-v21-gap-v1-numeric-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-gap-v1-numeric-NO-GO.json").read_text())
+          assert x["status"]=="GAPPED_M5_SIX_TF_V1_EMA_ATR_NUMERIC_PARITY_FIXTURE_ONLY"
+          assert x["source_m5_count"]==48
+          assert x["toy_tf_window_counts"]=={"M5":48,"M15":16,"M30":8,"H1":4,"H4":1,"D1":1}
+          assert x["nontrading_break_minutes"]==120
+          assert x["total_price_correction_checkpoint_suffix_positions"]==48
+          assert x["inherited_v1_sqlite_incremental_numerically_matches_independent_ema20_atr14"] is True
+          assert all(a["metadata_only_zero_recompute"] for a in x["tf_evidence"].values())
+          for k in ("source_license_verified","official_hose_hnx_upcom_historical_calendar_verified",
+                    "real_provider_aggregation_and_correction_proven","real_source_first_known_verified",
+                    "physical_google_drive_quote_cache_read_write",
+                    "cross_run_authenticated_writer_or_protected_cas_floor",
+                    "live_signal_release_or_trading_authorized"):
+              assert x[k] is False,k
+          print("GAPPED V1 NUMERIC/INDEPENDENT ORACLE PASS; ALL REAL MARKET GATES NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -87,5 +114,6 @@ jobs:
             /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
             /tmp/mst-v21-layer-impact-NO-GO.json
             /tmp/mst-v21-six-tf-slices-NO-GO.json
+            /tmp/mst-v21-gap-v1-numeric-NO-GO.json
           retention-days: 14
           if-no-files-found: error
