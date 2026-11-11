@@ -97,6 +97,8 @@ class FakeSession:
         self.late_named_wrong_mime = False
         self.late_named_new_identity = False
         self.late_named_wrong_parent = False
+        self.preexisting_extra_staging_file = False
+        self.late_extra_staging_file = False
 
     def folder(self, name):
         root = name == m.ROOT
@@ -154,10 +156,19 @@ class FakeSession:
                                 "trashed": False}]
                 else:
                     payload = [self.file()] if self.media_bytes is not None else []
-            if (self.read_calls >= 2 and
-                    f"name = 'MST_FAKE_V21_RUN_" in query):
+            # Fixture lookup now intentionally inventories the whole private
+            # folder without filtering on the requested filename or MIME.
+            is_stage_census = (f"'{self.STAGE_ID}' in parents" in query
+                               and "name =" not in query)
+            if is_stage_census and self.preexisting_extra_staging_file and payload:
+                payload.append({**payload[0], "id": "FAKE_UNRELATED_FILE_1234",
+                                "name": "FAKE_UNRELATED_DOCUMENT.txt", "mimeType": "text/plain"})
+            if self.read_calls >= 2 and is_stage_census:
                 if self.late_named_duplicate and payload:
                     payload.append({**payload[0], "id": "FAKE_LATE_OTHER_FILE_ID"})
+                elif self.late_extra_staging_file and payload:
+                    payload.append({**payload[0], "id": "FAKE_LATE_UNRELATED_FILE",
+                                    "name": "README.txt", "mimeType": "text/plain"})
                 elif self.late_named_absent:
                     payload = []
                 elif self.late_named_wrong_mime and payload:
@@ -605,6 +616,45 @@ class CloudFakeDriveTests(unittest.TestCase):
         with self.assertRaisesRegex(m.StagingDenied, "WRONG_PARENT"):
             m.run(self.s, self.name, "synthetic-write")
         self.assertEqual(self.s.read_calls, 2)
+
+    def test_74_second_distinct_dispatch_denied_if_prior_fixture_exists(self):
+        prior_name = "MST_FAKE_V21_RUN_43037551111_1.json"
+        self.s.payload_name = prior_name
+        self.s.media_bytes = m.fixed_fixture(prior_name)
+        with self.assertRaisesRegex(m.StagingDenied, "LIST_METADATA_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+        self.assertEqual(self.s.read_calls, 0)
+
+    def test_75_unrelated_existing_staging_file_denies_upload(self):
+        self.s.wrong_mime_existing = True
+        self.s.payload_name = "README.txt"
+        with self.assertRaisesRegex(m.StagingDenied, "LIST_METADATA_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_76_prior_same_run_plus_second_object_denies_upload(self):
+        self.s.payload_name = self.name
+        self.s.media_bytes = m.fixed_fixture(self.name)
+        self.s.preexisting_extra_staging_file = True
+        with self.assertRaisesRegex(m.StagingDenied, "AMBIGUOUS_DRIVE_LIST"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_77_late_unrelated_object_blocks_success_receipt(self):
+        self.s.late_extra_staging_file = True
+        with self.assertRaisesRegex(m.StagingDenied, "AMBIGUOUS_DRIVE_LIST"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 1)
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_78_writer_lists_all_staging_items_not_only_filename(self):
+        m.run(self.s, self.name, "synthetic-write")
+        stage_queries = [q for q in self.s.list_queries
+                         if f"'{self.s.STAGE_ID}' in parents" in q]
+        self.assertEqual(len(stage_queries), 2)
+        self.assertTrue(all("name =" not in q and "mimeType =" not in q
+                            for q in stage_queries))
 
 
 if __name__ == "__main__":
