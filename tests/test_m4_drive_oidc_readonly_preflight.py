@@ -273,5 +273,83 @@ class DriveOidcReadOnlyPreflightTests(unittest.TestCase):
         with self.assertRaisesRegex(PermissionError,"OIDC_REQUEST_CONTEXT"):
             run_live_oidc(env)
 
+
+    # Security-critical static checks on the REAL manual workflow definition.
+    # These only check repository source; they cannot attest a Google WIF login.
+    def _workflow_source(self):
+        from pathlib import Path
+        return (Path(__file__).resolve().parents[1] /
+                ".github/workflows/m4-drive-wif-metadata-only-manual.yml").read_text(
+                    encoding="utf-8")
+
+    def test_49_all_external_actions_pinned_to_github_verified_full_sha(self):
+        import re
+        s=self._workflow_source()
+        pins={
+            "actions/checkout":"11d5960a326750d5838078e36cf38b85af677262",
+            "actions/setup-python":"a26af69be951a213d495a4c3e4e4022e16d87065",
+            "google-github-actions/auth":"c200f3691d83b41bf9bbd8638997a462592937ed",
+            "actions/upload-artifact":"ea165f8d65b6e75b540449e92b4886f43607fa02",
+        }
+        uses=re.findall(r"(?m)^\s+(?:- )?uses:\s+([A-Za-z0-9_./-]+)@([a-f0-9]{40})\b",s)
+        self.assertEqual(dict(uses),pins)
+        self.assertEqual(len(uses),len(pins))
+
+    def test_50_workflow_has_no_mutable_action_tags(self):
+        import re
+        self.assertNotRegex(self._workflow_source(),r"(?m)^\s+(?:- )?uses:\s+\S+@v\d")
+
+    def test_51_exact_immutable_git_hub_repository_id_job_guard(self):
+        s=self._workflow_source()
+        self.assertIn("github.repository_id == 1450356304",s)
+        self.assertIn("github.repository_owner_id == 353049266",s)
+        self.assertIn("github.repository == 'ngluonghoa/MST'",s)
+
+    def test_52_manual_default_branch_job_guard(self):
+        s=self._workflow_source()
+        self.assertIn("github.ref == 'refs/heads/main'",s)
+        self.assertIn("github.event_name == 'workflow_dispatch'",s)
+        self.assertIn("  workflow_dispatch:",s)
+        self.assertNotRegex(s,r"(?m)^\s{2}(?:push|pull_request|pull_request_target|schedule|workflow_run):")
+
+    def test_53_checkout_credential_not_persisted(self):
+        s=self._workflow_source()
+        self.assertRegex(s,r"uses: actions/checkout@[a-f0-9]{40}.*\n\s+with:\n\s+persist-credentials: false")
+
+    def test_54_readonly_scope_and_oidc_only(self):
+        s=self._workflow_source()
+        self.assertIn("  contents: read",s)
+        self.assertIn("  id-token: write",s)
+        self.assertNotIn("contents: write",s)
+        self.assertNotIn("credentials_json:",s)
+
+    def test_55_no_service_account_key_in_workflow(self):
+        s=self._workflow_source()
+        self.assertIn("workload_identity_provider: ${{ vars.MST_GCP_WIF_PROVIDER }}",s)
+        self.assertIn("service_account: ${{ vars.MST_GCP_DRIVE_SA_EMAIL }}",s)
+        self.assertNotIn("service_account_key",s)
+        self.assertNotIn("private_key:",s)
+
+    def test_56_no_scheduled_or_content_drive_reader(self):
+        s=self._workflow_source()
+        self.assertIn("--mode live-readonly",s)
+        self.assertIn("metadata_object_count']==5",s)
+        self.assertNotIn("--mode ingest",s)
+        self.assertNotIn("--mode publish",s)
+        self.assertNotIn("cache-refresh",s)
+
+    def test_57_artifact_is_only_sanitized_metadata_receipt(self):
+        s=self._workflow_source()
+        self.assertIn("path: /tmp/mst-drive-oidc-metadata-READONLY.json",s)
+        self.assertIn("retention-days: 7",s)
+        self.assertNotIn("path: .",s)
+        self.assertNotIn("path: ~",s)
+
+    def test_58_wif_google_attribute_trust_is_external_to_workflow(self):
+        s=self._workflow_source()
+        self.assertIn("GCP WIF provider MUST independently enforce matching numeric IDs",s)
+        self.assertIn("github.repository_owner_id == 353049266",s)
+        self.assertNotIn("principalSet://",s)
+
 if __name__=="__main__":
     unittest.main()
