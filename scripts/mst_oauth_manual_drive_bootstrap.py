@@ -49,7 +49,7 @@ class OAuthSecrets:
     refresh_token: str = field(repr=False)
 
 
-def require_manual_main_context(env: Mapping[str, str]) -> OAuthSecrets:
+def require_manual_main_context(env: Mapping[str, str], *, allow_write: bool = False) -> OAuthSecrets:
     """Defense-in-depth: no schedule, PR, fork, WIF or main-mismatch fallback.
 
     GitHub environment strings are runtime gates, NOT signed identity proof
@@ -62,12 +62,15 @@ def require_manual_main_context(env: Mapping[str, str]) -> OAuthSecrets:
         "GITHUB_REF": HEAD_REF,
         "GITHUB_EVENT_NAME": RUN_EVENT,
         "GITHUB_WORKFLOW_REF": EXPECTED_WORKFLOW_REF,
-        "MST_OAUTH_BOOTSTRAP_ACCEPTED": "true",
     }
     if not isinstance(env, Mapping) or any(
         env.get(key) != value for key, value in checks.items()
     ):
         raise BootstrapDenied("MST_OAUTH_MANUAL_MAIN_EXPLICIT_OWNER_GATE_REQUIRED")
+    if type(allow_write) is not bool:
+        raise BootstrapDenied("MST_OAUTH_INVALID_WRITE_FLAG")
+    if allow_write and env.get("MST_OAUTH_BOOTSTRAP_ACCEPTED") != "true":
+        raise BootstrapDenied("MST_OAUTH_WRITE_OWNER_GATE_REQUIRED")
     if any(not isinstance(env.get(key), str) or not env[key].strip()
            for key in SECRET_NAMES):
         raise BootstrapDenied("MST_OAUTH_COMPLETE_PRIVATE_SECRET_TRIO_REQUIRED")
@@ -162,6 +165,28 @@ def find_or_create_app_folder(session: Any, name: str,
     return file_id
 
 
+def probe_readonly_from_session(session: Any) -> dict[str, object]:
+    """One bounded authenticated Google Drive metadata listing; NO writes.
+
+    Scope drive.file returns files created by/opened with this OAuth app,
+    not the owner's pre-existing MST project folders or Watchlist Sheet.
+    """
+    folder = _list_exact_child(session, ROOT_NAME, None)
+    if folder is not None:
+        _verify_exact(session, folder.get("id"), ROOT_NAME, None)
+    return {
+        "status": "MST_OAUTH_DRIVE_FILE_READ_ONLY_PROBE_PASS",
+        "actual_google_drive_metadata_read": True,
+        "app_owned_cache_root_discovered": folder is not None,
+        "google_drive_write_performed": False,
+        "watchlist_access_proven": False,
+        "market_provider_called": False,
+        "ohlcv_downloaded": False,
+        "market_cache_or_trading_activated": False,
+        "oauth_refresh_token_continuity_proven": False,
+    }
+
+
 def bootstrap_from_session(session: Any) -> dict[str, object]:
     """Called only after GitHub manual gate and OAuth authorize token flow."""
     root = find_or_create_app_folder(session, ROOT_NAME, None)
@@ -205,9 +230,13 @@ def _new_authorized_session(secrets: OAuthSecrets) -> Any:
 
 def main() -> None:
     # Critical: do not log either the env or OAuthSecrets repr.
-    secrets = require_manual_main_context(os.environ)
+    mode = os.environ.get("MST_OAUTH_MODE", "probe")
+    if mode not in ("probe", "bootstrap"):
+        raise BootstrapDenied("MST_OAUTH_UNSUPPORTED_MODE")
+    secrets = require_manual_main_context(os.environ, allow_write=(mode == "bootstrap"))
     session = _new_authorized_session(secrets)
-    receipt = bootstrap_from_session(session)
+    receipt = (probe_readonly_from_session(session) if mode == "probe"
+               else bootstrap_from_session(session))
     print(json.dumps(receipt, sort_keys=True))
 
 
