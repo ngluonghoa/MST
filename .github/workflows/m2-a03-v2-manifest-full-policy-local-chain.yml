@@ -27,6 +27,9 @@ on:
       - "scripts/m4_v21_source_revision_asof_ledger_lab.py"
       - "tests/test_m4_v21_source_revision_asof_ledger_lab.py"
       - "docs/MST_M4_V21_BITEMPORAL_SOURCE_CUSTODY_QA_20261111.md"
+      - "scripts/m4_v21_calendar_revision_quarantine_lab.py"
+      - "tests/test_m4_v21_calendar_revision_quarantine_lab.py"
+      - "docs/MST_M4_V21_CALENDAR_REVISION_QUARANTINE_QA_20261111.md"
 
 permissions:
   contents: read
@@ -197,6 +200,38 @@ jobs:
               assert proof[flag] is False,flag
           print("ASOF M3/M4 CUSTODY LAB SYNTHETIC PASS; REAL ISSUER AND GOOGLE DRIVE CACHE NO-GO")
           PY
+      - name: Run 47 fictional calendar-as-of revision and six-TF quarantine tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_calendar_revision_quarantine_lab.py' -v
+      - name: Validate two retro calendar revisions and deny all source or market authority
+        run: |
+          python -m scripts.m4_v21_calendar_revision_quarantine_lab --out /tmp/mst-v21-calendar-revision-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-calendar-revision-NO-GO.json").read_text())
+          assert x["status"]=="ASOF_TOY_CALENDAR_REVISIONS_QUARANTINE_NO_MARKET_AUTHORITY"
+          assert x["initial_fabricated_calendar_days"]==16
+          assert x["untrusted_calendar_events"]==18
+          assert x["two_retroactive_calendar_corrections_at_different_known_times"] is True
+          assert x["baseline_before_calendar_revisions"]["quarantined_known_m5"]==0
+          assert x["after_fake_holiday_correction"]["quarantined_known_m5"]==48
+          final=x["after_fake_halt_correction"]
+          assert final["quarantined_known_m5"]==72
+          assert final["source_observed_m5"]==768
+          assert final["full_policy_rotation_day_ordinals"]==[3,8]
+          assert final["six_tf_affected_windows"]=={"M5":72,"M15":24,"M30":12,"H1":6,"H4":2,"D1":2}
+          assert final["six_tf_affected_total"]==118
+          for k in ("real_calendar_issuer_verified","real_holiday_or_halt_verified",
+                    "rights_for_live_market_data_or_cloud_cache",
+                    "old_calendar_policy_cache_reuse_authorized",
+                    "source_first_known_by_actual_issuer_verified",
+                    "real_gdrive_quote_cache_read_write",
+                    "protected_cloud_signer_floor_cas_verified",
+                    "production_release_or_trading_permitted"):
+              assert final[k] is False,k
+          assert x["real_storage_trading_or_release_authorized"] is False
+          print("TOY CALENDAR REVISION QA PASS, ALL EXTERNAL SOURCE AND CLOUD STORAGE GATES NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -209,5 +244,6 @@ jobs:
             /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
             /tmp/mst-v21-daily-carry-NO-GO.json
             /tmp/mst-v21-first-known-asof-NO-GO.json
+            /tmp/mst-v21-calendar-revision-NO-GO.json
           retention-days: 14
           if-no-files-found: error
