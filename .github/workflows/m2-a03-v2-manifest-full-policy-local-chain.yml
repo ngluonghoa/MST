@@ -51,6 +51,9 @@ on:
       - "scripts/m2_a03_ssi_intraday_d1_observational_lab.py"
       - "tests/test_m2_a03_ssi_intraday_d1_observational_lab.py"
       - "docs/MST_A03_SSI_INTRA_D1_DATE_CONTRACT_REAL_SOURCE_QA_20261111.md"
+      - "scripts/m4_private_d1_dual_schema_manifest_quarantine_lab.py"
+      - "tests/test_m4_private_d1_dual_schema_manifest_quarantine_lab.py"
+      - "docs/MST_M4_REAL_PRIVATE_D1_180_DUAL_SCHEMA_UNIT_MANIFEST_CONFLICT_QA_20261111.md"
       - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
@@ -434,6 +437,35 @@ jobs:
               assert x[k] is False,k
           print('SSI HISTORICAL INTRADAY-D1 NUMERIC PARITY SYNTHETIC PASS; DATE AND NATIVE CANDLE SOURCE NO-GO')
           PY
+      - name: Run 50 fake dual private D1 schema/source manifest and DNSE unit alias quarantine guards
+        run: python -m unittest discover -s tests -p 'test_m4_private_d1_dual_schema_manifest_quarantine_lab.py' -v
+      - name: Demonstrate two schema manifests never silently normalize three DNSE unit labels
+        run: |
+          python -m scripts.m4_private_d1_dual_schema_manifest_quarantine_lab --out /tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json').read_text())
+          assert x['status']=='MULTISYMBOL_REAL_SHAPE_AUDIT_UNIT_TOKEN_CONFLICT_QUARANTINE_NO_GO'
+          assert x['actual_private_docs_read_by_validator'] is False
+          assert x['source_ohlcv_rows_structurally_checked']==180
+          assert x['source_partition_count']==9
+          assert x['source_manifests_checked']==2
+          assert x['source_manifest_unit_alias_conflicts']==3
+          assert len(x['unit_alias_conflicts'])==3
+          assert all(d['provider']=='DNSE' and d['field']=='unit' for d in x['unit_alias_conflicts'])
+          assert x['all_original_unit_labels_preserved'] is True
+          assert all(d['common_dates']==20 for d in x['source_diagnostics'].values())
+          for k in ('dnse_price_basis_and_scale_issuer_authenticated',
+                    'official_holiday_halt_and_exchange_calendar_verified',
+                    'source_first_known_and_corrections_attested',
+                    'authenticated_github_runner_drive_reader',
+                    'vendor_cloud_storage_rights_verified',
+                    'content_addressed_atomic_cache_or_trade_authorized'):
+              assert x[k] is False,k
+          assert x['production_admission']=='DENIED_UNIT_LABEL_CONFLICT_AND_EXTERNAL_RIGHTS'
+          print('TWO LEGACY PRIVATE PILOT SCHEMAS, THREE FAKE DNSE ALIASES QUARANTINED; REAL DRIVE/PRODUCTION NO GO')
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -454,5 +486,6 @@ jobs:
             /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
             /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
             /tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
