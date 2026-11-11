@@ -71,6 +71,16 @@ class FakeSession:
         self.paginated_list = False
         self.payload_name = None
         self.post_headers = None
+        self.post_params = None
+        self.shared_root = False
+        self.shared_stage = False
+        self.shared_file = False
+        self.unowned_stage = False
+        self.unowned_file = False
+        self.not_app_stage = False
+        self.not_app_file = False
+        self.stream_oversize_no_length = False
+        self.last_media_response = None
 
     def folder(self, name):
         root = name == m.ROOT
@@ -80,6 +90,9 @@ class FakeSession:
             "mimeType": m.FOLDER_MIME,
             "parents": ["FAKE_MY_DRIVE_ROOT"] if root else [self.ROOT_ID],
             "trashed": False,
+            "shared": self.shared_root if root else self.shared_stage,
+            "ownedByMe": True if root else not self.unowned_stage,
+            "isAppAuthorized": True if root else not self.not_app_stage,
         }
 
     def file(self):
@@ -98,6 +111,9 @@ class FakeSession:
             "md5Checksum": hashlib.md5(self.media_bytes).hexdigest(),
             "size": str(len(self.media_bytes)),
             "version": "1",
+            "shared": self.shared_file,
+            "ownedByMe": not self.unowned_file,
+            "isAppAuthorized": not self.not_app_file,
         }
 
     def get(self, url, *, params, timeout, **kwargs):
@@ -127,7 +143,13 @@ class FakeSession:
             data = self.media_bytes
             if self.read_calls == 2 and self.mutate_second_read:
                 data = b"tampered"
-            return FakeResponse(content=data)
+            if self.stream_oversize_no_length:
+                data = b"x" * (m.READ_LIMIT + 1)
+            response = FakeResponse(content=data)
+            if self.stream_oversize_no_length:
+                response.headers = {}
+            self.last_media_response = response
+            return response
         if url.endswith(self.FILE_ID):
             data = self.file()
             if self.metadata_tamper:
@@ -138,6 +160,7 @@ class FakeSession:
     def post(self, url, *, params, headers, data, timeout):
         self.upload_calls += 1
         self.post_headers = headers
+        self.post_params = params
         if self.fail_upload:
             return FakeResponse(code=403)
         boundary = b"--" + m.BOUNDARY.encode()
@@ -366,6 +389,67 @@ class CloudFakeDriveTests(unittest.TestCase):
         m.run(self.s, self.name, "synthetic-write")
         self.assertEqual(self.s.file()["appProperties"]["sha256"],
                          hashlib.sha256(self.s.media_bytes).hexdigest())
+
+    def test_45_refuse_shared_root_before_any_upload(self):
+        self.s.shared_root = True
+        with self.assertRaisesRegex(m.StagingDenied, "ROOT_READBACK"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_46_refuse_shared_staging_folder_before_upload(self):
+        self.s.shared_stage = True
+        with self.assertRaisesRegex(m.StagingDenied, "CHILD_READBACK"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_47_refuse_staging_not_owned_by_same_google_user(self):
+        self.s.unowned_stage = True
+        with self.assertRaises(m.StagingDenied):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_48_refuse_staging_not_authorized_to_same_app(self):
+        self.s.not_app_stage = True
+        with self.assertRaises(m.StagingDenied):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_49_refuse_created_file_shared(self):
+        self.s.shared_file = True
+        with self.assertRaisesRegex(m.StagingDenied, "METADATA"):
+            m.run(self.s, self.name, "synthetic-write")
+
+    def test_50_refuse_created_file_not_owned(self):
+        self.s.unowned_file = True
+        with self.assertRaises(m.StagingDenied):
+            m.run(self.s, self.name, "synthetic-write")
+
+    def test_51_refuse_created_file_not_app_authorized(self):
+        self.s.not_app_file = True
+        with self.assertRaises(m.StagingDenied):
+            m.run(self.s, self.name, "synthetic-write")
+
+    def test_52_override_domain_default_visibility_on_file_create(self):
+        m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.post_params["ignoreDefaultVisibility"], "true")
+        self.assertEqual(self.s.post_params["uploadType"], "multipart")
+
+    def test_53_reject_oversize_chunked_http_without_content_length(self):
+        self.s.stream_oversize_no_length = True
+        with self.assertRaisesRegex(m.StagingDenied, "MEDIA_OVERSIZE"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 1)
+        self.assertTrue(self.s.last_media_response.closed)
+
+    def test_54_metadata_parent_stays_staging_only(self):
+        m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.file()["parents"], [self.s.STAGE_ID])
+
+    def test_55_read_only_probe_refuses_public_staging(self):
+        self.s.shared_stage = True
+        with self.assertRaises(m.StagingDenied):
+            m.run(self.s, self.name, "probe")
+        self.assertEqual(self.s.upload_calls, 0)
 
 
 if __name__ == "__main__":
