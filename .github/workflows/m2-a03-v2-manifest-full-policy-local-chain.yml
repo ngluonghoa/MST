@@ -42,6 +42,9 @@ on:
       - "scripts/m4_wif_immutable_trust_policy_lab.py"
       - "tests/test_m4_wif_immutable_trust_policy_lab.py"
       - "docs/MST_M4_WIF_IMMUTABLE_ID_TRUST_SETUP_QA_20261111.md"
+      - "scripts/m2_a03_vcbs_adjusted_wm_crosscheck_lab.py"
+      - "tests/test_m2_a03_vcbs_adjusted_wm_crosscheck_lab.py"
+      - "docs/MST_A03_VCBS_REAL_D1_W1_MN1_ADJUSTED_PRICE_QA_20261111.md"
       - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
@@ -351,6 +354,27 @@ jobs:
               assert x[k] is False,k
           print('IMMUTABLE GITHUB NUMERIC REPOSITORY WIF PREVIEW PASS; REAL GOOGLE IAM/DRIVE AND LIVE CACHE NO-GO')
           PY
+      - name: Run 50 fake VCBS adjusted D1 to W1/MN1 arithmetic and partial-bar guards
+        run: python -m unittest discover -s tests -p 'test_m2_a03_vcbs_adjusted_wm_crosscheck_lab.py' -v
+      - name: Prove VCBS higher timeframe fake adjustment never authorizes quote cache or trades
+        run: |
+          python -m scripts.m2_a03_vcbs_adjusted_wm_crosscheck_lab --out /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json').read_text())
+          assert x["schema"]=="mst.a03.vcbs.d1-w1-mn1-adjusted-observational-crosscheck.v1"
+          assert x["status"]=="SOURCE_OBSERVED_ADJUSTMENT_ARITHMETIC_ONLY_CALENDAR_LICENSE_CACHE_NO_GO"
+          assert x["period_count"]==2 and x["partial_count"]==1
+          assert all(p["adjustment_present"] and p["numeric_mismatch_count"]==0 for p in x["period_comparisons"])
+          assert x["period_comparisons"][1]["classification"]=="QUARANTINED_PARTIAL_PERIOD"
+          for k in ("fully_closed_source_candles_attested","actual_provider_data_queried",
+                    "official_holiday_and_halt_calendar_verified",
+                    "issuer_first_known_authenticated",
+                    "cloud_cache_storage_or_trading_authorized"):
+              assert x[k] is False,k
+          print("VCBS W1/MN1 FULLY FAKE PRICE-ADJUSTMENT QA PASS; NO ACTUAL MARKET DATA OR PRODUCTION APPROVAL")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -368,5 +392,6 @@ jobs:
             /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
             /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
             /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
+            /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
