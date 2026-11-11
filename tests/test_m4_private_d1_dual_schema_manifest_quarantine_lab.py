@@ -105,7 +105,7 @@ class PrivateDualSchemaD1Tests(unittest.TestCase):
             parse_native_google_doc_text('Not a private MST document\n{"a":1}')
 
     def test_22_double_heading_disallowed(self):
-        with self.assertRaisesRegex(ValueError,"STRICT_SOURCE_JSON"):
+        with self.assertRaisesRegex(ValueError,"ONE_MST_TITLE_LINE_THEN_JSON_REQUIRED"):
             parse_native_google_doc_text('MST PILOT\nsecond header\n{"a":1}')
 
     def test_23_duplicate_iso_day_denied(self):
@@ -191,7 +191,6 @@ class PrivateDualSchemaD1Tests(unittest.TestCase):
     def test_41_cross_source_price_mismatch_keeps_quarantine(self):
         p,m=self.fixture()
         p[("BBB","VCBS")][1]["rows"][0]["close"]+=1
-        report=self.checked(p,m) if False else None  # explicit setup below
         # Manifest last_close untouched because first session changes.
         report=audit_private_dataset(p,m,cutoff="2025-04-28")
         self.assertGreater(report["source_diagnostics"]["BBB"]["ssi_vcbs_ohlc_mismatch_days"],0)
