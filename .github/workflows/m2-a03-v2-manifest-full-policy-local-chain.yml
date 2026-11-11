@@ -36,6 +36,10 @@ on:
       - "scripts/m4_v21_private_pilot_d1_validation_lab.py"
       - "tests/test_m4_v21_private_pilot_d1_validation_lab.py"
       - "docs/MST_M4_LIVE_PILOT_3_SOURCE_FPT_D1_PRIVATE_QA_20261111.md"
+      - "scripts/m4_drive_oidc_readonly_preflight.py"
+      - "tests/test_m4_drive_oidc_readonly_preflight.py"
+      - "docs/MST_M4_GOOGLE_DRIVE_OIDC_READONLY_IDENTITY_GATE_QA_20261111.md"
+      - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
   contents: read
@@ -293,6 +297,32 @@ jobs:
           assert x["all_production_gates_no_go"] is True
           print("PRIVATE LIVE DRIVE SNAPSHOT PARSER CONTRACT PASS USING FICTIONAL VALUES; ALL PRODUCTION GATES NO-GO")
           PY
+      - name: Run 48 fully fake GitHub OIDC Drive metadata preflight guard tests
+        run: python -m unittest discover -s tests -p 'test_m4_drive_oidc_readonly_preflight.py' -v
+      - name: Verify read-only OIDC scope intent without actual Google credentials or market data
+        run: |
+          python -m scripts.m4_drive_oidc_readonly_preflight \
+            --mode synthetic --out /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json').read_text())
+          assert x['schema']=='mst.m4.oidc-drive-metadata-preflight.v1'
+          assert x['status']=='SERVICE_IDENTITY_METADATA_PREFLIGHT_ONLY_PRODUCTION_INGEST_DENIED'
+          assert x['metadata_object_count']==5
+          assert x['provider_namespaces_checked']==['SSI','DNSE','VCBS']
+          for k in ('real_google_drive_credentials_exchanged',
+                    'real_google_drive_resource_metadata_retrieved',
+                    'actual_live_github_identity_configured','actual_docs_content_read',
+                    'vendor_market_api_called','market_ohlcv_downloaded',
+                    'google_drive_write_performed','cloud_cache_automatic_refresh_active',
+                    'external_source_retention_license_attested',
+                    'issuer_first_known_and_official_calendar_attested',
+                    'external_signer_highwater_or_two_writer_cas_attested',
+                    'production_cache_or_trading_enabled'):
+              assert x[k] is False,k
+          print('M4 OIDC CLOUD DRIVE CLOUD IDENTITY SYNTHETIC CONTRACT PASS; NO LIVE AUTH/GDRIVE READ DONE')
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -308,5 +338,6 @@ jobs:
             /tmp/mst-v21-calendar-revision-NO-GO.json
             /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
             /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
