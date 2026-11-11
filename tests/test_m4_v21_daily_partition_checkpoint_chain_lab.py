@@ -168,7 +168,7 @@ class DailyPartitionCarryP0Tests(unittest.TestCase):
         c = bad[0].checkpoints[0]
         bad[0] = replace(bad[0], checkpoints=(replace(c, ema20=c.ema20 + Decimal(1)),)
                          + bad[0].checkpoints[1:])
-        with self.assertRaises(PermissionError):
+        with self.assertRaisesRegex(ValueError, "NONCAUSAL_OR_TAMPERED_INDICATOR_CARRY"):
             verify_chain(self.original, "M5", tuple(bad), as_of_utc=COLD_AT)
 
     def test_23_mutated_revision_lineage_hash_denied(self):
