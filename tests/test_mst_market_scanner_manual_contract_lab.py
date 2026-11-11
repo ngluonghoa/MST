@@ -1,6 +1,7 @@
 """MST Market Scanner negative QA: fictional fixture, zero cloud/provider access."""
 
 import math
+from dataclasses import replace
 from pathlib import Path
 import unittest
 
@@ -13,6 +14,7 @@ from scripts.mst_market_scanner_manual_contract_lab import (
     freeze_manual_universe,
     rank_fictional_probe_scores,
     synthetic_demo,
+    synthetic_scanner_cache_key,
 )
 
 
@@ -269,6 +271,43 @@ class SyntheticCandidateBoundaryTests(unittest.TestCase):
         self.assertIn("--synthetic-self-test", workflow)
         self.assertIn("test_mst_market_scanner_manual_contract_lab.py", workflow)
         self.assertNotIn("mst/watchlist", workflow)
+
+
+    def test_56_scanner_key_contains_immutable_digest(self):
+        frozen = freeze()
+        key = synthetic_scanner_cache_key(frozen, "universe")
+        self.assertEqual(key, f"{SCANNER_NAMESPACE}/{frozen.scan_id}/universe.json")
+
+    def test_57_scanner_key_is_not_watchlist_path(self):
+        key = synthetic_scanner_cache_key(freeze(), "candidates")
+        self.assertFalse(key.startswith(WATCHLIST_NAMESPACE + "/"))
+
+    def test_58_scanner_key_rejects_path_traversal(self):
+        with self.assertRaises(ScannerContractError):
+            synthetic_scanner_cache_key(freeze(), "../watchlist")
+
+    def test_59_scanner_key_rejects_unapproved_kind(self):
+        with self.assertRaises(ScannerContractError):
+            synthetic_scanner_cache_key(freeze(), "provider_live_data")
+
+    def test_60_scanner_key_rejects_nonstring_kind(self):
+        with self.assertRaises(ScannerContractError):
+            synthetic_scanner_cache_key(freeze(), None)
+
+    def test_61_scanner_key_rejects_wrong_descriptor(self):
+        with self.assertRaises(ScannerContractError):
+            synthetic_scanner_cache_key({}, "audit")
+
+    def test_62_scanner_key_rejects_forged_namespace(self):
+        altered = replace(freeze(), scanner_cache_namespace=WATCHLIST_NAMESPACE)
+        with self.assertRaises(ScannerContractError):
+            synthetic_scanner_cache_key(altered, "audit")
+
+    def test_63_scanner_key_rejects_forged_digest(self):
+        altered = replace(freeze(), scan_id="../../watchlist")
+        with self.assertRaises(ScannerContractError):
+            synthetic_scanner_cache_key(altered, "audit")
+
 
 
 if __name__ == "__main__":
