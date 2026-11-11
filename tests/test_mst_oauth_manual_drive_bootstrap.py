@@ -206,8 +206,10 @@ class TestDriveFakeProbe(unittest.TestCase):
             m.probe_readonly_from_session(FakeDrive(fail_list=True))
 
     def test_28_probe_nonobject_json_fail_closed(self):
+        d = FakeDrive()
+        d.bad_json = True
         with self.assertRaises(m.BootstrapDenied):
-            m.probe_readonly_from_session(FakeDrive(bad_json=True))
+            m.probe_readonly_from_session(d)
 
     def test_29_probe_multipage_denied(self):
         d = FakeDrive()
