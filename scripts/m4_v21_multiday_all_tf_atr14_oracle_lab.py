@@ -55,7 +55,10 @@ def multi_key(tf:str):
 
 
 def binding(tf:str):
-    return FullPolicyFixture(fixture_scope(multi_key(tf))).binding
+    # V1-only full-policy fingerprint: the actual opt-in V1→V2 typed map
+    # requires exactly one session_date_local and MUST reject this 16-day
+    # composite synthetic history. Never misrepresent it as a valid V2 binding.
+    return multi_key(tf).fingerprint
 
 
 @dataclass(frozen=True)
@@ -295,6 +298,8 @@ def execute_oracle():
         "actual_v1_indicator_checkpoint_suffix_recomputed":count,
         "metadata_only_zero_numeric_indicator_recompute_all_six":True,
         "per_tf":details,
+        "v2_multiday_candidate_scope_approved":False,
+        "sixteen_day_v1_fingerprint_only_not_v2_manifest":True,
         "history_source_issuer_verified":False,
         "official_vn_exchange_historical_calendar_verified":False,
         "official_h4_d1_provider_aggregation_verified":False,

@@ -164,15 +164,15 @@ class MultidayAllSixTFATROracleTests(unittest.TestCase):
     def test_42_full_policy_rights_epoch_revocation_denied(self):
         original=multi_key("M5")
         changedrights=replace(original,source_rights_policy_version="RIGHTS.REVOKED")
-        self.assertNotEqual(FullPolicyFixture(fixture_scope(changedrights)).binding,binding("M5"))
+        self.assertNotEqual(changedrights.fingerprint,binding("M5"))
     def test_43_full_policy_calendar_revision_denied(self):
         old=multi_key("H4")
         newer=replace(old,calendar_version="FAKE.16D.NEW")
-        self.assertNotEqual(FullPolicyFixture(fixture_scope(newer)).binding,binding("H4"))
+        self.assertNotEqual(newer.fingerprint,binding("H4"))
     def test_44_full_policy_indicator_parameter_revision_denied(self):
         old=multi_key("D1")
         newer=replace(old,indicator_parameter_version="ATR14.EMA20.REVISED")
-        self.assertNotEqual(FullPolicyFixture(fixture_scope(newer)).binding,binding("D1"))
+        self.assertNotEqual(newer.fingerprint,binding("D1"))
     def test_45_bad_source_revision_type_denied(self):
         with self.assertRaisesRegex(ValueError,"ONLY_TYPED_FAKE"):
             changed(self.original,"LIVE",CHANGE_DAY,CHANGE_M5_IN_DAY)
@@ -221,3 +221,9 @@ class MultidayAllSixTFATROracleTests(unittest.TestCase):
                     scope_start_utc=future.start_utc,scope_end_utc=future.end_utc,
                     complete_scope=False)
             self.assertEqual(db.read_bars(key),())
+
+    def test_55_multiday_must_not_bypass_singlesession_v1_to_v2_mapping(self):
+        with self.assertRaisesRegex(ValueError,"V1_V2_SESSION_MAP_NOT_EXPLICITLY_LOCKED"):
+            fixture_scope(multi_key("D1"))
+        self.assertFalse(self.report["v2_multiday_candidate_scope_approved"])
+        self.assertTrue(self.report["sixteen_day_v1_fingerprint_only_not_v2_manifest"])

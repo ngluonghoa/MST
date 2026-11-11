@@ -109,7 +109,7 @@ jobs:
               assert x[k] is False,k
           print("GAPPED V1 NUMERIC/INDEPENDENT ORACLE PASS; ALL REAL MARKET GATES NO-GO")
           PY
-      - name: Run 54 full six-TF numerical ATR14 16-day synthetic replay tests
+      - name: Run 55 full six-TF numerical ATR14 16-day synthetic V1-only replay tests
         run: python -m unittest discover -s tests -p 'test_m4_v21_multiday_all_tf_atr14_oracle_lab.py' -v
       - name: Validate 16-day actual inherited V1 six-TF ATR14 numeric oracle and no-go
         run: |
@@ -123,6 +123,8 @@ jobs:
           assert a["total_toy_closed_derived_windows"]==1248
           assert a["actual_v1_indicator_checkpoint_suffix_recomputed"]==204
           assert a["all_six_tf_atr14_has_numerical_values_after_fourteen_closed_bars"] is True
+          assert a["v2_multiday_candidate_scope_approved"] is False
+          assert a["sixteen_day_v1_fingerprint_only_not_v2_manifest"] is True
           assert a["all_six_tf_independent_ema20_atr14_oracle_equal"] is True
           assert a["metadata_only_zero_numeric_indicator_recompute_all_six"] is True
           assert {k:v["numeric_checkpoint_suffix_recomputed"] for k,v in a["per_tf"].items()}=={"M5":124,"M15":42,"M30":21,"H1":11,"H4":3,"D1":3}
