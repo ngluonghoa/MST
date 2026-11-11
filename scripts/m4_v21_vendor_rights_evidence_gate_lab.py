@@ -81,6 +81,11 @@ class PublicDocument:
             raise ValueError("EXPLICIT_REVIEW_DATE_MUST_NOT_BE_FUTURE")
         if type(self.synopsis) is not str or not (15 <= len(self.synopsis) <= 400):
             raise ValueError("REVIEWED_SCOPE_SUMMARY_REQUIRED")
+        if (type(self.grants_account_access) is not bool
+                or type(self.grants_cache_retention) is not bool
+                or type(self.proves_first_known) is not bool
+                or type(self.official_full_history_authenticated) is not bool):
+            raise TypeError("EXPLICIT_BOOLEAN_EXTERNAL_PROOF_FLAGS_REQUIRED")
         if (self.grants_account_access is not False
                 or self.grants_cache_retention is not False
                 or self.proves_first_known is not False
@@ -153,6 +158,10 @@ class ReviewRequest:
         _asof(self.as_of_utc)
         if type(self.symbol) is not str or not self.symbol or not self.symbol.isascii() or len(self.symbol)>16 or not all(c.isupper() or c.isdigit() or c=="-" for c in self.symbol):
             raise ValueError("NORMALIZED_SYNTHETIC_SYMBOL_REQUIRED")
+        if any(type(v) is not bool for v in (
+                self.owner_release_approved, self.live_source_credential_verified,
+                self.contract_rights_verified, self.external_custody_verified)):
+            raise TypeError("EXPLICIT_BOOLEAN_SOURCE_APPROVAL_FLAGS_REQUIRED")
         if any((self.owner_release_approved,
                 self.live_source_credential_verified,
                 self.contract_rights_verified,
@@ -177,6 +186,10 @@ class AdmissionDecision:
     def __post_init__(self):
         if self.status != "DENIED_UNVERIFIED_RIGHTS":
             raise PermissionError("ONLY_DENY_DECISION_SUPPORTED_BEFORE_REAL_ISSUER_ENROLLMENT")
+        if any(type(v) is not bool for v in (
+                self.read_live_provider_allowed, self.write_cloud_cache_allowed,
+                self.run_real_backtest_allowed, self.use_market_data_for_trading_allowed)):
+            raise TypeError("EXPLICIT_BOOLEAN_ADMISSION_FLAGS_REQUIRED")
         if any((self.read_live_provider_allowed, self.write_cloud_cache_allowed,
                 self.run_real_backtest_allowed, self.use_market_data_for_trading_allowed)):
             raise PermissionError("LOCAL_PUBLIC_DOCS_CANNOT_PROMOTE_TO_REAL_MARKET_GRANT")
