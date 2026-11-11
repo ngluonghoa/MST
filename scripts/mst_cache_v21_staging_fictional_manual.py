@@ -320,6 +320,13 @@ def run(session: Any, name: str, mode: str) -> dict:
     # best-effort drift fence, not atomic permission locking.
     if exact_staging(session) != stage_id:
         raise StagingDenied("MST_STAGING_FOLDER_ID_DRIFT")
+    # The first name lookup is only a preflight: files may be added, removed
+    # or renamed during the two media reads. Re-list the exact staging/name
+    # after verifying root/stage privacy, and require the SAME unique file ID.
+    # This is not transactional uniqueness or a CAS lock.
+    final_object = find_one(session, name, stage_id, "application/json")
+    if final_object is None or final_object["id"] != file_id:
+        raise StagingDenied("MST_STAGING_FILE_IDENTITY_DRIFT")
     return {
         "status": "MST_STAGING_FICTIONAL_JSON_UPLOAD_TWO_REAL_READS_PASS",
         "synthetic_only": True,
