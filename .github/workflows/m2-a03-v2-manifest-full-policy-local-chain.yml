@@ -33,6 +33,9 @@ on:
       - "scripts/m4_v21_vendor_rights_evidence_gate_lab.py"
       - "tests/test_m4_v21_vendor_rights_evidence_gate_lab.py"
       - "docs/MST_M3_PUBLIC_VENDOR_RIGHTS_EVIDENCE_MATRIX_QA_20261111.md"
+      - "scripts/m4_v21_private_pilot_d1_validation_lab.py"
+      - "tests/test_m4_v21_private_pilot_d1_validation_lab.py"
+      - "docs/MST_M4_LIVE_PILOT_3_SOURCE_FPT_D1_PRIVATE_QA_20261111.md"
 
 permissions:
   contents: read
@@ -263,6 +266,33 @@ jobs:
               assert x[flag] is False,flag
           print("M3 PUBLIC SOURCE DOCUMENT REVIEW RECEIPT PASS; ALL SSI DNSE VCBS LIVE/DRIVE GATES NO-GO")
           PY
+      - name: Run 60 synthetic private D1 pilot source manifest and incremental refresh cases
+        run: python -m unittest discover -s tests -p 'test_m4_v21_private_pilot_d1_validation_lab.py' -v
+      - name: Prove fake pilot manifest is parseable, source-isolated and never production eligible
+        run: |
+          python -m scripts.m4_v21_private_pilot_d1_validation_lab --out /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json").read_text())
+          assert x["status"]=="PRIVATE_D1_SNAPSHOT_CONTRACT_AND_REFRESH_PLAN_NO_PRODUCTION_APPROVAL"
+          assert x["source_records_are_completely_fabricated"] is True
+          assert x["original_real_mcp_market_data_in_github_artifacts"] is False
+          p=x["pilot_contract_validation"]
+          assert p["total_verified_rows"]==6
+          assert set(p["providers"])=={"SSI","DNSE","VCBS"}
+          assert p["cross_source_diagnostic"]["equal_dates_count"]==2
+          assert p["cross_source_diagnostic"]["dnse_unit_and_price_basis_authenticated"] is False
+          assert p["cross_source_diagnostic"]["automatic_refresh_or_production_cache"] is False
+          assert x["idempotent_same_snapshot_refresh_plan"]["proposed_new_closed_sessions"]==[]
+          assert x["idempotent_same_snapshot_refresh_plan"]["drive_write_or_manifest_promotion_authorized"] is False
+          for f in ("github_actions_account_authentication_performed",
+                    "real_drive_docs_read_write_performed_in_ci",
+                    "automatic_live_provider_ingestion_active"):
+              assert x[f] is False
+          assert x["all_production_gates_no_go"] is True
+          print("PRIVATE LIVE DRIVE SNAPSHOT PARSER CONTRACT PASS USING FICTIONAL VALUES; ALL PRODUCTION GATES NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -277,5 +307,6 @@ jobs:
             /tmp/mst-v21-first-known-asof-NO-GO.json
             /tmp/mst-v21-calendar-revision-NO-GO.json
             /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
+            /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
