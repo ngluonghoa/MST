@@ -129,7 +129,7 @@ def find_one(session: Any, name: str, parent: str | None, mime: str) -> dict | N
 
 def get_metadata(session: Any, file_id: str) -> dict:
     return google_get_json(session, DRIVE + "/" + validate_id(file_id), {
-        "fields": "id,name,mimeType,parents,trashed,size,md5Checksum,appProperties,version",
+        "fields": "id,name,mimeType,parents,trashed,size,md5Checksum,appProperties,version,shared,ownedByMe,isAppAuthorized",
     })
 
 
@@ -143,7 +143,10 @@ def exact_staging(session: Any) -> str:
             or root_detail.get("mimeType") != FOLDER_MIME
             or root_detail.get("trashed") is not False
             or type(root_detail.get("parents")) is not list
-            or len(root_detail["parents"]) != 1):
+            or len(root_detail["parents"]) != 1
+            or root_detail.get("shared") is not False
+            or root_detail.get("ownedByMe") is not True
+            or root_detail.get("isAppAuthorized") is not True):
         raise StagingDenied("MST_STAGING_ROOT_READBACK_DRIFT")
     stage = find_one(session, CHILD, root_id, FOLDER_MIME)
     if stage is None:
@@ -153,7 +156,10 @@ def exact_staging(session: Any) -> str:
     if (stage_detail.get("id") != stage_id or stage_detail.get("name") != CHILD
             or stage_detail.get("mimeType") != FOLDER_MIME
             or stage_detail.get("parents") != [root_id]
-            or stage_detail.get("trashed") is not False):
+            or stage_detail.get("trashed") is not False
+            or stage_detail.get("shared") is not False
+            or stage_detail.get("ownedByMe") is not True
+            or stage_detail.get("isAppAuthorized") is not True):
         raise StagingDenied("MST_STAGING_CHILD_READBACK_DRIFT")
     return stage_id
 
@@ -197,7 +203,8 @@ def upload_one(session: Any, stage_id: str, name: str, content: bytes, sha: str)
     try:
         response = session.post(UPLOAD, params={
             "uploadType": "multipart",
-            "fields": "id,name,mimeType,parents,trashed,size,md5Checksum,appProperties,version",
+            "ignoreDefaultVisibility": "true",
+            "fields": "id,name,mimeType,parents,trashed,size,md5Checksum,appProperties,version,shared,ownedByMe,isAppAuthorized",
         }, headers={"Content-Type": f"multipart/related; boundary={BOUNDARY}"},
             data=body, timeout=30)
         obj = json_response(response, success=(200, 201))
@@ -220,6 +227,9 @@ def verify_metadata(session: Any, file_id: str, stage_id: str, name: str,
             or m.get("parents") != [stage_id]
             or m.get("trashed") is not False
             or m.get("appProperties") != expected_properties
+            or m.get("shared") is not False
+            or m.get("ownedByMe") is not True
+            or m.get("isAppAuthorized") is not True
             or str(m.get("size")) != str(len(content))
             or m.get("md5Checksum") != hashlib.md5(content).hexdigest()):
         raise StagingDenied("MST_STAGING_FILE_METADATA_INTEGRITY_DRIFT")
@@ -236,9 +246,20 @@ def two_real_media_reads(session: Any, file_id: str, expected: bytes) -> None:
                     raise StagingDenied("MST_STAGING_MEDIA_REQUEST_REJECTED")
                 if response.headers.get("Content-Length") and int(response.headers["Content-Length"]) > READ_LIMIT:
                     raise StagingDenied("MST_STAGING_MEDIA_OVERSIZE")
-                content = b"".join(response.iter_content(chunk_size=READ_LIMIT+1))
-                if len(content) > READ_LIMIT:
-                    raise StagingDenied("MST_STAGING_MEDIA_OVERSIZE")
+                # A streaming HTTP response must NEVER be joined before enforcing
+                # the ceiling: a false/missing Content-Length is not trusted.
+                parts: list[bytes] = []
+                received = 0
+                for chunk in response.iter_content(chunk_size=1024):
+                    if not isinstance(chunk, bytes):
+                        raise StagingDenied("MST_STAGING_NONBYTE_MEDIA_CHUNK")
+                    received += len(chunk)
+                    if received > READ_LIMIT:
+                        raise StagingDenied("MST_STAGING_MEDIA_OVERSIZE")
+                    parts.append(chunk)
+                content = b"".join(parts)
+                if not content:
+                    raise StagingDenied("MST_STAGING_EMPTY_MEDIA")
             finally:
                 response.close()
         except StagingDenied:
