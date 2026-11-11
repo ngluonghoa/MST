@@ -48,3 +48,13 @@ The owner-linked Drive connector independently reported shared=false for root MS
 Google docs:
 - https://developers.google.com/workspace/drive/api/reference/rest/v3/files
 - https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create
+
+## 2026-11-12 — Drive server-version stability fence, synthetic-only QA
+
+The Google Drive v3 File resource `version` is an output-only decimal int64 string that monotonically increases on any server-side file change, including metadata changes not otherwise visible to this test. This patch requires a present, positive, canonical decimal file version on the metadata read immediately before the two `alt=media` reads and again on the final metadata read. The values must be **equal**. A missing/malformed version or intervening revision fails closed with a constant sanitized error; IDs, versions, raw HTTP bodies and credentials are never logged.
+
+Three additional **in-memory fake** negative tests cover: (1) file version changing between two successful identical-content media reads and final metadata, (2) absent version, and (3) malformed version. No real Drive request, market data or OAuth token is used by these tests. Existing OAuth Drive folder bootstrap, source files, and production gates are unchanged.
+
+**Boundary:** version equality is only a single-run drift-detection check. It does **not** provide a server-enforced conditional write, atomic compare-and-swap, multiwriter transaction, immutable object lock, independent signer or trusted anti-rollback floor; a rollback or concurrent update outside the observed window may evade it. PR23 remains Draft and unmerged. The default manual probe remains read-only. The separate owner-approved gate for one fictional STAGING_ONLY JSON write remains required; no new write permission, cron or production Cache is authorized here.
+
+Official field semantics: https://developers.google.com/workspace/drive/api/reference/rest/v3/files
