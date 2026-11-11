@@ -81,6 +81,9 @@ class FakeSession:
         self.not_app_file = False
         self.stream_oversize_no_length = False
         self.last_media_response = None
+        self.version_drift_after_reads = False
+        self.missing_version = False
+        self.malformed_version = False
 
     def folder(self, name):
         root = name == m.ROOT
@@ -110,7 +113,9 @@ class FakeSession:
             },
             "md5Checksum": hashlib.md5(self.media_bytes).hexdigest(),
             "size": str(len(self.media_bytes)),
-            "version": "1",
+            "version": (None if self.missing_version else
+                        "invalid" if self.malformed_version else
+                        "2" if self.version_drift_after_reads and self.read_calls >= 2 else "1"),
             "shared": self.shared_file,
             "ownedByMe": not self.unowned_file,
             "isAppAuthorized": not self.not_app_file,
@@ -450,6 +455,25 @@ class CloudFakeDriveTests(unittest.TestCase):
         with self.assertRaises(m.StagingDenied):
             m.run(self.s, self.name, "probe")
         self.assertEqual(self.s.upload_calls, 0)
+
+    def test_56_file_version_changes_after_two_reads_denied(self):
+        self.s.version_drift_after_reads = True
+        with self.assertRaisesRegex(m.StagingDenied, "VERSION_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 1)
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_57_missing_file_version_denied(self):
+        self.s.missing_version = True
+        with self.assertRaisesRegex(m.StagingDenied, "VERSION_UNAVAILABLE"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 0)
+
+    def test_58_malformed_file_version_denied(self):
+        self.s.malformed_version = True
+        with self.assertRaisesRegex(m.StagingDenied, "VERSION_UNAVAILABLE"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 0)
 
 
 if __name__ == "__main__":
