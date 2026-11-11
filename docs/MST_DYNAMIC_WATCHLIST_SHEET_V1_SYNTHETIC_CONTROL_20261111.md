@@ -4,7 +4,7 @@ Date: 2026-11-11. Owner-approved design under canonical Master Handoff §§125/1
 
 ## Why this is the next safe milestone
 
-Watchlist is **not hard-coded in Python nor GitHub YAML**. Owner edits a private Google Drive-hosted **Google Sheet**; an authorized GitHub Actions collector would (later) read a consistent snapshot **once per run** and only update enabled symbols. The Sheet is not created/deployed by this PR. The initial real ticker list has NOT been provided and must not be inferred from past synthetic/provider QA symbols.
+Watchlist is **not hard-coded in Python nor GitHub YAML**. Owner edits a private Google Drive-hosted **Google Sheet**; an authorized GitHub Actions collector would (later) read a consistent snapshot **once per run** and only update enabled symbols. A real owner-private control-plane Google Sheet has since been created separately by the connected Google Drive account under MST's dedicated private 06_WATCHLIST_CONTROL_PLANE_PRIVATE_NO_PRODUCTION folder; it is intentionally EMPTY, with only validated three-column headers, venue/status dropdowns and a README. The Sheet was created as a Drive operation, NOT deployed by this Draft PR, and is NOT connected to Actions, Google WIF, vendors or Cache. The private file ID and owner permissions do not belong in the public repository. The initial real ticker list has NOT been provided and must not be inferred from past synthetic/provider QA symbols.
 
 Market Scanner remains separate and **manual-only**. No Scanner candidate is automatically inserted into Watchlist, even if it scores highly. On-demand unknown symbols must use separate explicit requests, not sneak into a scheduled scope.
 
@@ -37,7 +37,7 @@ A read-only connector shall obtain an authenticated Google revision token and a 
 
 ## Open external gates; no premature implementation claims
 
-- Real private Google Sheet creation, auth/ACL and error-checked consistent values.get adapter, signed trusted revision and verified rollback floor.
+- Owner-private control Sheet was created and manually read back with headers Symbol/Exchange/Enabled and zero ticker rows, dropdowns and a README. This is a file existence/UI readiness check ONLY, not authenticated GitHub runner Google Sheets access. Still OPEN: exact authorized service identity and read-only ACL (no permission grants made), consistent values.get snapshot adapter, signed trusted revision and independently verified rollback floor.
 - Owner's initial enabled/paused symbols; only owner may choose them.
 - Explicit owner-selected cadence (example 5m is not yet locked), valid HOSE/HNX/UPCoM calendar, eligible closed M5–D1 sources, SSI/DNSE/VCBS license and GitHub runner permissions, source-native units and corrections.
 - Actual Google OIDC → GCP WIF → service-account Drive metadata and content-read scope; PR17 still draft and not deployed. Least-privilege separate Cache write identity and authenticated multiwriter CAS.
