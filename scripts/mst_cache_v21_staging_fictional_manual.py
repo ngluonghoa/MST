@@ -107,11 +107,17 @@ def find_one(session: Any, name: str, parent: str | None, mime: str) -> dict | N
         raise StagingDenied("MST_STAGING_FIXED_NAME_ONLY")
     parent_part = "'root'" if parent is None else "'" + validate_id(parent) + "'"
     result = google_get_json(session, DRIVE, {
-        "q": f"{parent_part} in parents and name = '{name}' and mimeType = '{mime}' and trashed = false",
+        # Name-only lookup: a same-name object with another MIME type is
+        # a conflict, not proof that our expected object does not exist.
+        "q": f"{parent_part} in parents and name = '{name}' and trashed = false",
         "pageSize": 100,
-        "fields": "nextPageToken,files(id,name,mimeType,parents,trashed,appProperties)",
+        "fields": "nextPageToken,incompleteSearch,files(id,name,mimeType,parents,trashed,appProperties)",
     })
     files = result.get("files")
+    # A positive incompleteSearch flag means omitted results: never treat
+    # that response as evidence of absence or uniqueness.
+    if result.get("incompleteSearch", False) is not False:
+        raise StagingDenied("MST_STAGING_INCOMPLETE_DRIVE_SEARCH")
     if type(files) is not list or len(files) > 1 or result.get("nextPageToken"):
         raise StagingDenied("MST_STAGING_AMBIGUOUS_DRIVE_LIST")
     if not files:
