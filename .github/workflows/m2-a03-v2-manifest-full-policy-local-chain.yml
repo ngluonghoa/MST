@@ -48,6 +48,9 @@ on:
       - "scripts/m2_a03_vcbs_ssi_minute_reference_audit_lab.py"
       - "tests/test_m2_a03_vcbs_ssi_minute_reference_audit_lab.py"
       - "docs/MST_A03_VCBS_SSI_REAL_INTRADAY_REFERENCE_ONLY_QA_20261111.md"
+      - "scripts/m2_a03_ssi_intraday_d1_observational_lab.py"
+      - "tests/test_m2_a03_ssi_intraday_d1_observational_lab.py"
+      - "docs/MST_A03_SSI_INTRA_D1_DATE_CONTRACT_REAL_SOURCE_QA_20261111.md"
       - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
 
 permissions:
@@ -404,6 +407,33 @@ jobs:
               assert x[k] is False,k
           print('VCBS MINUTE PRICE REFERENCE-ONLY SYNTHETIC GUARD PASS, NEVER AUTHORIZE NATIVE M5 OR LIVE CACHE')
           PY
+      - name: Run 50 fake SSI D1-intraday consistency, contradictory date token and no-M5-source-right tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_ssi_intraday_d1_observational_lab.py' -v
+      - name: Show fictional SSI day-token conflict and D1 parity never authorize minute candles
+        run: |
+          python -m scripts.m2_a03_ssi_intraday_d1_observational_lab --out /tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json').read_text())
+          assert x['schema']=='mst.a03.ssi-intraday-to-d1-observational-arithmetic.v1'
+          assert x['status']=='SSI_WHOLE_SESSION_D1_PARITY_ONLY_NATIVE_MINUTE_CLOSE_DATE_CONTRACT_NO_GO'
+          assert x['tick_row_count']==3 and x['intraday_to_d1_price_volume_fields_matched']==5
+          assert x['day_token_format_evidence']=='OBSERVED_LITERAL_CONFLICTS_WITH_MMDY_CONNECTOR_DESCRIPTION'
+          assert x['non_60_second_adjacent_clock_differences']==1
+          assert x['other_d1_window_rows_ignored']==1
+          for k in ('date_contract_verified_by_issuer',
+                    'original_raw_price_sys_token_endpoint_authenticated',
+                    'native_m1_m5_bar_closure_or_start_end_verified',
+                    'source_calendar_gaps_backfillable',
+                    'source_event_time_and_first_known_authenticated',
+                    'provider_cloud_retention_license_verified',
+                    'github_runner_market_source_connected',
+                    'official_market_calendar_and_corporate_actions_verified',
+                    'production_cache_or_trading_authorized'):
+              assert x[k] is False,k
+          print('SSI HISTORICAL INTRADAY-D1 NUMERIC PARITY SYNTHETIC PASS; DATE AND NATIVE CANDLE SOURCE NO-GO')
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -423,5 +453,6 @@ jobs:
             /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
             /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
             /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
+            /tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json
           retention-days: 14
           if-no-files-found: error
