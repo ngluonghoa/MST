@@ -88,6 +88,10 @@ class FakeSession:
         self.version_drift_after_reads = False
         self.missing_version = False
         self.malformed_version = False
+        self.share_root_after_media_reads = False
+        self.share_stage_after_media_reads = False
+        self.revoke_stage_app_after_media_reads = False
+        self.reparent_stage_after_media_reads = False
 
     def folder(self, name):
         root = name == m.ROOT
@@ -95,11 +99,15 @@ class FakeSession:
             "id": self.ROOT_ID if root else self.STAGE_ID,
             "name": name,
             "mimeType": m.FOLDER_MIME,
-            "parents": ["FAKE_MY_DRIVE_ROOT"] if root else [self.ROOT_ID],
+            "parents": (["FAKE_MY_DRIVE_ROOT"] if root else
+                        ["FAKE_OTHER_PARENT"] if self.reparent_stage_after_media_reads and self.read_calls >= 2
+                        else [self.ROOT_ID]),
             "trashed": False,
-            "shared": self.shared_root if root else self.shared_stage,
+            "shared": (self.shared_root or (root and self.share_root_after_media_reads and self.read_calls >= 2)
+                       if root else self.shared_stage or (self.share_stage_after_media_reads and self.read_calls >= 2)),
             "ownedByMe": True if root else not self.unowned_stage,
-            "isAppAuthorized": True if root else not self.not_app_stage,
+            "isAppAuthorized": (True if root else not (self.not_app_stage or
+                               (self.revoke_stage_app_after_media_reads and self.read_calls >= 2))),
         }
 
     def file(self):
@@ -270,6 +278,17 @@ class GuardTests(unittest.TestCase):
         self.assertNotIn("symbol", data)
         self.assertNotIn("ohlcv", data)
         self.assertNotIn("provider", data)
+
+    def test_62_deny_write_on_second_github_attempt_even_with_approval(self):
+        with self.assertRaisesRegex(m.StagingDenied, "WRITE_RERUN_DENIED"):
+            m.guard(env(MST_STAGING_MODE="synthetic-write",
+                        MST_CACHE_V21_STAGING_WRITE_ACCEPTED="true",
+                        GITHUB_RUN_ATTEMPT="2"))
+
+    def test_63_allow_read_only_probe_on_second_github_attempt(self):
+        mode, _, name = m.guard(env(GITHUB_RUN_ATTEMPT="2"))
+        self.assertEqual(mode, "probe")
+        self.assertEqual(name, "MST_FAKE_V21_RUN_43037551110_2.json")
 
 
 class CloudFakeDriveTests(unittest.TestCase):
@@ -506,6 +525,36 @@ class CloudFakeDriveTests(unittest.TestCase):
         self.assertEqual(self.s.upload_calls, 0)
         self.assertTrue(self.s.list_queries)
         self.assertTrue(all("mimeType =" not in q for q in self.s.list_queries))
+
+    def test_64_refuse_root_shared_after_successful_file_reads(self):
+        self.s.share_root_after_media_reads = True
+        with self.assertRaisesRegex(m.StagingDenied, "ROOT_READBACK_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+        self.assertEqual(self.s.upload_calls, 1)
+
+    def test_65_refuse_stage_shared_after_successful_file_reads(self):
+        self.s.share_stage_after_media_reads = True
+        with self.assertRaisesRegex(m.StagingDenied, "CHILD_READBACK_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_66_refuse_stage_app_access_revoked_after_reads(self):
+        self.s.revoke_stage_app_after_media_reads = True
+        with self.assertRaisesRegex(m.StagingDenied, "CHILD_READBACK_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_67_refuse_stage_reparent_after_reads(self):
+        self.s.reparent_stage_after_media_reads = True
+        with self.assertRaisesRegex(m.StagingDenied, "WRONG_PARENT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.read_calls, 2)
+
+    def test_68_success_rechecks_both_folder_chain_metadata(self):
+        m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.list_calls, 5)
+        self.assertEqual(self.s.read_calls, 2)
 
 
 if __name__ == "__main__":
