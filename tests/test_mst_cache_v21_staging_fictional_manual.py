@@ -81,6 +81,10 @@ class FakeSession:
         self.not_app_file = False
         self.stream_oversize_no_length = False
         self.last_media_response = None
+        self.incomplete_search = False
+        self.invalid_search_flag = False
+        self.wrong_mime_existing = False
+        self.list_queries = []
         self.version_drift_after_reads = False
         self.missing_version = False
         self.malformed_version = False
@@ -125,15 +129,22 @@ class FakeSession:
         if url == m.DRIVE:
             self.list_calls += 1
             query = params["q"]
+            self.list_queries.append(query)
             if f"name = '{m.ROOT}'" in query:
                 payload = [] if self.fail_root else [self.folder(m.ROOT)]
             elif f"name = '{m.CHILD}'" in query:
                 payload = [] if self.fail_stage else [self.folder(m.CHILD)]
             else:
-                payload = [self.file()] if self.media_bytes is not None else []
+                if self.wrong_mime_existing:
+                    payload = [{"id": self.FILE_ID, "name": self.payload_name,
+                                "mimeType": "text/plain", "parents": [self.STAGE_ID],
+                                "trashed": False}]
+                else:
+                    payload = [self.file()] if self.media_bytes is not None else []
             if self.duplicate_list and payload:
                 payload.append(payload[0])
-            response = {"files": payload}
+            response = {"files": payload,
+                        "incompleteSearch": "false" if self.invalid_search_flag else self.incomplete_search}
             if self.paginated_list:
                 response["nextPageToken"] = "FAKE_NEXT"
             return FakeResponse(response)
@@ -474,6 +485,27 @@ class CloudFakeDriveTests(unittest.TestCase):
         with self.assertRaisesRegex(m.StagingDenied, "VERSION_UNAVAILABLE"):
             m.run(self.s, self.name, "synthetic-write")
         self.assertEqual(self.s.read_calls, 0)
+
+    def test_59_incomplete_search_denies_probe_without_upload(self):
+        self.s.incomplete_search = True
+        with self.assertRaisesRegex(m.StagingDenied, "INCOMPLETE_DRIVE_SEARCH"):
+            m.run(self.s, self.name, "probe")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_60_invalid_incomplete_flag_denies_writer(self):
+        self.s.invalid_search_flag = True
+        with self.assertRaisesRegex(m.StagingDenied, "INCOMPLETE_DRIVE_SEARCH"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+
+    def test_61_same_name_different_mime_denies_create(self):
+        self.s.wrong_mime_existing = True
+        self.s.payload_name = self.name
+        with self.assertRaisesRegex(m.StagingDenied, "LIST_METADATA_DRIFT"):
+            m.run(self.s, self.name, "synthetic-write")
+        self.assertEqual(self.s.upload_calls, 0)
+        self.assertTrue(self.s.list_queries)
+        self.assertTrue(all("mimeType =" not in q for q in self.s.list_queries))
 
 
 if __name__ == "__main__":
