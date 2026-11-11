@@ -192,7 +192,7 @@ def make_multipart(meta: dict, content: bytes) -> bytes:
     return headers + json.dumps(meta, sort_keys=True, separators=(",", ":")).encode() + med + content + end
 
 
-def upload_one(session: Any, stage_id: str, name: str, content: bytes, sha: str) -> str:
+def upload_one(session: Any, stage_id: str, name: str, content: bytes, sha: str) -> tuple[str, str]:
     metadata = {
         "name": name,
         "mimeType": "application/json",
@@ -213,12 +213,12 @@ def upload_one(session: Any, stage_id: str, name: str, content: bytes, sha: str)
     except Exception:
         raise StagingDenied("MST_STAGING_UPLOAD_FAILED_CLOSED") from None
     file_id = validate_id(obj.get("id"))
-    verify_metadata(session, file_id, stage_id, name, content, sha)
-    return file_id
+    initial_version = verify_metadata(session, file_id, stage_id, name, content, sha)
+    return file_id, initial_version
 
 
 def verify_metadata(session: Any, file_id: str, stage_id: str, name: str,
-                    content: bytes, sha: str) -> None:
+                    content: bytes, sha: str) -> str:
     m = get_metadata(session, file_id)
     expected_properties = {"mst_fixture_only": "true", "sha256": sha,
                            "schema": "fictional-v21"}
@@ -233,6 +233,13 @@ def verify_metadata(session: Any, file_id: str, stage_id: str, name: str,
             or str(m.get("size")) != str(len(content))
             or m.get("md5Checksum") != hashlib.md5(content).hexdigest()):
         raise StagingDenied("MST_STAGING_FILE_METADATA_INTEGRITY_DRIFT")
+    # Google's Drive v3 file version is an output-only int64 string. A metadata
+    # change during both media reads must invalidate this one-off proof even
+    # when the bytes happen to retain the expected SHA256. Not a CAS guarantee.
+    version = m.get("version")
+    if type(version) is not str or not re.fullmatch(r"[1-9][0-9]{0,18}", version):
+        raise StagingDenied("MST_STAGING_FILE_VERSION_UNAVAILABLE")
+    return version
 
 
 def two_real_media_reads(session: Any, file_id: str, expected: bytes) -> None:
@@ -287,12 +294,14 @@ def run(session: Any, name: str, mode: str) -> dict:
     sha = hashlib.sha256(content).hexdigest()
     existing = find_one(session, name, stage_id, "application/json")
     if existing is None:
-        file_id = upload_one(session, stage_id, name, content, sha)
+        file_id, before_version = upload_one(session, stage_id, name, content, sha)
     else:
         file_id = existing["id"]
-        verify_metadata(session, file_id, stage_id, name, content, sha)
+        before_version = verify_metadata(session, file_id, stage_id, name, content, sha)
     two_real_media_reads(session, file_id, content)
-    verify_metadata(session, file_id, stage_id, name, content, sha)
+    after_version = verify_metadata(session, file_id, stage_id, name, content, sha)
+    if after_version != before_version:
+        raise StagingDenied("MST_STAGING_FILE_VERSION_DRIFT")
     return {
         "status": "MST_STAGING_FICTIONAL_JSON_UPLOAD_TWO_REAL_READS_PASS",
         "synthetic_only": True,
