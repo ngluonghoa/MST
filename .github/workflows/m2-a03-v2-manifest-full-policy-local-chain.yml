@@ -24,6 +24,9 @@ on:
       - "scripts/m4_v21_daily_partition_checkpoint_chain_lab.py"
       - "tests/test_m4_v21_daily_partition_checkpoint_chain_lab.py"
       - "docs/MST_M4_V21_DAILY_PARTITION_CARRY_QA_20261111.md"
+      - "scripts/m4_v21_source_revision_asof_ledger_lab.py"
+      - "tests/test_m4_v21_source_revision_asof_ledger_lab.py"
+      - "docs/MST_M4_V21_BITEMPORAL_SOURCE_CUSTODY_QA_20261111.md"
 
 permissions:
   contents: read
@@ -167,6 +170,33 @@ jobs:
               assert x[flag] is False,flag
           print("P0 SINGLE-DATE V2 CARRY FIXTURE PASS, LIVE SOURCE AND DRIVE NO-GO")
           PY
+      - name: Run 47 synthetic as-of revision and first-known custody tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_source_revision_asof_ledger_lab.py' -v
+      - name: Verify three bitemporal views and preserve source licensing NO-GO
+        run: |
+          python -m scripts.m4_v21_source_revision_asof_ledger_lab --out /tmp/mst-v21-first-known-asof-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-first-known-asof-NO-GO.json").read_text())
+          assert x["status"]=="SOURCE_REVISION_ASOF_CUSTODY_FIXTURE_ONLY_ALL_LIVE_GATES_NO_GO"
+          assert x["untrusted_ledger_events"]==770
+          assert x["declared_synthetic_m5_source_rows"]==768
+          assert x["revision_history_asof_snapshots"]==3
+          assert x["value_revision_invisible_before_known"] is True
+          assert x["metadata_only_zero_numeric_recompute"] is True
+          assert x["six_tf_asof_numeric_oracle_verified"] is True
+          proof=x["source_proof"]
+          for flag in ("issuer_signature_authenticated",
+                       "official_market_calendar_attested",
+                       "authorized_real_source_retention",
+                       "independent_protected_rollback_floor",
+                       "external_concurrent_writer_cas",
+                       "read_write_real_google_drive_quotes",
+                       "production_or_trading_permitted"):
+              assert proof[flag] is False,flag
+          print("ASOF M3/M4 CUSTODY LAB SYNTHETIC PASS; REAL ISSUER AND GOOGLE DRIVE CACHE NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -178,5 +208,6 @@ jobs:
             /tmp/mst-v21-gap-v1-numeric-NO-GO.json
             /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
             /tmp/mst-v21-daily-carry-NO-GO.json
+            /tmp/mst-v21-first-known-asof-NO-GO.json
           retention-days: 14
           if-no-files-found: error
