@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 import hashlib
 import json
 import math
@@ -203,6 +203,21 @@ def rank_fictional_probe_scores(
         }
         for score, venue, symbol in ranked[:frozen.candidate_limit]
     )
+
+
+
+def synthetic_scanner_cache_key(frozen: FrozenScan, kind: str) -> str:
+    """Derive a synthetic Scanner-only key. Does NOT read/write Drive."""
+    if not isinstance(frozen, FrozenScan):
+        raise ScannerContractError("invalid immutable scan descriptor")
+    if not isinstance(kind, str) or kind not in {"universe", "candidates", "audit"}:
+        raise ScannerContractError("invalid scanner artifact kind")
+    if not re.fullmatch(r"[0-9a-f]{64}", frozen.scan_id):
+        raise ScannerContractError("invalid snapshot digest")
+    if frozen.scanner_cache_namespace != SCANNER_NAMESPACE:
+        raise ScannerContractError("cache namespace tampering denied")
+    return f"{SCANNER_NAMESPACE}/{frozen.scan_id}/{kind}.json"
+
 
 
 def synthetic_demo() -> dict[str, object]:
