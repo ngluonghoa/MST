@@ -146,7 +146,7 @@ class SsiIntradayD1ObservationalTests(unittest.TestCase):
         self.bad(lambda a,b:b.pop(0),ValueError,"EXACT_ONE_D1_ROW")
 
     def test_38_unavailable_both_date_parsers_denied(self):
-        with self.assertRaisesRegex(ValueError,"DATE_TOKEN_IMPOSSIBLE"):
+        with self.assertRaisesRegex(ValueError,"SOURCE_CALENDAR_DATE_IMPOSSIBLE"):
             self.compute(day_token="14/13/2025")
 
     def test_39_wrong_declared_mmdd_calendar_day_denied(self):
