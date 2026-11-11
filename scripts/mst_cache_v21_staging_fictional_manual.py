@@ -69,6 +69,12 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets, str]:
     run_id, attempt = env.get("GITHUB_RUN_ID", ""), env.get("GITHUB_RUN_ATTEMPT", "")
     if not re.fullmatch(r"[1-9][0-9]{5,19}", run_id) or not re.fullmatch(r"[1-9][0-9]{0,5}", attempt):
         raise StagingDenied("MST_STAGING_VALID_GITHUB_RUN_IDENTIFIERS_REQUIRED")
+    # GitHub retains RUN_ID on a rerun, but increments RUN_ATTEMPT. As the
+    # filename contains both, rerunning a write would mint a *new* filename
+    # rather than safely retrying the first file. Deny repeated write attempts.
+    # This is not a global single-use guarantee across distinct dispatches.
+    if mode == "synthetic-write" and attempt != "1":
+        raise StagingDenied("MST_STAGING_WRITE_RERUN_DENIED")
     name = f"MST_FAKE_V21_RUN_{run_id}_{attempt}.json"
     return mode, OAuthSecrets(*(env[k] for k in SECRETS)), name
 
@@ -308,6 +314,12 @@ def run(session: Any, name: str, mode: str) -> dict:
     after_version = verify_metadata(session, file_id, stage_id, name, content, sha)
     if after_version != before_version:
         raise StagingDenied("MST_STAGING_FILE_VERSION_DRIFT")
+    # A folder could become shared, lose ownership/app authorization or be
+    # replaced after the initial preflight. Revalidate the same root -> child
+    # context before emitting a successful write receipt. This is still a
+    # best-effort drift fence, not atomic permission locking.
+    if exact_staging(session) != stage_id:
+        raise StagingDenied("MST_STAGING_FOLDER_ID_DRIFT")
     return {
         "status": "MST_STAGING_FICTIONAL_JSON_UPLOAD_TWO_REAL_READS_PASS",
         "synthetic_only": True,
