@@ -33,3 +33,18 @@ Drive v3 native file metadata version is not by itself a proven atomic compare-a
 Google official API references:
 - https://developers.google.com/workspace/drive/api/guides/manage-uploads
 - https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get
+
+## 2026-11-11 hardening review before any protected-main promotion
+Google Drive official v3 API references confirm POST /upload/drive/v3/files?uploadType=multipart with metadata first and media second, plus GET files/{fileId}?alt=media for raw JSON bytes; drive.file supports both operations. The v3 File resource exposes read-only shared, ownedByMe, isAppAuthorized, md5Checksum and version metadata. The create API supports ignoreDefaultVisibility=true to override domain default publication, though explicit inherited parent permissions still matter.
+
+**New fail-closed checks in this PR:**
+- Require both the root app cache folder and STAGING_ONLY folder to be private (shared=false), owned by the same Google account (ownedByMe=true), and authorized to the same OAuth app (isAppAuthorized=true) before any write. Require the same values for the created or reused fictional JSON file.
+- files.create explicitly requests ignoreDefaultVisibility=true. This is not a substitute for the parent share/ownership checks; it reduces accidental domain-default publication risk.
+- Each raw media response is consumed in bounded 1024-byte chunks with a strict 4096-byte ceiling during streaming; the code does not join an arbitrarily long response before rejecting it. It closes the response on every success or failure path.
+- Eleven additional fake HTTP cases cover shared root/child/file, non-owned and non-app-authorized storage, default visibility override, oversized content with absent Content-Length, and read-only handling under changed sharing.
+
+The owner-linked Drive connector independently reported shared=false for root MST_OAUTH_CACHE_V1 and child STAGING_ONLY on 2026-11-11, but the GitHub runner's own OAuth ownedByMe and isAppAuthorized response fields have not been observed live. A future real probe must pass the stricter preflight on main before a single fictional JSON write is considered. A false negative for missing metadata must fail closed, not silently bypass these checks.
+
+Google docs:
+- https://developers.google.com/workspace/drive/api/reference/rest/v3/files
+- https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create
