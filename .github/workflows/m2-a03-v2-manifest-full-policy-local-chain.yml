@@ -30,6 +30,9 @@ on:
       - "scripts/m4_v21_calendar_revision_quarantine_lab.py"
       - "tests/test_m4_v21_calendar_revision_quarantine_lab.py"
       - "docs/MST_M4_V21_CALENDAR_REVISION_QUARANTINE_QA_20261111.md"
+      - "scripts/m4_v21_vendor_rights_evidence_gate_lab.py"
+      - "tests/test_m4_v21_vendor_rights_evidence_gate_lab.py"
+      - "docs/MST_M3_PUBLIC_VENDOR_RIGHTS_EVIDENCE_MATRIX_QA_20261111.md"
 
 permissions:
   contents: read
@@ -232,6 +235,34 @@ jobs:
           assert x["real_storage_trading_or_release_authorized"] is False
           print("TOY CALENDAR REVISION QA PASS, ALL EXTERNAL SOURCE AND CLOUD STORAGE GATES NO-GO")
           PY
+      - name: Run 54 negative provider evidence and public-source licensing tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_vendor_rights_evidence_gate_lab.py' -v
+      - name: Audit 7 public documentation references and 15 unlicensed use-case denials
+        run: |
+          python -m scripts.m4_v21_vendor_rights_evidence_gate_lab --out /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-m3-vendor-public-doc-rights-NO-GO.json").read_text())
+          assert x["schema"]=="mst.m3.p0.vendor-public-evidence-rights-gate.synthetic.v1"
+          assert x["status"]=="PUBLIC_DOCS_REVIEWED_NO_LIVE_PROVIDER_LICENSE_OR_CLOUD_CACHE_AUTH"
+          assert x["provider_namespaces"]==["SSI","DNSE","VCBS"]
+          assert x["reviewed_public_document_count"]==7
+          assert x["total_denied_probes"]==15
+          assert len(x["public_source_documents"])==7
+          for provider,cases in x["per_provider_use_denials"].items():
+              assert len(cases)==5,provider
+              assert all(item["status"]=="DENIED_UNVERIFIED_RIGHTS" for item in cases.values())
+              assert all(item["data_rights_or_live_access_approved"] is False for item in cases.values())
+          for flag in ("public_references_fetched_in_github_ci",
+                       "actual_vendor_market_ohlcv_requested_or_retained",
+                       "gdrive_quote_cache_read_write",
+                       "verified_external_issuer_or_license_evidence",
+                       "protected_signer_cas_high_water",
+                       "owner_approved_live_release_or_trading"):
+              assert x[flag] is False,flag
+          print("M3 PUBLIC SOURCE DOCUMENT REVIEW RECEIPT PASS; ALL SSI DNSE VCBS LIVE/DRIVE GATES NO-GO")
+          PY
       - name: Archive temporary untrusted design evidence only
         uses: actions/upload-artifact@v4
         with:
@@ -245,5 +276,6 @@ jobs:
             /tmp/mst-v21-daily-carry-NO-GO.json
             /tmp/mst-v21-first-known-asof-NO-GO.json
             /tmp/mst-v21-calendar-revision-NO-GO.json
+            /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
           retention-days: 14
           if-no-files-found: error
