@@ -152,8 +152,11 @@ def read_two_private_manifests(
         raise DriveReadonlyDenied("MST_M3_DISTINCT_PRIVATE_MANIFESTS_REQUIRED")
     earlier = fetch_private_doc_readonly(session, prior_manifest_id, approved_parents)
     later = fetch_private_doc_readonly(session, next_manifest_id, approved_parents)
-    previous = _read_manifest(earlier)
-    current = _read_manifest(later)
+    try:
+        previous = _read_manifest(earlier)
+        current = _read_manifest(later)
+    except (ValueError, TypeError, KeyError):
+        raise DriveReadonlyDenied("MST_M3_PRIVATE_MANIFEST_SCHEMA_REJECTED") from None
     if set(previous) != set(current) or not 1 <= len(current) <= _MAX_DOCS:
         raise DriveReadonlyDenied("MST_M3_MANIFEST_SOURCE_PARTITION_SET_DRIFT")
     ids = sorted(set(previous.values()) | set(current.values()))
@@ -170,8 +173,11 @@ def read_two_private_manifests(
               "metadata_only_revisions": 0}
     for key in sorted(previous):
         old_id,new_id=previous[key],current[key]
-        o=read_private_d1_document(documents[old_id], document_id=old_id)
-        n=read_private_d1_document(documents[new_id], document_id=new_id)
+        try:
+            o=read_private_d1_document(documents[old_id], document_id=old_id)
+            n=read_private_d1_document(documents[new_id], document_id=new_id)
+        except (ValueError, TypeError, KeyError):
+            raise DriveReadonlyDenied("MST_M3_PRIVATE_SOURCE_ROW_SCHEMA_REJECTED") from None
         if ((o.endpoint,o.symbol)!=(n.endpoint,n.symbol)
             or (o.endpoint.value.split(".",1)[0],o.symbol)!=key
             or o.native.price_basis != n.native.price_basis
@@ -216,6 +222,8 @@ def read_two_private_manifests(
         **states,
         "oauth_drive_file_access_to_exact_docs_observed": True,
         "previous_mutable_docs_immutable_proof": False,
+        "same_id_mutability_change_undetectable": True,
+        "cross_provider_volume_qa_crosschecked": False,
         "private_data_written": False,
         "new_vendor_data_fetched": False,
         "automatic_cache_v2_writer_authorized": False,
