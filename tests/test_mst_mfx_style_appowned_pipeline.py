@@ -179,5 +179,120 @@ class DnseNative(unittest.TestCase):
             m.validate_dnse_native(payload,1794000000,1794500000)
 
 
+
+def stage_owner_env(**updates):
+    return owner_env(**{
+        "MST_MFX_SOURCE_MODE":m.MODE_STAGE,
+        "MST_DNSE_READONLY_OWNER_ACCEPTED":"true",
+        "MST_DNSE_SOURCE_RIGHTS_CONFIRMED":"true",
+        "MST_DNSE_STORAGE_RIGHTS_CONFIRMED":"true",
+        "MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED":"true",
+        "MST_DNSE_API_KEY":"FAKE_MARKETDATA_ID",
+        "MST_DNSE_API_SECRET":"FAKE_MARKETDATA_SECRET",
+        "MST_DNSE_SYMBOL":"FPT",
+        "MST_DNSE_FROM_UNIX":"1794000000",
+        "MST_DNSE_TO_UNIX":"1794500000",
+        "GITHUB_RUN_ID":"43270010001",
+        "GITHUB_RUN_ATTEMPT":"1",
+        **updates,
+    })
+
+
+class FakeQuarantineDrive(FakeDrive):
+    FILE_ID="FAKE_UNPUBLISHED_DOC_1234567890"
+    def __init__(self):
+        super().__init__()
+        self.media=None
+        self.file_info=None
+        self.post_calls=0
+        self.media_reads=0
+        self.mutate_media=False
+        self.name_lookup_count=0
+
+    def get(self,url,*,params,timeout,**kwargs):
+        if url=="https://www.googleapis.com/drive/v3/files":
+            q=params.get("q","")
+            if "MST_UNPUBLISHED_DNSE_D1_" in q:
+                self.name_lookup_count+=1
+                files=[]
+                if self.file_info:
+                    files=[{k:self.file_info[k] for k in
+                            ("id","name","mimeType","parents","trashed")}]
+                return FakeResponse({"files":files})
+        if url==m.DRIVE_URL+self.FILE_ID:
+            if params.get("alt")=="media":
+                self.media_reads+=1
+                o=FakeResponse({"ignored":"private_source_body"})
+                o.content=(b"TAMPERED" if self.mutate_media else self.media)
+                return o
+            return FakeResponse(self.file_info)
+        return super().get(url,params=params,timeout=timeout)
+
+    def post(self,url,*,params,data,headers,timeout):
+        self.post_calls+=1
+        assert url=="https://www.googleapis.com/upload/drive/v3/files"
+        assert params["uploadType"]=="multipart"
+        boundary=headers["Content-Type"].split("boundary=",1)[1]
+        first=b"--"+boundary.encode()
+        assert data.startswith(first+b"\\r\\nContent-Type:")
+        parts=data.split(first)
+        metadata=json.loads(parts[1].split(b"\\r\\n\\r\\n",1)[1].strip())
+        body=parts[2].split(b"\\r\\n\\r\\n",1)[1].removesuffix(b"\\r\\n")
+        self.media=body
+        import hashlib
+        self.file_info={
+            "id":self.FILE_ID,"name":metadata["name"],"mimeType":"application/json",
+            "parents":metadata["parents"],"trashed":False,
+            "shared":False,"ownedByMe":True,"isAppAuthorized":True,
+            "version":"1","size":str(len(body)),
+            "md5Checksum":hashlib.md5(body).hexdigest(),
+            "appProperties":metadata["appProperties"],
+        }
+        return FakeResponse({"id":self.FILE_ID},201)
+
+
+class UnpublishedSourceStage(unittest.TestCase):
+    def test_stage_requires_independent_owner_storage_license_gate(self):
+        payload=DnseNative().payload()
+        d=FakeQuarantineDrive()
+        bad=stage_owner_env(MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED="false")
+        with self.assertRaises(m.CloudGateDenied):
+            m.stage_unpublished_dnse_source(d,bad,payload)
+        self.assertEqual(d.post_calls,0)
+
+    def test_stage_rejects_workflow_rerun(self):
+        payload=DnseNative().payload()
+        d=FakeQuarantineDrive()
+        with self.assertRaises(m.CloudGateDenied):
+            m.stage_unpublished_dnse_source(d,stage_owner_env(GITHUB_RUN_ATTEMPT="2"),payload)
+        self.assertEqual(d.post_calls,0)
+
+    def test_stage_uses_exact_app_chunk_and_two_real_media_reads(self):
+        payload=DnseNative().payload()
+        d=FakeQuarantineDrive()
+        r=m.stage_unpublished_dnse_source(d,stage_owner_env(),payload)
+        self.assertTrue(r["unpublished_private_source_document_stored"])
+        self.assertTrue(r["readback_sha256_verified"])
+        self.assertTrue(r["not_a_cache_publish_commit"])
+        self.assertFalse(r["signals_and_trading_eligible"])
+        self.assertEqual(d.post_calls,1)
+        self.assertEqual(d.media_reads,2)
+        self.assertEqual(d.name_lookup_count,2)
+        saved=json.loads(d.media)
+        self.assertEqual(saved["raw_native"]["v"],[200,250])
+        self.assertFalse(saved["eligible_for_signals"])
+        self.assertFalse(saved["independent_publish_cas_verified"])
+        # Same run cannot silently upload another source on retry.
+        with self.assertRaisesRegex(m.CloudGateDenied,"PREEXISTING_ATTEMPT"):
+            m.stage_unpublished_dnse_source(d,stage_owner_env(),payload)
+        self.assertEqual(d.post_calls,1)
+
+    def test_mismatch_on_media_readback_cannot_claim_staged_success(self):
+        d=FakeQuarantineDrive()
+        d.mutate_media=True
+        with self.assertRaisesRegex(m.CloudGateDenied,"MEDIA_READBACK_MISMATCH"):
+            m.stage_unpublished_dnse_source(d,stage_owner_env(),DnseNative().payload())
+        self.assertEqual(d.post_calls,1)
+
 if __name__=="__main__":
     unittest.main()
