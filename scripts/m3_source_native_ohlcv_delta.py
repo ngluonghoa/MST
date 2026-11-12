@@ -190,6 +190,7 @@ def diff_native_d1_versions(
     missing = sorted(set(a) - set(b))
     numerical: list[dict[str, object]] = []
     adjustment: list[dict[str, object]] = []
+    timestamp_label: list[dict[str, object]] = []
     metadata: list[dict[str, object]] = []
     equal = 0
     for day in matched:
@@ -203,6 +204,12 @@ def diff_native_d1_versions(
             changed = [name for i, name in enumerate(_AUX[earlier.endpoint])
                        if aux0[i] != aux1[i]]
             adjustment.append({"day": day, "changed_fields": changed})
+        if (earlier.endpoint is DailyEndpoint.DNSE_CONNECTED_DAY
+                and a[day]["source_unix_seconds"] != b[day]["source_unix_seconds"]):
+            timestamp_label.append({
+                "day": day,
+                "changed_fields": ["source_unix_seconds"],
+            })
         keys = sorted(set(meta0) | set(meta1))
         meta_changes = [k for k in keys if
                         (k not in meta0) != (k not in meta1) or
@@ -218,10 +225,11 @@ def diff_native_d1_versions(
                 "changed_fields": meta_changes,
                 "absent_vs_null_only": null_shape_only,
             })
-        if core0 == core1 and aux0 == aux1 and not meta_changes:
+        if (core0 == core1 and aux0 == aux1 and not meta_changes
+                and not any(x["day"] == day for x in timestamp_label)):
             equal += 1
     changed_days = sorted(
-        set(additions) | {x["day"] for x in numerical + adjustment}
+        set(additions) | {x["day"] for x in numerical + adjustment + timestamp_label}
     )
     return {
         "schema": "mst.m3.endpoint-native.d1-ohlcv-revision-observer.v1",
@@ -240,6 +248,7 @@ def diff_native_d1_versions(
         "missing_prior_day_labels_UNVERIFIED": missing,
         "numeric_ohlcv_revisions": numerical,
         "adjustment_or_price_basis_revisions": adjustment,
+        "source_candle_start_timestamp_revisions": timestamp_label,
         "metadata_changes_only_or_in_addition": metadata,
         "affected_research_day_labels": changed_days,
         "recommendation": (
