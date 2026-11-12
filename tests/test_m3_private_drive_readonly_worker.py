@@ -47,8 +47,13 @@ def record(provider,symbol,ref,count):
 
 
 def manifest(records):
+    by_provider={}
+    for item in records:
+        by_provider[item["provider"]]=by_provider.get(item["provider"],0)+item["persisted_rows"]
     return {"schema":"mst.cloud.drive.private.mcp_d1_capture_manifest.v0.2",
             "project":"MST","source_partition_count":len(records),
+            "total_saved_ohlcv_rows":sum(by_provider.values()),
+            "rows_by_provider":by_provider,
             "snapshots":records}
 
 
@@ -95,8 +100,9 @@ def fixtures():
     return {
       OLD:manifest([record("SSI","AAA",SSI_OLD,1),
                     record("DNSE","BBB",DNSE,1)]),
-      NEW:manifest([record("SSI","AAA",SSI_NEW,2),
+      NEW:{**manifest([record("SSI","AAA",SSI_NEW,2),
                     record("DNSE","BBB",DNSE,1)]),
+           "previous_manifest_document_id":OLD},
       SSI_OLD:ssi_snapshot([ssi_row("11/11/2026")],"2026-11-12T10:00:00Z"),
       SSI_NEW:ssi_snapshot([ssi_row("12/11/2026"),ssi_row("11/11/2026")],
                            "2026-11-12T11:00:00Z"),
@@ -352,6 +358,40 @@ class TwoManifestReadOnlyTests(unittest.TestCase):
 
 
 
+    def test_new_manifest_missing_predecessor_denied(self):
+        data=fixtures()
+        del data[NEW]["previous_manifest_document_id"]
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"PREDECESSOR"):
+            m.read_two_private_manifests(
+                FakeSession(data),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+    def test_new_manifest_wrong_predecessor_denied(self):
+        data=fixtures()
+        data[NEW]["previous_manifest_document_id"]=NEW
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"PREDECESSOR"):
+            m.read_two_private_manifests(
+                FakeSession(data),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+    def test_total_rows_tamper_denied_before_source_read(self):
+        data=fixtures()
+        data[NEW]["total_saved_ohlcv_rows"]+=100
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"ROW_TOTALS"):
+            m.read_two_private_manifests(
+                FakeSession(data),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+    def test_provider_total_rows_tamper_denied(self):
+        data=fixtures()
+        data[NEW]["rows_by_provider"]["SSI"]+=1
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"ROW_TOTALS"):
+            m.read_two_private_manifests(
+                FakeSession(data),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+
+
 class ManualContextTests(unittest.TestCase):
     def test_valid_owner_manual_env(self):
         secrets,a,b,parents=m.require_manual_owner_env(env())
@@ -443,7 +483,7 @@ def nine_partition_fixtures():
             old_files.append(record(provider,sym,old_id,1))
             new_files.append(record(provider,sym,new_id,2 if provider=="SSI" else 1))
     docs[OLD]=manifest(old_files)
-    docs[NEW]=manifest(new_files)
+    docs[NEW]={**manifest(new_files),"previous_manifest_document_id":OLD}
     return docs
 
 
