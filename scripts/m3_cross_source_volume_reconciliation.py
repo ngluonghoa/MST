@@ -9,7 +9,7 @@ market prices, provider credential, issuer first-known or signing operations.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 import re
 
@@ -117,6 +117,94 @@ def reconcile_observed_volumes(*records: UntrustedVolumeObservation) -> dict[str
         "licensed_persistent_retention_verified": False,
         "complete_market_auction_proof": False,
         "cache_v2_authorized": False,
+        "signal_eligible": False,
+        "production_authorized": False,
+    }
+
+
+def compare_volume_refreshes(
+    previous: tuple[UntrustedVolumeObservation, ...],
+    current: tuple[UntrustedVolumeObservation, ...],
+    *,
+    previous_received_utc: datetime,
+    current_received_utc: datetime,
+) -> dict[str, object]:
+    """Pure receipt/delta gate for one symbol/session, no publisher write.
+
+    Values are *observed provider volume counts only*. Equal counts do NOT
+    establish identical OHLCV, entitlement, first-known, session coverage or
+    immutable provider revision. The times are local RECEIPT clocks only.
+    """
+    if type(previous) is not tuple or type(current) is not tuple:
+        raise TypeError("IMMUTABLE_TYPED_SOURCE_RECEIPT_TUPLES_REQUIRED")
+    for stamp in (previous_received_utc, current_received_utc):
+        if (type(stamp) is not datetime or stamp.tzinfo is None
+                or stamp.utcoffset() != timedelta(0)):
+            raise ValueError("EXPLICIT_UTC_RECEIPT_CLOCK_REQUIRED")
+    if current_received_utc <= previous_received_utc:
+        raise ValueError("STRICTLY_MONOTONE_OBSERVATION_RECEIPTS_REQUIRED")
+    earlier = reconcile_observed_volumes(*previous)
+    later = reconcile_observed_volumes(*current)
+    if earlier["symbol"] != later["symbol"] or earlier["trading_day"] != later["trading_day"]:
+        raise ValueError("SAME_SYMBOL_SESSION_REQUERY_REQUIRED")
+    before = {x.source: x for x in previous}
+    after = {x.source: x for x in current}
+    if before.keys() != after.keys():
+        raise ValueError("EXACT_SAME_PROVIDER_SURFACES_REQUIRED_FOR_REFRESH_DIFF")
+    changes = []
+    for source in _ORDER:
+        if source not in before:
+            continue
+        first, second = before[source], after[source]
+        volume_delta = second.session_volume_shares - first.session_volume_shares
+        atc_delta = (
+            second.atc_volume_shares - first.atc_volume_shares
+            if second.atc_volume_shares is not None and
+            first.atc_volume_shares is not None else None
+        )
+        atc_changed = second.atc_volume_shares != first.atc_volume_shares
+        changes.append({
+            "source": source.value,
+            "prior_session_volume_shares": first.session_volume_shares,
+            "current_session_volume_shares": second.session_volume_shares,
+            "observed_volume_delta_shares": volume_delta,
+            "prior_atc_volume_shares": first.atc_volume_shares,
+            "current_atc_volume_shares": second.atc_volume_shares,
+            "atc_delta_shares_if_both_present": atc_delta,
+            "atc_presence_or_value_changed": atc_changed,
+            "source_counts_changed": volume_delta != 0 or atc_changed,
+            "entire_ohlcv_history_identical_proven": False,
+        })
+    changed = [x["source"] for x in changes if x["source_counts_changed"]]
+    prev_gap = earlier["pairwise_disagreement_count"]
+    curr_gap = later["pairwise_disagreement_count"]
+    return {
+        "schema": "mst.m3.private-source.volume-refresh-delta-preflight.v1",
+        "symbol": later["symbol"],
+        "trading_day": later["trading_day"],
+        "previous_local_received_utc": previous_received_utc.astimezone(timezone.utc).isoformat(),
+        "current_local_received_utc": current_received_utc.astimezone(timezone.utc).isoformat(),
+        "previous_disagreement_pair_count": prev_gap,
+        "current_disagreement_pair_count": curr_gap,
+        "observed_disagreement_persists": prev_gap > 0 and curr_gap > 0,
+        "observed_disagreement_numerically_cleared": prev_gap > 0 and curr_gap == 0,
+        "observed_new_disagreement": prev_gap == 0 and curr_gap > 0,
+        "changed_source_surfaces": changed,
+        "sources": changes,
+        "incremental_candidate_action": (
+            "RECORD_VOLUME_REVISION_AND_INVALIDATE_RESEARCH_DEPENDENCIES"
+            if changed else "RECORD_RECHECK_RECEIPT_WITHOUT_VOLUME_REVISION"
+        ),
+        "source_qa_action": (
+            "QUARANTINE_PROVIDER_VOLUME_CONFLICT"
+            if curr_gap > 0 else "OBSERVED_NUMERIC_AGREEMENT_ONLY"
+        ),
+        "source_retrieval_recheck_is_native_finality": False,
+        "source_clock_is_publisher_first_known": False,
+        "matching_volume_proves_identical_ohlcv": False,
+        "signed_issuer_revision_verified": False,
+        "approved_market_cache_write": False,
+        "cross_provider_master_selected": False,
         "signal_eligible": False,
         "production_authorized": False,
     }
