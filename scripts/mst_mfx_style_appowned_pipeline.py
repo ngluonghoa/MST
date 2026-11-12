@@ -165,10 +165,10 @@ def build_dnse_request(
     symbol: str, from_unix: int, to_unix: int,
     api_key: str, api_secret: str, *, date_header: str, nonce: str,
 ) -> tuple[str, dict[str, str]]:
-    """Construct DNSE documented HMAC-SHA256 market-data-only GET.
+    """Construct DNSE official-SDK-aligned market-data-only GET.
 
-    Signing the exact path and canonical URL query (no trading token/OTP).
-    A real authenticated read still requires vendor-issued credentials/rights.
+    DNSE official SDK signs the fixed REST path, not its URL query string.
+    No trading token or OTP. Requires separately authorized source rights.
     """
     if (not SYMBOL_RE.fullmatch(symbol) or not api_key or not api_secret
             or not re.fullmatch(r"[0-9a-f]{32}", nonce)
@@ -178,7 +178,7 @@ def build_dnse_request(
     q = urlencode({"symbol":symbol,"type":"STOCK","resolution":"1D",
                    "from":from_unix,"to":to_unix})
     target = DNSE_PATH + "?" + q
-    signing = f"(request-target): get {target}\ndate: {date_header}\nnonce: {nonce}"
+    signing = f"(request-target): get {DNSE_PATH}\ndate: {date_header}\nnonce: {nonce}"
     raw = hmac.new(api_secret.encode("utf-8"), signing.encode("utf-8"),
                    hashlib.sha256).digest()
     signature = quote(base64.b64encode(raw).decode("ascii"), safe="")
