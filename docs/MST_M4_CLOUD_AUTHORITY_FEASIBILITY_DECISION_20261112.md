@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-12 (Asia/Ho_Chi_Minh)  
 **Status:** DRAFT / DESIGN AND READ-ONLY PLATFORM VERIFICATION / NO PRODUCTION AUTHORITY  
-**Scope:** One small isolated documentation PR branching from `main@e4b162c57f10a47de62809188389bdc35d1261f5`. No credentials, new service, cloud billing, real Drive write, market data, GitHub policy or ref mutation. The hourly MST automation stays **disabled**.
+**Scope:** One small isolated documentation PR branching from `main@e4b162c57f10a47de62809188389bdc35d1261f5`. No credentials, new service, cloud billing, real Drive write, market data, GitHub policy or **protected/control** ref mutation. Only an isolated Draft **documentation** branch/commit is created. The hourly MST automation stays **disabled**.
 
 ## 1. Why this decision is needed
 
@@ -45,7 +45,7 @@ The GitHub connector's branch-protection endpoint returned **403 Resource not ac
 - GitHub Git References API `force:false`, status and `Contents:write`: https://docs.github.com/en/rest/git/refs
 - GitHub Actions pending queue `single` vs `max` and non-guaranteed dispatch order: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
 - GitHub rulesets: deletion/non-fast-forward and bypass behavior: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
-- Prior existing MST [M4 publish/read-barrier ADR](https://github.com/ngluonghoa/MST/blob/mst/m2-a03-optin-v2-contracts-20261109/docs/MST_M4_CLOUD_PUBLISH_READ_BARRIER_ADR_CANDIDATE.md) and [signed-receipt negative proof](https://github.com/ngluonghoa/MST/pull/8). These are prior research, not runtime GO evidence.
+- Prior existing MST [M4 publish/read-barrier ADR](https://github.com/ngluonghoa/MST/blob/17ba56e062c6296895374d53938ea2763b9d9525/docs/MST_M4_CLOUD_PUBLISH_READ_BARRIER_ADR_CANDIDATE.md) and [signed-receipt negative proof](https://github.com/ngluonghoa/MST/pull/8). These are prior research, not runtime GO evidence.
 
 ## 4. Minimal authority protocol IF an independently trusted control service is authorized
 
