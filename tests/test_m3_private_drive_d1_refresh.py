@@ -231,6 +231,8 @@ class PrivateDriveD1AdapterTests(unittest.TestCase):
         old=prior[docid("SSI","AAA")]
         old["rows"].insert(0,row("SSI","AAA",day="2026-11-11"))
         old["source_row_count"]=2;old["retained_row_count"]=2
+        next(r for r in manifest["snapshots"] if
+             r["provider"]=="SSI" and r["symbol"]=="AAA")["persisted_rows"]=2
         d=decide_private_d1_refresh(
             manifest=manifest,prior_documents=prior,candidate_documents=now)
         self.assertEqual(d["quarantined_partition_count"],1)
