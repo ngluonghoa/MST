@@ -46,3 +46,22 @@ Official primary sources:
 - https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/ — signed REST history, independently documented API product
 
 **Engineering interpretation:** DNSE's description of unchanged closed events is vendor documentation, NOT proof that the user's account may subscribe, or that a late arriving/revised historical record can never exist. Never treat `ohlc_closed` string, `lastUpdated` or client receipt time as independently authenticated first-known.
+
+
+## 2026-11-12 follow-up — DNSE documented reconnect, authenticated-session and gap-recovery limitations
+
+**Primary official documentation verified:**
+- https://developers.dnse.com.vn/docs/sdk/build_websocket/ — the documented WebSocket protocol requires a welcome message, HMAC auth with timestamp+fresh nonce within 30 seconds, then explicit subscribe ACK; reconnect creates a NEW session_id and requires fresh timestamp/nonce and all subscriptions repeated.
+- The official same page documents a maximum 8-hour connection lifetime, server PING roughly every 3 minutes, PONG within 1 minute, close code 1008 for expiry/heartbeat/policy and 1013 for overloaded slow client; exponential backoff is recommended for retries.
+- https://developers.dnse.com.vn/docs/guide/market-data/connect/ — distinguishes forming `ohlc` and published-on-close `ohlc_closed` event families and lists their time/resolution fields.
+
+**Crucial evidence distinction:** These pages prescribe **how to reconnect**, but no verified, per-symbol/per-timeframe monotone delivery sequence, guaranteed replay from cursor, complete REST repair on reconnect, or externally signed issuer first-known / revision origin was established in the reviewed protocol. Therefore even `auth_success`, subscription ACK and adjacent later candle-start labels do NOT prove that messages were not missed while disconnected. Equally, a large gap in candle-start labels might represent auction/lunch/no-trade/holiday/special venue behavior; it is a **potential** delivery/calendar gap until an official market schedule and vendor proof are checked. Distinguish duplicate exact slot vs conflicting payload and out-of-order correction; never silently overwrite earlier accepted state.
+
+**New additive test-only implementation** in the same Draft PR25:
+- `scripts/m3_dnse_reconnect_gap_negative_lab.py` — metadata-only SYNTHETIC protocol-phase/epoch state machine; requires welcome, a fresh synthetic auth-ack nonce marker, and exact re-subscription before receiving synthetic `ohlc_closed` slot labels. Detects same-slot duplicate, conflicting claim, out-of-order label, clock skew and potential time jump; bounds stored synthetic slot metadata; quarantines suspected faults. A reconnect always flags **unverified delivery history**, regardless of later chronological adjacency. All vendor identities/rights, first-known, real replay, Cache and signal fields remain permanently FALSE.
+- `tests/test_m3_dnse_reconnect_gap_negative_lab.py` — 37 negative/offline unit methods, including reconnect code 1008, pseudo-network loss 1006, repeated nonce, stale epoch, missing subscription, duplicate/conflict, simulated lunch gap, no false calendar completeness, bounded capacity and no quote/secret fields.
+- This does **NOT** open a WebSocket, construct a HMAC request, authenticate any provider account, collect market data, write a Google Drive cache, prove raw/derived retention rights, or upgrade the separate current connected DNSE DAY-only MCP. All handshake IDs/nonces/digest tags are **SYN-... fixture markers**, not vendor replies and not market payload hashes.
+
+**External evidence still required before a future live admission:** independently approved DNSE subscription/Cloud credentials and licence, protected Cloud runner and identity, authenticated WS origin and verified instrument+timeframe delivery contract, vendor-provided resume/backfill/cursor or proved alternative recovery, official venue calendar/auction/no-trade, correction/revision and first-known history, H4-derived chain, signed audit and nonrollbackable publisher floor, owner go-live approval. No real market cache or trading until all gates pass.
+
+**CI checkpoint:** verify the final exact PR25 HEAD in GitHub Foundation CI after this commit. The new protocol lab is an intentionally untrusted negative oracle, not a live transport or a production cache safety proof.
