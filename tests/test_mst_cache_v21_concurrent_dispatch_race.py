@@ -57,5 +57,55 @@ class ConcurrentDispatchRaceTests(unittest.TestCase):
         # Local set is an explanatory model, NOT Google Drive CAS.
 
 
+    def test_expired_fencing_epoch_cannot_block_direct_unmediated_drive_create(self):
+        stage = SimulatedStage()
+        authoritative_epoch = 2
+        stale_epoch = 1
+        # A stale writer can call Drive files.create without passing its
+        # epoch: Drive's basic upload API does not enforce this toy authority.
+        stage.create("stale-writer-epoch-1")
+        stale_commit_accepted = (stale_epoch == authoritative_epoch)
+        self.assertFalse(stale_commit_accepted)
+        self.assertEqual(stage.list_all(), ("stale-writer-epoch-1",))
+        # Post-hoc authority rejection cannot undo the earlier file create.
+        # This is a NEGATIVE acceptance case, not proof of protection.
+
+    def test_after_upload_permission_failure_cannot_retract_artifact(self):
+        stage = SimulatedStage()
+        was_private_on_preflight = True
+        self.assertTrue(was_private_on_preflight)
+        stage.create("fictional-json")
+        became_shared_before_postcondition = True
+        pass_receipt_allowed = not became_shared_before_postcondition
+        self.assertFalse(pass_receipt_allowed)
+        # Fail-closed receipt cannot make a successful earlier write disappear.
+        self.assertEqual(stage.list_all(), ("fictional-json",))
+
+    def test_lost_drive_upload_ack_requires_inspection_not_fresh_dispatch(self):
+        stage = SimulatedStage()
+        stage.create("first-dispatch")
+        acknowledgment_lost = True
+        self.assertTrue(acknowledgment_lost)
+        second_dispatch_snapshot = stage.list_all()
+        self.assertNotEqual(second_dispatch_snapshot, ())
+        if not second_dispatch_snapshot:
+            stage.create("second-dispatch")
+        self.assertEqual(stage.list_all(), ("first-dispatch",))
+        # A rerun with new RUN_ID must not reinterpret the unknown first
+        # outcome as permission to create another file.
+
+    def test_self_consistent_drive_snapshot_can_still_be_rolled_back(self):
+        # A self-consistent metadata digest plus file bytes alone can be
+        # replayed together. Only trusted independent monotonic highwater
+        # outside this namespace can detect an old complete snapshot.
+        latest = {"version": 21, "media": b"latest", "digest": b"latest"}
+        old = {"version": 20, "media": b"old", "digest": b"old"}
+        self.assertEqual(latest["media"], latest["digest"])
+        observed = dict(old)  # adversary replays BOTH content and metadata
+        self.assertEqual(observed["media"], observed["digest"])
+        independent_trusted_highwater = 21
+        self.assertLess(observed["version"], independent_trusted_highwater)
+
+
 if __name__ == "__main__":
     unittest.main()
