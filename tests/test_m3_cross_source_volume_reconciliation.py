@@ -3,11 +3,11 @@
 No real quote records, live connector calls, client secrets, network, or source
 publisher can be created by this module.
 """
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 import unittest
 
 from scripts.m3_cross_source_volume_reconciliation import (
-    Surface, UntrustedVolumeObservation, reconcile_observed_volumes,
+    Surface, UntrustedVolumeObservation, reconcile_observed_volumes, compare_volume_refreshes,
 )
 
 D = date(2026, 11, 12)
@@ -209,6 +209,180 @@ class SourceVolumeReconciliationTests(unittest.TestCase):
         )
         self.assertFalse(r["provider_scope_equivalence_verified"])
         self.assertFalse(r["issuer_source_and_first_known_verified"])
+
+
+
+def receipt_clock(h: int = 10):
+    return datetime(2026, 11, 12, h, 0, tzinfo=timezone.utc)
+
+
+class SourceVolumeRefreshReceiptTests(unittest.TestCase):
+    def test_repeated_disagreement_never_promoted_to_cache(self):
+        prev = (obs(Surface.SSI_MINUTE_SUM, 200, atc=40),
+                obs(Surface.DNSE_D1, 200),
+                obs(Surface.VCBS_D1, 199),
+                obs(Surface.VCBS_BOARD, 199, atc=39))
+        result = compare_volume_refreshes(
+            prev, prev, previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertTrue(result["observed_disagreement_persists"])
+        self.assertEqual(result["changed_source_surfaces"], [])
+        self.assertEqual(result["source_qa_action"], "QUARANTINE_PROVIDER_VOLUME_CONFLICT")
+        self.assertEqual(result["incremental_candidate_action"],
+                         "RECORD_RECHECK_RECEIPT_WITHOUT_VOLUME_REVISION")
+        self.assertFalse(result["approved_market_cache_write"])
+
+    def test_new_vendor_volume_delta_triggers_dependency_invalidating_candidate(self):
+        prev = (obs(Surface.SSI_MINUTE_SUM, 200), obs(Surface.DNSE_D1, 200))
+        new = (obs(Surface.SSI_MINUTE_SUM, 200), obs(Surface.DNSE_D1, 201))
+        out = compare_volume_refreshes(
+            prev, new, previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertEqual(out["changed_source_surfaces"], [Surface.DNSE_D1.value])
+        self.assertEqual(out["incremental_candidate_action"],
+                         "RECORD_VOLUME_REVISION_AND_INVALIDATE_RESEARCH_DEPENDENCIES")
+        self.assertTrue(out["observed_new_disagreement"])
+        self.assertFalse(out["signal_eligible"])
+
+    def test_atc_only_revision_is_a_real_source_count_revision(self):
+        prev = (obs(Surface.SSI_MINUTE_SUM, 200, atc=40),
+                obs(Surface.VCBS_BOARD, 200, atc=40))
+        new = (obs(Surface.SSI_MINUTE_SUM, 200, atc=41),
+               obs(Surface.VCBS_BOARD, 200, atc=40))
+        result = compare_volume_refreshes(
+            prev, new, previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        item = result["sources"][0]
+        self.assertEqual(item["observed_volume_delta_shares"], 0)
+        self.assertEqual(item["atc_delta_shares_if_both_present"], 1)
+        self.assertTrue(item["source_counts_changed"])
+        self.assertIn(Surface.SSI_MINUTE_SUM.value, result["changed_source_surfaces"])
+
+    def test_new_atc_field_with_unchanged_total_still_triggers_qa(self):
+        prev = (obs(Surface.SSI_MINUTE_SUM, 200),
+                obs(Surface.VCBS_BOARD, 200, atc=39))
+        new = (obs(Surface.SSI_MINUTE_SUM, 200, atc=40),
+               obs(Surface.VCBS_BOARD, 200, atc=39))
+        result = compare_volume_refreshes(
+            prev, new, previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertTrue(result["sources"][0]["atc_presence_or_value_changed"])
+        self.assertIsNone(result["sources"][0]["atc_delta_shares_if_both_present"])
+
+    def test_disagreement_clearing_is_not_finality(self):
+        prior = (obs(Surface.SSI_MINUTE_SUM, 200),
+                 obs(Surface.VCBS_D1, 199))
+        now = (obs(Surface.SSI_MINUTE_SUM, 200),
+               obs(Surface.VCBS_D1, 200))
+        out = compare_volume_refreshes(
+            prior, now, previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertTrue(out["observed_disagreement_numerically_cleared"])
+        self.assertEqual(out["source_qa_action"], "OBSERVED_NUMERIC_AGREEMENT_ONLY")
+        self.assertFalse(out["signed_issuer_revision_verified"])
+        self.assertFalse(out["production_authorized"])
+
+    def test_identical_counts_never_prove_same_ohlcv(self):
+        rec = (obs(Surface.SSI_MINUTE_SUM, 200),
+               obs(Surface.DNSE_D1, 200))
+        out = compare_volume_refreshes(
+            rec, rec, previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertFalse(out["matching_volume_proves_identical_ohlcv"])
+        self.assertFalse(out["source_clock_is_publisher_first_known"])
+        self.assertTrue(all(not item["entire_ohlcv_history_identical_proven"]
+                            for item in out["sources"]))
+
+    def test_reversed_input_provider_order_produces_same_source_order(self):
+        a, b = obs(Surface.SSI_MINUTE_SUM, 200), obs(Surface.DNSE_D1, 200)
+        out = compare_volume_refreshes(
+            (a,b), (b,a), previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertEqual([p["source"] for p in out["sources"]],
+                         [Surface.SSI_MINUTE_SUM.value, Surface.DNSE_D1.value])
+        self.assertEqual(out["changed_source_surfaces"], [])
+
+    def test_mismatched_provider_sets_refused(self):
+        with self.assertRaises(ValueError):
+            compare_volume_refreshes(
+                (obs(Surface.SSI_MINUTE_SUM), obs(Surface.DNSE_D1)),
+                (obs(Surface.SSI_MINUTE_SUM), obs(Surface.VCBS_D1)),
+                previous_received_utc=receipt_clock(),
+                current_received_utc=receipt_clock(11))
+
+    def test_mismatched_symbol_refused(self):
+        with self.assertRaises(ValueError):
+            compare_volume_refreshes(
+                (obs(symbol="ABC"), obs(Surface.DNSE_D1, symbol="ABC")),
+                (obs(symbol="XYZ"), obs(Surface.DNSE_D1, symbol="XYZ")),
+                previous_received_utc=receipt_clock(),
+                current_received_utc=receipt_clock(11))
+
+    def test_mismatched_trading_date_refused(self):
+        tomorrow=date(2026, 11, 13)
+        with self.assertRaises(ValueError):
+            compare_volume_refreshes(
+                (obs(), obs(Surface.DNSE_D1)),
+                (obs(day=tomorrow), obs(Surface.DNSE_D1, day=tomorrow)),
+                previous_received_utc=receipt_clock(),
+                current_received_utc=receipt_clock(11))
+
+    def test_wrong_input_shapes_refused(self):
+        a=obs()
+        b=obs(Surface.DNSE_D1)
+        for previous,current in (([a,b],(a,b)),((a,b),[a,b]),((a,b),{})):
+            with self.subTest(previous=type(previous).__name__,
+                              current=type(current).__name__), self.assertRaises(TypeError):
+                compare_volume_refreshes(
+                    previous,current,previous_received_utc=receipt_clock(),
+                    current_received_utc=receipt_clock(11))
+
+    def test_missing_utc_clock_rejected(self):
+        values=(obs(),obs(Surface.DNSE_D1))
+        for stamp in (None, "2026-11-12", datetime(2026,11,12,10),
+                      datetime(2026,11,12,10,tzinfo=timezone(timedelta(hours=7)))):
+            with self.subTest(stamp=repr(stamp)), self.assertRaises(ValueError):
+                compare_volume_refreshes(
+                    values,values,previous_received_utc=stamp,
+                    current_received_utc=receipt_clock(11))
+
+    def test_nonmonotone_receipt_refused(self):
+        values=(obs(),obs(Surface.DNSE_D1))
+        for new_time in (receipt_clock(), receipt_clock(9)):
+            with self.subTest(clock=new_time), self.assertRaises(ValueError):
+                compare_volume_refreshes(
+                    values,values,previous_received_utc=receipt_clock(),
+                    current_received_utc=new_time)
+
+    def test_duplicate_surface_in_single_receipt_refused(self):
+        values=(obs(),obs())
+        with self.assertRaises(ValueError):
+            compare_volume_refreshes(
+                values,values,previous_received_utc=receipt_clock(),
+                current_received_utc=receipt_clock(11))
+
+    def test_all_four_surfaces_unchanged_deterministic(self):
+        prev=(obs(Surface.VCBS_BOARD, 199, atc=39),
+              obs(Surface.VCBS_D1,199),
+              obs(Surface.DNSE_D1,200),
+              obs(Surface.SSI_MINUTE_SUM,200,atc=40))
+        out = compare_volume_refreshes(
+            prev, tuple(reversed(prev)),
+            previous_received_utc=receipt_clock(),
+            current_received_utc=receipt_clock(11))
+        self.assertEqual(len(out["sources"]),4)
+        self.assertEqual(len(out["changed_source_surfaces"]),0)
+        self.assertEqual(out["current_disagreement_pair_count"],4)
+        self.assertEqual(out["incremental_candidate_action"],
+                         "RECORD_RECHECK_RECEIPT_WITHOUT_VOLUME_REVISION")
+
+    def test_trusted_publisher_flag_cannot_be_set_through_refresh(self):
+        a,b=obs(),obs(Surface.DNSE_D1)
+        with self.assertRaises(PermissionError):
+            bad=obs(Surface.VCBS_D1, independent_issuer_authenticated=True)
+            compare_volume_refreshes(
+                (a,b),(a,b,bad),previous_received_utc=receipt_clock(),
+                current_received_utc=receipt_clock(11))
 
 
 if __name__ == "__main__":
