@@ -1,0 +1,92 @@
+name: MST M4 Main Human Review Owner Proposal - READ ONLY NO APPLY
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-main-positive-review-owner-no-apply.yml"
+      - "scripts/m4_main_positive_review_preflight.py"
+      - "scripts/m4_pr_review_freshness_audit.py"
+      - "tests/test_m4_main_positive_review_preflight.py"
+      - "tests/test_m4_pr_review_freshness_audit.py"
+      - "docs/MST_M4_MAIN_POSITIVE_REVIEW_OWNER_PROPOSAL_20261110.json"
+      - "docs/MST_M4_MAIN_POSITIVE_REVIEW_QA_20261110.md"
+      - "docs/MST_M4_PR_REVIEW_FRESHNESS_NEGATIVE_QA_20261110.md"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  main-human-review-owner-no-go:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Live original 63 V1 + 8 opt-in V2 source lock before audit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-review-source-lock.json
+      - name: Run 22 owner governance fail-closed tests
+        run: python -m unittest discover -s tests -p 'test_m4_main_positive_review_preflight.py' -v
+      - name: Run 33 adverse review-freshness and deduplication tests
+        run: python -m unittest discover -s tests -p 'test_m4_pr_review_freshness_audit.py' -v
+      - name: Read-only live ruleset, main, PR8, reviews and 3 CODEOWNERS paths
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.m4_main_positive_review_preflight --out /tmp/mst-review-NO-APPLY.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-review-NO-APPLY.json").read_text())
+          s=json.loads(Path("/tmp/mst-review-source-lock.json").read_text())
+          assert s["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert s["original_python_module_count"]==63
+          assert s["approved_opt_in_v2_sidecar_module_count"]==8
+          assert r["current_positive_reviews_required"]==0
+          assert r["three_foundation_ci_required"] is True
+          for key in ("effective_admin_bypass_independently_verified",
+                      "reviewer_identity_independently_verified","proposal_approved",
+                      "policy_applied","pr_merged","production_authorized",
+                      "trading_authorized"):
+              assert r[key] is False,key
+          print("NO-GO governance observation only. GitHub rules, permissions and PR unchanged.")
+          PY
+      - name: Audit live PR review freshness without identities or merge authority
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.m4_pr_review_freshness_audit \
+            --out /tmp/mst-pr8-review-freshness-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-pr8-review-freshness-NO-GO.json").read_text())
+          assert r["readback_complete_under_page_cap"] is True
+          assert r["pr8_event_head_matches_readback"] is True
+          for k in ("reviewer_account_is_distinct_human_controller_proven",
+                    "reviewer_has_effective_write_or_codeowner_permission_proven",
+                    "last_pusher_identity_independently_proven",
+                    "github_policy_positive_review_enforced_proven",
+                    "reviewed_candidate_is_signed_owner_acceptance",
+                    "pr8_merge_authorized","production_release_authorized",
+                    "trading_authorized"):
+              assert r[k] is False,k
+          print("Technical PR review event audit completed, independent approval remains unproven")
+          PY
+      - name: Keep sanitized read-only governance receipt 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-main-human-review-NO-APPLY
+          path: |
+            /tmp/mst-review-source-lock.json
+            /tmp/mst-review-NO-APPLY.json
+            /tmp/mst-pr8-review-freshness-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

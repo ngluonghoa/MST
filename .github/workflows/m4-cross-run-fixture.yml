@@ -1,0 +1,60 @@
+name: MST M4 Cross-Run Cache Proof - UNTRUSTED SYNTHETIC
+
+# Independent hosted jobs and successive PR runs only. NOT a real Google
+# Drive writer, authenticated vendor receipt, signer or rollback floor.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-cross-run-fixture.yml"
+      - "scripts/m4_cross_run_fixture.py"
+      - "tests/test_m4_cross_run_fixture.py"
+      - "docs/MST_M4_CROSS_RUN_CACHE_PROOF_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  recover-prior-run:
+    name: Check prior run cache (untrusted)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore another run's synthetic cache (if present)
+        uses: actions/cache/restore@v4
+        with:
+          path: .m4-synthetic-fixture
+          key: mst-m4-pr${{ github.event.pull_request.number }}-fixture-${{ github.run_id }}
+          restore-keys: |
+            mst-m4-pr${{ github.event.pull_request.number }}-fixture-
+      - name: Verify prior run artifact (never grant market rights)
+        run: |
+          if test -f docs/MST_M4_CROSS_RUN_CACHE_PROOF_20261109.md; then
+            python -m scripts.m4_cross_run_fixture recover \
+              --path .m4-synthetic-fixture/intent.json \
+              --run-id ${{ github.run_id }} \
+              --pr ${{ github.event.pull_request.number }} \
+              --require-prior
+          else
+            python -m scripts.m4_cross_run_fixture recover \
+              --path .m4-synthetic-fixture/intent.json \
+              --run-id ${{ github.run_id }} \
+              --pr ${{ github.event.pull_request.number }}
+          fi
+
+  stage-next-run:
+    name: Stage synthetic fixture for next run
+    needs: recover-prior-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Emit fresh unattested synthetic operation claim
+        run: |
+          python -m scripts.m4_cross_run_fixture emit \
+            --path .m4-synthetic-fixture/intent.json \
+            --run-id ${{ github.run_id }} \
+            --pr ${{ github.event.pull_request.number }}
+      - name: Save disposable cross-run test cache
+        uses: actions/cache/save@v4
+        with:
+          path: .m4-synthetic-fixture
+          key: mst-m4-pr${{ github.event.pull_request.number }}-fixture-${{ github.run_id }}

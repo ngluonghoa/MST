@@ -1,0 +1,194 @@
+{
+  "schema": "mst.a03.supplier-owner-proof-acceptance.public-unapproved.v1",
+  "repository": "ngluonghoa/MST",
+  "architecture": "OPTION_A_GITHUB_GOOGLE_DRIVE_ONLY",
+  "source_pin": "cd90c1babae8912db31490ad614fc2ad2f868042",
+  "protected_main_pin": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "source_tree_pin": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+  "prior_m4_private_intake": "docs/MST_M4_OPTION_A_PRIVATE_OWNER_EVIDENCE_INTAKE_20261110.json",
+  "status": "REQUIREMENTS_ONLY_ALL_OWNER_PROOFS_NOT_RECEIVED_NO_GO",
+  "owner_choices_approved": 0,
+  "owner_choices_total": 14,
+  "a02_original_module_owner_approved": 0,
+  "a03_opt_in_v2_owner_approved": 0,
+  "requirements": [
+    {
+      "gate": "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+      "existing_m4_requirement_ids": [
+        "E11",
+        "E14"
+      ],
+      "acceptance_checks": [
+        "Independent provider-issued issuer and feed enrollment with authenticated root ownership, scoped venue, symbol, timeframe, price basis and revocation",
+        "Authenticated provider revision closure and independently acquired ledger head including sequence gaps, correction and tombstone semantics",
+        "Historical as-of replay with first-known timestamps and verified official Vietnam exchange session-calendar mapping"
+      ],
+      "proof_state": "NOT_RECEIVED",
+      "owner_approved": false,
+      "independent_verifier_attested": false
+    },
+    {
+      "gate": "A03-OWNER-INDEPENDENT-CUSTODY-12",
+      "existing_m4_requirement_ids": [
+        "E03",
+        "E14"
+      ],
+      "acceptance_checks": [
+        "Independently enrolled source signer and reader witnessed by separately controlled principals with effective permissions and immutable audit readbacks",
+        "Key epoch rotation and revocation verified by independently authorized reviewer, including rejection of caller-replaced public trust anchor",
+        "Reconciliation of independently fetched source and viewer receipts with explicit missing fields and no self-declared separation accepted"
+      ],
+      "proof_state": "NOT_RECEIVED",
+      "owner_approved": false,
+      "independent_verifier_attested": false
+    },
+    {
+      "gate": "A03-OWNER-DURABLE-FLOOR-13",
+      "existing_m4_requirement_ids": [
+        "E08",
+        "E13"
+      ],
+      "acceptance_checks": [
+        "Independently owned nonresettable cross-run high-watermark survives fresh runner, restart, restore and attempted old signed receipt replay",
+        "Two separately authenticated nonadmin writers contend on an approved protected GitHub ref with exactly one server-serialized compare-and-swap winner",
+        "Independent verifier readback of loser denial, immutable generation lineage, owner-approved bypass controls and recovery procedures"
+      ],
+      "proof_state": "NOT_RECEIVED",
+      "owner_approved": false,
+      "independent_verifier_attested": false
+    },
+    {
+      "gate": "A03-OWNER-LICENSED-REPLAY-14",
+      "existing_m4_requirement_ids": [
+        "E11",
+        "E12"
+      ],
+      "acceptance_checks": [
+        "Provider-issued contractual rights cover exact feed, historical corrections, retention duration, derived bars and Google Drive storage geography",
+        "Owner and legal review explicitly approve source-specific license scope, deletion policy, auditability and redistribution or onward-use restrictions",
+        "After rights approval, independently authorized Google Drive physical byte readback proves retention boundaries and partition-to-license provenance"
+      ],
+      "proof_state": "NOT_RECEIVED",
+      "owner_approved": false,
+      "independent_verifier_attested": false
+    }
+  ],
+  "untrusted_claim_scenarios": [
+    {
+      "id": "CALLER_REPLACES_PUBLIC_KEY",
+      "gate": "A03-OWNER-INDEPENDENT-CUSTODY-12",
+      "missing_independent_proof": "Independent root enrollment absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "SIGNED_HISTORY_REHASHED",
+      "gate": "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+      "missing_independent_proof": "Supplier revision history not independently closed",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "SELF_CLAIMED_TWO_VIEWERS",
+      "gate": "A03-OWNER-INDEPENDENT-CUSTODY-12",
+      "missing_independent_proof": "Actual independently controlled principals unverified",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "SAME_ACCOUNT_DIFFERENT_ROLE_LABELS",
+      "gate": "A03-OWNER-INDEPENDENT-CUSTODY-12",
+      "missing_independent_proof": "Effective owner and permissions separation unverified",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "MISSING_MIDDLE_CORRECTION",
+      "gate": "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+      "missing_independent_proof": "Provider sequence completeness unverified",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "TOMBSTONE_RESURRECTION",
+      "gate": "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+      "missing_independent_proof": "Provider-authoritative tombstone policy missing",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "FUTURE_CORRECTION_LEAKS_ASOF",
+      "gate": "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+      "missing_independent_proof": "Provider first-known clock and historical replay unverified",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "UNOFFICIAL_SESSION_CALENDAR",
+      "gate": "A03-OWNER-SOURCE-HEAD-CLOSURE-11",
+      "missing_independent_proof": "Exchange calendar attestation absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "UNATTESTED_KEY_REVOCATION",
+      "gate": "A03-OWNER-INDEPENDENT-CUSTODY-12",
+      "missing_independent_proof": "Issuer revocation chain unverified",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "FRESH_RUN_RESET_FLOOR",
+      "gate": "A03-OWNER-DURABLE-FLOOR-13",
+      "missing_independent_proof": "Independent nonresettable high-watermark absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "TWO_SIGNED_FORKS_PASS_SEPARATELY",
+      "gate": "A03-OWNER-DURABLE-FLOOR-13",
+      "missing_independent_proof": "Real two-writer server-side compare-and-swap absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "ADMIN_BYPASS_OF_PROTECTED_REF",
+      "gate": "A03-OWNER-DURABLE-FLOOR-13",
+      "missing_independent_proof": "Effective bypass and separation owner readback absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "VENDOR_RIGHTS_ONLY_SELF_DECLARED",
+      "gate": "A03-OWNER-LICENSED-REPLAY-14",
+      "missing_independent_proof": "Provider-issued explicit feed and retention grant absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "DRIVE_LINK_WITHOUT_PHYSICAL_BYTES",
+      "gate": "A03-OWNER-LICENSED-REPLAY-14",
+      "missing_independent_proof": "Authorized physical cached bytes and retention provenance absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "SINGLE_CONNECTED_ACCOUNT_APPROVAL",
+      "gate": "A03-OWNER-INDEPENDENT-CUSTODY-12",
+      "missing_independent_proof": "Single connection not an independent attestation",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    },
+    {
+      "id": "UNSIGNED_RELEASE_OWNER_DECISION",
+      "gate": "A03-OWNER-LICENSED-REPLAY-14",
+      "missing_independent_proof": "Owner A02 and A03 release authorization absent",
+      "expected": "NO_GO_UNTRUSTED_PROOF_CLAIM"
+    }
+  ],
+  "admissions": {
+    "provider_issued_root_authenticated": false,
+    "provider_revision_head_complete": false,
+    "independent_source_viewer_custody_verified": false,
+    "nonresettable_cross_run_floor_verified": false,
+    "two_writer_server_cas_verified": false,
+    "licensed_market_data_and_drive_retention_authorized": false,
+    "physical_drive_market_cache_verified": false,
+    "qualified_market_signal_authorized": false,
+    "production_release_authorized": false,
+    "trading_authorized": false
+  },
+  "handling": {
+    "public_requirements_only": true,
+    "no_private_principal_or_key_or_evidence_url": true,
+    "no_real_provider_api_calls": true,
+    "no_vendor_market_cache_writes": true,
+    "no_privileged_github_mutation": true,
+    "no_merge_or_release": true
+  }
+}

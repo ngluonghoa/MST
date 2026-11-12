@@ -1,0 +1,165 @@
+{
+  "schema": "mst.m4.option-a.effective-authority-threat-register.unattested.v1",
+  "date_local": "2026-11-10",
+  "repository": "ngluonghoa/MST",
+  "option": "GITHUB_GOOGLE_DRIVE_ONLY",
+  "owner_decision_source": "docs/MST_M4_OPTION_A_G01_G03_OWNER_DECISION_BRIDGE_20261110.json",
+  "existing_role_source": "docs/MST_M4_OPTION_A_ROLE_SEPARATION_PROPOSAL_20261109.json",
+  "existing_drive_snapshot_source": "docs/MST_M4_OPTION_A_DRIVE_ACL_OBSERVATION_20261109.json",
+  "current_state": "READ_ONLY_OWNER_ROOT_BYPASS_THREAT_MODEL_ALL_EXTERNAL_GATES_OPEN",
+  "source_lock": {
+    "main": "4048f91beaaa3410116d97e35896c8b688384e19",
+    "tree": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+    "upstream": "cd90c1babae8912db31490ad614fc2ad2f868042"
+  },
+  "trust_layers": {
+    "original_source_parity": "GITHUB_SOURCE_SHA_CHECKS_ONLY",
+    "github_ci_ruleset": "TOKEN_LIMITED_ACTIVE_MAIN_RULESET",
+    "connected_github_repository": "SEPARATE_CONNECTED_ACCOUNT_ADMIN_PERMISSION_OBSERVED_NOT_EFFECTIVE_BYPASS_PROOF",
+    "connected_drive_folder_acl": "FIVE_CURRENT_FOLDER_METADATA_VIEWS_NO_IMMUTABLE_EXTERNAL_CUSTODY",
+    "proposed_rolematrix": "EIGHT_UNASSIGNED_ROLES_TWENTY_FIVE_PAIR_CONSTRAINTS",
+    "synthetic_a03": "LOCAL_CONCURRENCY_SPLIT_BRAIN_AND_RESET_COUNTEREXAMPLE",
+    "owner_independent_proof": "ABSENT_NOT_A_VALIDATED_ATTESTATION"
+  },
+  "published_principal_identifiers": false,
+  "attached_private_keys": false,
+  "required_owner_decisions": [
+    "OA01",
+    "OA02",
+    "OA03",
+    "OA04",
+    "OA05",
+    "OA06"
+  ],
+  "required_open_external_gates": [
+    "G01",
+    "G02",
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07",
+    "G08"
+  ],
+  "threats": [
+    {
+      "id": "T01",
+      "scenario": "ADMIN_MUTATES_WITNESS_RULESET",
+      "gate": "G01",
+      "decision": "OA01",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "INDEPENDENT_EFFECTIVE_ADMIN_AND_BYPASS_READBACK"
+    },
+    {
+      "id": "T02",
+      "scenario": "PROTECTED_WITNESS_REF_DELETED_OR_RECREATED",
+      "gate": "G02",
+      "decision": "OA02",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "OWNER_APPROVED_NONDELETE_NONFORCE_AND_MONOTONIC_REMOTE_FLOOR"
+    },
+    {
+      "id": "T03",
+      "scenario": "SIGNER_ROOT_AND_WRITER_SHARE_CONTROLLER",
+      "gate": "G01",
+      "decision": "OA01",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "PRIVATE_DISTINCT_CONTROLLER_AND_KEY_ENROLLMENT_PROOF"
+    },
+    {
+      "id": "T04",
+      "scenario": "ROOT_ADMIN_REWINDS_SIGNER_EPOCH_OR_GENESIS",
+      "gate": "G02",
+      "decision": "OA05",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "INDEPENDENT_REGISTRY_AND_ANTIROLLBACK_RECOVERY_WITNESS"
+    },
+    {
+      "id": "T05",
+      "scenario": "DRIVE_OWNER_CHANGES_OR_DELETES_CACHED_OBJECT",
+      "gate": "G05",
+      "decision": "OA04",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "OWNER_CUSTODY_AND_PHYSICAL_BYTE_READBACK_WITH_RETENTION"
+    },
+    {
+      "id": "T06",
+      "scenario": "TWO_WRITER_LABELS_SHARE_ONE_CREDENTIAL",
+      "gate": "G03",
+      "decision": "OA03",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "TWO_REAL_DISTINCT_NONADMIN_AUTHENTICATED_PRINCIPALS"
+    },
+    {
+      "id": "T07",
+      "scenario": "PULL_REQUEST_ACTION_OBTAINS_PRIVILEGED_WRITER_KEY",
+      "gate": "G01",
+      "decision": "OA01",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "SEPARATE_PR_TOKEN_AND_SIGNER_WRITER_SECRET_DOMAIN"
+    },
+    {
+      "id": "T08",
+      "scenario": "OMITTED_BYPASS_ACTORS_TREATED_AS_EMPTY",
+      "gate": "G01",
+      "decision": "OA05",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "INDEPENDENT_OWNER_ADMIN_BYPASS_INVENTORY"
+    },
+    {
+      "id": "T09",
+      "scenario": "APPROVER_SELF_SIGNS_POLICY_AND_REGISTRY",
+      "gate": "G01",
+      "decision": "OA01",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "DISTINCT_OWNER_APPROVAL_AND_REVOCATION_CONTROLLER"
+    },
+    {
+      "id": "T10",
+      "scenario": "FRESH_READER_ACCEPTS_OLDER_VALID_SIGNED_HISTORY",
+      "gate": "G02",
+      "decision": "OA02",
+      "state": "COUNTEREXAMPLE_BLOCK",
+      "control": "REMOTE_HIGHEST_ACCEPTED_FLOOR_FROM_INDEPENDENT_AUTHORITY"
+    },
+    {
+      "id": "T11",
+      "scenario": "GITHUB_REF_AND_DRIVE_OBJECT_DISAGREE_ON_CRASH",
+      "gate": "G03",
+      "decision": "OA04",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "TWO_SERVICE_READER_READBACK_AND_QUARANTINE_PROTOCOL"
+    },
+    {
+      "id": "T12",
+      "scenario": "ACTIONS_TOKEN_METADATA_MISTAKEN_FOR_GLOBAL_ROOT_FACT",
+      "gate": "G07",
+      "decision": "OA05",
+      "state": "UNVERIFIED_BLOCK",
+      "control": "SEPARATELY_AUTHENTICATED_PERMISSION_SCOPE_PROVENANCE"
+    }
+  ],
+  "observed_static": {
+    "repo_main_rule_id": 26801439,
+    "repo_main_positive_review_required": 0,
+    "repo_main_protected": true,
+    "witness_ref_provisioned": false,
+    "github_ci_bypass_list_visible": false,
+    "drive_metadata_folders_count": 5,
+    "drive_visible_owner_roles_each": 1,
+    "bound_roles_count": 0,
+    "distinct_principal_constraints": 25,
+    "github_connector_account_admin_permission_observed": true,
+    "admin_permission_does_not_prove_effective_bypass": true
+  },
+  "external_authority_signer_verified": false,
+  "external_monotonic_floor_verified": false,
+  "authenticated_two_principal_cas_verified": false,
+  "cross_service_atomic_commit_verified": false,
+  "independent_admin_bypass_inventory_verified": false,
+  "independent_owner_signoff_received": false,
+  "release_read_authorized": false,
+  "cache_write_authorized": false,
+  "trading_authorized": false,
+  "safe_next": "PRIVATE_OWNER_EFFECTIVE_IDENTITY_ACL_AND_PLATFORM_ROOT_RISK_REVIEW_NO_APPLY"
+}

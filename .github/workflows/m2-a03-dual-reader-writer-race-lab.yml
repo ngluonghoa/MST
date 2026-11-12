@@ -1,0 +1,41 @@
+name: MST A03 Dual-Reader Dual-Writer Reset Falsification - SYNTHETIC NO APPLY
+
+# Cloud-hosted read-only manufactured V1 SQLite / Decimal source scenario.
+# In-memory actor labels do not authenticate independent principals.
+# No physical Google Drive cache or GitHub protected ref mutation.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-dual-reader-writer-race-lab.yml"
+      - "scripts/m2_a03_dual_reader_writer_interleaving_lab.py"
+      - "tests/test_m2_a03_dual_reader_writer_interleaving_lab.py"
+      - "docs/MST_A03_DUAL_READER_WRITER_RACE_RESET_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  dual-readers-writers-reset-and-fork-negatives:
+    name: Same-process collision, stale reads, split brain, reset and crash
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned inherited source without vendor entitlements
+        run: python -m pip install -e ".[custody]"
+      - name: Execute 48 targeted negative and positive race tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dual_reader_writer_interleaving_lab.py' -v
+      - name: Exercise real inherited V1 SQLite/Decimal synthetic four-stage chain
+        run: |
+          python -m scripts.m2_a03_dual_reader_writer_interleaving_lab \
+            --out /tmp/mst-a03-dual-reader-writer-NO-REMOTE-TRUST.json
+      - name: Review-only evidence, NOT a signer or external rollback floor
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-dual-reader-writer-race-NO-AUTH
+          path: /tmp/mst-a03-dual-reader-writer-NO-REMOTE-TRUST.json
+          retention-days: 14
+          if-no-files-found: error

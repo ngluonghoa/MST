@@ -1,0 +1,51 @@
+name: MST M4 Option A Effective Authority / Root Bypass Review - READ ONLY
+
+# Green = twelve risk gaps still blocked, NOT a signer or root attestation.
+# No permissions write, no witnesses, no secrets, no vendor data, no Drive IO.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-effective-root-acl-review-readonly.yml"
+      - "scripts/m4_option_a_effective_authority_threat_preflight.py"
+      - "tests/test_m4_option_a_effective_authority_threat_preflight.py"
+      - "docs/MST_M4_OPTION_A_EFFECTIVE_AUTHORITY_THREAT_REGISTER_20261110.json"
+      - "docs/MST_M4_OPTION_A_EFFECTIVE_AUTHORITY_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  effective-root-and-owner-bypass-review-no-apply:
+    name: Twelve unverified authority threats; no signer, CAS or release
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source for synthetic-only validation
+        run: python -m pip install -e ".[custody]"
+      - name: Run 41 falsification tests (mocked API receipts, never source authority)
+        run: python -m unittest discover -s tests -p 'test_m4_option_a_effective_authority_threat_preflight.py' -v
+      - name: Read live GitHub ruleset and witness using only a read token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m scripts.m4_option_a_live_custody_audit \
+            > /tmp/mst-m4-root-actual-github-and-historical-drive.json
+          python -m scripts.m4_reader_readiness_preflight \
+            > /tmp/mst-m4-root-actual-github-readiness.json
+      - name: Validate unassigned owner-root threat model against real CI token metadata
+        run: |
+          python -m scripts.m4_option_a_effective_authority_threat_preflight \
+            --live-custody /tmp/mst-m4-root-actual-github-and-historical-drive.json \
+            --live-readiness /tmp/mst-m4-root-actual-github-readiness.json \
+            --out /tmp/mst-m4-root-NO-ATTESTATION-NO-PRODUCTION.json
+      - name: Retain transient sanitized review only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-root-owner-gaps-NO-AUTH
+          path: /tmp/mst-m4-root-NO-ATTESTATION-NO-PRODUCTION.json
+          retention-days: 14
+          if-no-files-found: error

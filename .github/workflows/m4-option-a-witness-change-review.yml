@@ -1,0 +1,40 @@
+name: MST M4 Option A Witness Owner Change Packet - NO APPLY
+
+# A green check certifies a DRAFT packet with zero privileged changes.
+# Run in pull_request with contents:read only. Never install a ruleset/ref.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-witness-change-review.yml"
+      - "docs/MST_M4_OPTION_A_WITNESS_OWNER_CHANGE_PACKET_20261109.json"
+      - "docs/MST_M4_OPTION_A_WITNESS_OWNER_CHANGE_PLAN_20261109.md"
+      - "docs/MST_M4_OPTION_A_WITNESS_CHANGE_QA_20261109.md"
+      - "scripts/m4_option_a_witness_change_preflight.py"
+      - "tests/test_m4_option_a_witness_change_preflight.py"
+
+permissions:
+  contents: read
+
+jobs:
+  owner-change-packet-no-action:
+    name: Validate owner packet, 8 gates OPEN, zero witness writes
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate witness owner decision and ref/ruleset proposal only
+        run: |
+          python -m scripts.m4_option_a_witness_change_preflight \
+            --out /tmp/m4-option-a-witness-change-review-unapproved.json
+      - name: Preserve owner packet without applying any GitHub setting
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-option-a-witness-owner-change-NO-APPLY
+          path: |
+            docs/MST_M4_OPTION_A_WITNESS_OWNER_CHANGE_PACKET_20261109.json
+            /tmp/m4-option-a-witness-change-review-unapproved.json
+          retention-days: 14
+          if-no-files-found: error

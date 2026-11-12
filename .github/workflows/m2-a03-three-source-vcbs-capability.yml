@@ -1,0 +1,246 @@
+name: MST A03 Three Sources Six TF VCBS Minute Price Negative QA
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-three-source-vcbs-capability.yml"
+      - "scripts/m2_a03_three_source_vcbs_capability_lab.py"
+      - "scripts/m2_a03_connected_source_freshness_lab.py"
+      - "scripts/m2_a03_documented_ohlc_transport_boundary_lab.py"
+      - "scripts/m2_a03_dnse_ws_reconnect_coverage_lab.py"
+      - "scripts/m2_a03_dnse_ws_protocol_lifecycle_lab.py"
+      - "scripts/m2_a03_dnse_rest_m5_backfill_contract_lab.py"
+      - "tests/test_m2_a03_dnse_ws_reconnect_coverage_lab.py"
+      - "tests/test_m2_a03_dnse_ws_protocol_lifecycle_lab.py"
+      - "tests/test_m2_a03_dnse_rest_m5_backfill_contract_lab.py"
+      - "tests/test_m2_a03_documented_ohlc_transport_boundary_lab.py"
+      - "tests/test_m2_a03_connected_source_freshness_lab.py"
+      - "tests/test_m2_a03_three_source_vcbs_capability_lab.py"
+      - "docs/MST_A03_THREE_SOURCE_VCBS_CAPABILITY_QA_20261110.md"
+      - "docs/MST_A03_DNSE_WS_PROTOCOL_LIFECYCLE_QA_20261111.md"
+      - "docs/MST_A03_DNSE_REST_M5_BACKFILL_CONTRACT_QA_20261111.md"
+
+permissions:
+  contents: read
+
+jobs:
+  vcbs-source-capability-original-bytes-unmodified:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install unchanged inherited and opt-in package
+        run: python -m pip install -e .
+      - name: Lock original Swing 63 V1 plus 8 V2 source bytes against upstream main PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-three-source-lock.json
+      - name: Run 64 SSI DNSE source-mode and VCBS source-capability tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_three_source_vcbs_capability_lab.py' -v
+      - name: Run 24 SSI latest/session clock and cross-provider comparability tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_connected_source_freshness_lab.py' -v
+      - name: Validate synthetic source clock, asof and last-M5 comparability NO GO
+        run: |
+          python -m scripts.m2_a03_connected_source_freshness_lab --out /tmp/mst-source-clock-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/tmp/mst-source-clock-NO-GO.json").read_text())
+          assert d["status"]=="CONNECTOR_ASOF_IS_NOT_VENDOR_FIRST_KNOWN_NO_GO"
+          assert d["synthetic_ssi"]["syntactic_lag_seconds"]==900
+          assert d["synthetic_ssi"]["signal_eligible"] is False
+          assert d["exchange_calendar_freshness_age_limit"] is None
+          assert d["source_bar_rows_persisted"] is False
+          assert len(d["cross_mode_pairs"])==3
+          assert all(p["permitted_to_confirm_latest_m5"] is False for p in d["cross_mode_pairs"])
+          for k in ("source_issuer_clock_authenticated","source_first_known_authenticated",
+                   "official_calendar_and_session_open_verified",
+                   "native_m5_closed_bar_verified",
+                   "cross_provider_same_native_timeframe_verified",
+                   "source_rights_verified","physical_google_drive_cache_authorized",
+                   "owner_a02_63_approved","owner_a03_v2_8_approved",
+                   "owner_a03_14_approved","production_release_authorized",
+                   "trading_authorized"):
+              assert d[k] is False,k
+          print("CONNECTOR META ASOF != PUBLISHER FIRST-KNOWN; CROSS-MODE M5 NO-GO")
+          PY
+      - name: Test 26 DNSE documented WebSocket forming/closed and SSI REST 30m facts
+        run: python -m unittest discover -s tests -p 'test_m2_a03_documented_ohlc_transport_boundary_lab.py' -v
+      - name: Verify published source transport never becomes authenticated M5 signal
+        run: |
+          python -m scripts.m2_a03_documented_ohlc_transport_boundary_lab --out /tmp/mst-a03-documented-ohlc-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a03-documented-ohlc-NO-GO.json").read_text())
+          assert r["status"]=="DOCUMENTED_SOURCE_TRANSPORT_IS_NOT_CONNECTED_OR_LICENSED_NO_GO"
+          assert r["ssi_public_rest_v3_m30"]["rest_v3_public_timeFrame_30m"] is True
+          assert r["ssi_public_rest_v3_m30"]["current_connected_mcp_supports_rest_v3_30m"] is False
+          assert r["dnse_public_ws_start_label_documented"] is True
+          assert r["dnse_public_ws_ohlc_closed_channel_documented"] is True
+          assert r["dnse_connected_mcp_is_d1_history_not_live_ws"] is True
+          assert r["dnse_qualified_closed_M5_signal"] is False
+          assert len(r["fabricated_channel_observations"])==2
+          assert r["fabricated_channel_observations"][0]["source_payload_self_declares_closed_channel"] is True
+          assert r["fabricated_channel_observations"][1]["source_payload_self_declares_closed_channel"] is False
+          assert all(x["can_emit_signal"] is False for x in r["fabricated_channel_observations"])
+          for k in ("connected_mcp_exposes_this_native_ws_stream",
+                    "connected_mcp_exposes_rest_v3_30m",
+                    "vendor_channel_origin_authenticated",
+                    "provider_entitlement_and_retention_authorized",
+                    "signed_source_first_known_history_verified",
+                    "official_exchange_calendar_and_auction_verified",
+                    "native_bar_feed_closed_and_complete_independently_verified",
+                    "real_historical_revision_ledger_verified",
+                    "real_market_data_cached_on_google_drive",
+                    "original_v1_or_v2_source_changed",
+                    "a02_owner_63_approved","a03_v2_owner_8_approved",
+                    "a03_owner_14_approved","production_release_authorized",
+                    "trading_authorized"):
+              assert r[k] is False,k
+          print("DNSE CLOSED VS FORMING DOCUMENTED TRANSPORT: SIMULATED ONLY; NO LIVE SOURCE")
+          PY
+      - name: Run 32 DNSE WS reconnect/gap/duplicate and chronology tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_ws_reconnect_coverage_lab.py' -v
+      - name: Confirm synthetic reconnect cannot prove vendor source or complete M5 history
+        run: |
+          python -m scripts.m2_a03_dnse_ws_reconnect_coverage_lab --out /tmp/mst-a03-dnse-ws-reconnect-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a03-dnse-ws-reconnect-NO-GO.json").read_text())
+          assert r["status"]=="DNSE_WS_REPLAY_AND_GAP_COVERAGE_SYNTHETIC_NO_SOURCE_AUTHORITY"
+          assert r["scenario_count"]==10
+          x=r["cases"]
+          assert x["COMPLETE_UNTRUSTED"]["status"]=="STRUCTURALLY_COVERED_BUT_UNTRUSTED"
+          assert x["NO_CLOSED_MIDDLE"]["missing"]==1
+          assert x["FORMING_NOT_CLOSED"]["missing"]==1
+          assert x["CLOSED_OUT_OF_ORDER"]["reordered"]==1
+          assert x["EXACT_DUPLICATE_NOT_PROOF"]["duplicate"]==1
+          assert x["CONFLICTING_DUPLICATE"]["conflicts"]==1
+          assert x["RECONNECT_COMPLETE_STILL_UNTRUSTED"]["reconnect"]==1
+          assert x["FORMING_AFTER_CLOSED"]["signal_eligible"] is False
+          assert all(z["signal_eligible"] is False for z in x.values())
+          assert r["fake_grid_not_official_session_holiday_auction"] is True
+          assert r["fake_local_connection_generation_not_issuer_sequence"] is True
+          assert r["no_real_ws_rows_or_source_timestamps_saved"] is True
+          for k in ("actual_ws_access_ever_used","actual_exchange_calendar_qualified",
+                   "publisher_issuer_authenticated",
+                   "source_sequence_or_resumption_contract_verified",
+                   "provider_history_backfill_authenticated",
+                   "closed_feed_history_complete_verified",
+                   "source_revision_first_known_verified",
+                   "independent_source_ledger_verified",
+                   "licensed_market_data_retention_authorized",
+                   "real_drive_market_cache_active","original_63_v1_or_8_v2_changed",
+                   "a02_63_owner_approved","a03_v2_8_owner_approved",
+                   "a03_14_owner_approved","production_release_authorized",
+                   "trading_authorized"):
+              assert r[k] is False,k
+          print("DNSE WS RECONNECT AND CLOSE COVERAGE: NO REAL SOURCE AUTHORITY")
+          PY
+      - name: Run 48 corrected DNSE WS client lifecycle and source-document negative tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_ws_protocol_lifecycle_lab.py' -v
+      - name: Verify fabricated handshake and reconnection NEVER qualify real source
+        run: |
+          python -m scripts.m2_a03_dnse_ws_protocol_lifecycle_lab --out /tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json").read_text())
+          assert r["status"]=="DOCUMENTED_WEBSOCKET_PROTOCOL_SIMULATED_NO_LIVE_AUTHORITY"
+          assert r["imaginary_session_count"]==2
+          assert r["fake_auth_attempts"]==2
+          assert r["fake_subscribe_ack_count"]==2
+          assert r["fake_closed_event_count"]==2
+          assert r["fake_heartbeat_roundtrips"]==1
+          assert r["fake_proactive_pongs"]==0
+          assert r["fake_pongs_without_echo"]==0
+          assert r["fake_pong_echo_mismatches"]==0
+          assert r["fake_error_controls"]==0
+          assert r["actual_doc_control_action_model_used"] is True
+          assert r["synthetic_trace_only"] is True
+          for k in ("source_credentials_present","real_websocket_opened",
+                    "source_issuer_authenticated","historical_backfill_proven",
+                    "closed_delivery_completeness_proven","real_m5_source_qualified",
+                    "google_drive_market_cache_enabled","production_or_trading_authorized"):
+              assert r[k] is False,k
+          print("DOCUMENTED DNSE WS CONTROL SEQUENCE: SYNTHETIC ONLY; NO GO")
+          PY
+      - name: Run 23 DNSE public REST M5 history nextTime and WS closed overlap negative tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_dnse_rest_m5_backfill_contract_lab.py' -v
+      - name: Ensure public DNSE REST pagination does not grant source rights or history custody
+        run: |
+          python -m scripts.m2_a03_dnse_rest_m5_backfill_contract_lab --out /tmp/mst-dnse-rest-m5-backfill-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-dnse-rest-m5-backfill-NO-GO.json").read_text())
+          assert r["status"]=="PUBLIC_DNSE_M5_REST_BACKFILL_SHAPE_NOT_ISSUER_AUTHORITY_NO_GO"
+          assert r["documentation"]["resolution"]=="5"
+          assert r["documentation"]["historical_response_fields"]==["t","o","h","l","c","v","nextTime"]
+          assert r["fake_pagination"]["synthetic_pages_observed"]==2
+          assert r["fake_pagination"]["synthetic_rows_observed"]==3
+          assert r["fake_pagination"]["nexttime_zero_claimed_at_end"] is True
+          assert r["fake_closed_vs_rest"]["status"]=="IDENTICAL_NUMERIC_SHAPE_NOT_SOURCE_PROOF"
+          for k in ("source_lawful_entitlement_verified",
+                    "issuer_first_known_or_revision_ledger_verified",
+                    "official_exchange_calendar_verified","real_history_saved",
+                    "real_drive_market_cache_enabled","production_or_trading_allowed"):
+              assert r[k] is False,k
+          print("PUBLIC DNSE REST NEXTTIME IS NOT SOURCE FIRST-KNOWN OR LICENSE")
+          PY
+      - name: Ensure all 18 rows and VCBS price-only fixture remain NO GO
+        run: |
+          python -m scripts.m2_a03_three_source_vcbs_capability_lab --out /tmp/mst-three-source-vcbs-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-three-source-vcbs-NO-GO.json").read_text())
+          lock=json.loads(Path("/tmp/mst-three-source-lock.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert r["provider_count"] == 3 and r["timeframe_count"] == 6
+          assert r["rows_count"] == 18 and len(r["rows"]) == 18
+          assert r["vcbs_fabricated_probe"]["synthetic_points"] == 3
+          assert r["vcbs_fabricated_probe"]["source_has_per_candle_ohlcv"] is False
+          assert r["vcbs_fabricated_probe"]["valid_for_signal_indicators"] is False
+          p=r["ssi_dnse_synthetic_mode_probe"]
+          assert p["ssi_original_c2_shape"]=="SHAPE_RETURNED"
+          assert p["ssi_synthetic_rows"]==3
+          assert p["ssi_raw_date_semantic_authenticated"] is False
+          assert p["ssi_ambiguous_latest_token_inferred"] is False
+          assert p["dnse_original_c2_shape"]=="SHAPE_RETURNED"
+          assert p["dnse_synthetic_d1_rows"]==3
+          assert p["dnse_connected_minute_ohlcv_blocked"] is True
+          assert p["real_source_payload_persisted"] is False
+          assert all(row["qualified_native_ohlcv"] is False and
+                     row["signal_eligible"] is False for row in r["rows"])
+          for key in ("native_minute_ohlcv_connected_and_qualified",
+                      "independent_vendor_issuer_verified","publisher_first_known_verified",
+                      "official_calendar_and_timestamp_semantics_verified",
+                      "source_rights_and_retention_approved","real_drive_market_cache_authorized",
+                      "upstream_v1_or_v2_modified","a02_63_approved","a03_v2_8_approved",
+                      "a03_14_approved","production_release_authorized","trading_authorized"):
+              assert r[key] is False,key
+          print("VCBS PRICE POINTS REMAIN REFERENCE ONLY; ALL 18 TF CELLS NO GO")
+          PY
+      - name: Retain fabricated-only source lock and six-TF receipt for fourteen days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-three-source-six-tf-vcbs-NO-GO
+          path: |
+            /tmp/mst-three-source-lock.json
+            /tmp/mst-three-source-vcbs-NO-GO.json
+            /tmp/mst-source-clock-NO-GO.json
+            /tmp/mst-a03-documented-ohlc-NO-GO.json
+            /tmp/mst-a03-dnse-ws-reconnect-NO-GO.json
+            /tmp/mst-a03-dnse-ws-lifecycle-NO-GO.json
+            /tmp/mst-dnse-rest-m5-backfill-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

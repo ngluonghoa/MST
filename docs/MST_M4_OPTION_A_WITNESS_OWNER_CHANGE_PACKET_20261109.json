@@ -1,0 +1,227 @@
+{
+  "schema": "mst.m4.option-a.witness-change-packet.unapproved.v1",
+  "status": "OWNER_CHANGE_REVIEW_PACKET_NO_ACTION_AUTHORIZED",
+  "repository": "ngluonghoa/MST",
+  "branch_scope": "DRAFT_PR8_ONLY",
+  "source_baseline": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "user_selected_platform_scope": "GITHUB_AND_GOOGLE_DRIVE_ONLY",
+  "witness_ref": "refs/heads/mst/m4-witness/v1",
+  "current_witness_ref_exists": false,
+  "current_main_ruleset_id": 26801439,
+  "current_main_required_approving_reviews": 0,
+  "current_main_required_signed_commits_in_inspected_ruleset": false,
+  "current_ci_token_bypass_list_visible": false,
+  "current_classic_branch_protection_endpoint_readable": false,
+  "independent_admin_and_root_graph_verified": false,
+  "effective_witness_bypass_absence_verified": false,
+  "approved_production_root_registry": false,
+  "proposed_witness_ruleset_path": "docs/MST_M4_WITNESS_RULESET_PROPOSAL_20261109.json",
+  "proposed_identity_policy_path": "docs/MST_M4_OPTION_A_ROLE_SEPARATION_PROPOSAL_20261109.json",
+  "suggested_rule_types": [
+    "deletion",
+    "non_fast_forward",
+    "required_signatures"
+  ],
+  "forbidden_rule_types_for_unenrolled_writers": [
+    "creation",
+    "update"
+  ],
+  "expected_ruleset_condition": {
+    "include": [
+      "refs/heads/mst/m4-witness/v1"
+    ],
+    "exclude": []
+  },
+  "proposed_bypass_actors": [],
+  "privileged_roles_to_verify": [
+    "POLICY_CONTROLLER",
+    "SIGNER_ROOT_CUSTODIAN",
+    "REVOCATION_CONTROLLER",
+    "WITNESS_WRITER_A",
+    "WITNESS_WRITER_B",
+    "DRIVE_CHUNK_WRITER",
+    "READ_ONLY_VERIFIER"
+  ],
+  "owner_approvals": [
+    {
+      "id": "C01",
+      "decision": "APPROVE_CUSTODIAN_IDENTITIES_ROOT_ADMIN_AND_BYPASS_INVENTORY",
+      "required_evidence": "Owner must independently review actual GitHub/Drive administrator and signer/recovery control graph, not role aliases",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C02",
+      "decision": "APPROVE_WITNESS_REF_NAMESPACE_AND_OWNER_AUTHORITY",
+      "required_evidence": "Explicit choice of one GitHub witness custody domain; exact ref scope, root/admin threat and rollback model",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C03",
+      "decision": "APPROVE_GENESIS_BOOTSTRAP_BEFORE_RULESET_ENFORCEMENT",
+      "required_evidence": "Owner independently approves initial protected genesis head and rollback floor without Actions cache",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C04",
+      "decision": "APPROVE_WITNESS_RULESET_APPLY_AND_READBACK",
+      "required_evidence": "Admin proposes exact deletion/non-FF/signed-commit rules with empty effective bypass and authorizes readback",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C05",
+      "decision": "APPROVE_TWO_WRITER_AND_INDEPENDENT_READER_ENROLLMENT",
+      "required_evidence": "Different authenticated nonadmin writers and a separate reader, no PR workflow writer secrets",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C06",
+      "decision": "APPROVE_SERVER_CAS_AND_ADVERSARIAL_ROLLBACK_EXPERIMENT",
+      "required_evidence": "Real two-credential one-winner evidence and root-policy tamper detection; not an untrusted fixture",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C07",
+      "decision": "APPROVE_LICENSED_DRIVE_CUSTODY_AND_REVOKE_RECOVERY",
+      "required_evidence": "Rights/retention, physical Drive blob SHA, independent reader, two-service crash and global key revocation",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    },
+    {
+      "id": "C08",
+      "decision": "APPROVE_FINAL_PARITY_ABI_M3_M4_RELEASE",
+      "required_evidence": "A02 63 source dispositions, A03 ABI, M3/M4/M8 and no trade before owner release",
+      "status": "OPEN_OWNER_REVIEW_REQUIRED",
+      "owner_principal": null,
+      "approval_receipt_uri": null,
+      "independently_attested": false
+    }
+  ],
+  "change_sequence": [
+    {
+      "id": "S00",
+      "operation": "CURRENT_STATE_READ_ONLY_PREFLIGHT",
+      "intent": "GET GitHub main, existing rulesets/witness ref with separate read identities; GET Drive folder permission metadata; snapshot only",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": false,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S01",
+      "operation": "OWNER_REVIEW_IDENTITIES_AND_ADMIN_RECOVERY",
+      "intent": "Privately inventory effective policy controllers, signer root, separate revoker, 2 writers, Drive writer, reader and all admin/bypass/recovery paths",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": false,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S02",
+      "operation": "OWNER_APPROVE_REF_AND_GENESIS",
+      "intent": "Approve exact target ref and non-resettable starting floor sourced from verified data/right revisions; no bootstrap from CI cache",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S03",
+      "operation": "OWNER_GATED_GENESIS_BRANCH_CREATION",
+      "intent": "Only after explicit scoped approval: create immutable genesis on exact witness ref BEFORE applying restrictive policy",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S04",
+      "operation": "OWNER_GATED_RULESET_INSTALLATION",
+      "intent": "Only after separate explicit scoped approval: install ruleset to exact witness ref with deletion, non_fast_forward and required_signatures, bypass_actors empty",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S05",
+      "operation": "INDEPENDENT_READBACK_AND_EFFECTIVE_PROTECTION",
+      "intent": "Verify actual ref, ruleset scope/enforcement/protection/bypass with distinct authenticated identity; policy admin mismatch or 403 => BLOCK",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S06",
+      "operation": "OWNER_GATED_WRITER_SIGNER_ENROLLMENT",
+      "intent": "Only after separately approved real signer roles: enroll two distinct narrow writer principals and independent reader; no PR-token privileges",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S07",
+      "operation": "MULTIWRITER_CAS_ROLLBACK_AND_GLOBAL_REVOKE_ACCEPTANCE",
+      "intent": "Two authenticated sibling writers exactly one winner; attempt stale signed G1 and admin rollback; quarantine unknown; revocation propagates",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S08",
+      "operation": "PHYSICAL_LICENSED_DRIVE_CHUNK_AND_CROSS_SERVICE_BARRIER",
+      "intent": "When G04 approved, read actual licensed bytes back, bind Drive ID/hash to protected Git ref and test 2-service crash/recovery",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    },
+    {
+      "id": "S09",
+      "operation": "FINAL_OWNER_DISPOSITION",
+      "intent": "Owner independently signs G01..G08, A02/A03/M3/M4/M8; only separate production admission can authorize market cache/trading",
+      "status": "NOT_EXECUTED",
+      "requires_independent_owner_authorization": true,
+      "execution_evidence_uri": null,
+      "actual_resource_mutation": false
+    }
+  ],
+  "current_owner_authorization_for_privileged_changes": false,
+  "real_witness_ruleset_installed": false,
+  "real_witness_branch_bootstrapped": false,
+  "real_owner_signer_enrolled": false,
+  "real_two_auth_writer_cas_verified": false,
+  "real_license_and_first_known_attested": false,
+  "real_drive_bytes_verified": false,
+  "global_revocation_verified": false,
+  "protected_nonresettable_monotonic_floor_verified": false,
+  "release_approved": false,
+  "production_cache_read_authorized": false,
+  "production_cache_write_authorized": false,
+  "trading_authorized": false,
+  "residual_risk": "GITHUB_REPO_ROOT_ADMIN_CAN_CHANGE_OR_REPLACE_REPO_RULES_OR_HISTORY_UNLESS_INDEPENDENTLY_DETECTED; SAME_CONTROLLER_ACROSS_GITHUB_AND_DRIVE_NOT_PROVEN_SAFE",
+  "recovery_rule": "ON_POLICY_BYPASS_RESET_REF_DRIFT_UNVERIFIED_OWNER_OR_403_QUARANTINE_AND_REQUIRE_OWNER_INDEPENDENT_FLOOR_READBACK; NEVER_AUTOMATICALLY_REBASE_OR_REBOOTSTRAP_G1",
+  "decision": "NO_GO_UNTIL_SEPARATE_OWNER_APPROVAL_AND_ADVERSARIAL_EVIDENCE"
+}

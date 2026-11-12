@@ -1,0 +1,71 @@
+name: MST A03 Test-Only V2 Session Membership and PIT Screen — OWNER NO-GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-v2-session-pit-screen-negative.yml"
+      - "scripts/m2_a03_v2_session_pit_screen_lab.py"
+      - "tests/test_m2_a03_v2_session_pit_screen_lab.py"
+      - "docs/MST_A03_V2_SESSION_PIT_SCREEN_NEGATIVE_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  v2-untrusted-session-pit-screen:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install unchanged original plus opt-in V2 test package
+        run: python -m pip install -e .
+      - name: Original 63 V1 plus 8 V2 live source-byte lock first
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-v2-session-pit-source-lock.json
+      - name: Run 38 untrusted session and point-in-time screening tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_v2_session_pit_screen_lab.py' -v
+      - name: Execute original V1 plus existing V2 consumer and revision hypotheses
+        run: |
+          python -m scripts.m2_a03_v2_session_pit_screen_lab --out /tmp/mst-a03-v2-session-pit-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-a03-v2-session-pit-NO-GO.json").read_text())
+          lock=json.loads(Path("/tmp/mst-v2-session-pit-source-lock.json").read_text())
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert x["assertion_count"] == 16
+          assert x["before_correction_candidate"] == "r1"
+          assert x["at_exact_correction_first_known_candidate"] == "r2"
+          assert x["existing_v2_consumer_old_asof_denied"] is True
+          assert x["existing_v2_preview_wrong_session_not_authenticated"] is True
+          assert x["proposed_test_only_slot_screen_rejects_cross_session"] is True
+          for key in ("external_exchange_calendar_authenticated",
+                      "provider_session_membership_authenticated",
+                      "revision_ledger_completeness_authenticated",
+                      "source_first_known_issuer_authenticated",
+                      "licensed_historical_data_authorized",
+                      "real_google_drive_cache_implemented",
+                      "external_floor_or_cas_verified",
+                      "existing_v1_or_v2_module_modified",
+                      "owner_a02_63_approved","owner_a03_v2_8_approved",
+                      "owner_a03_14_choices_approved",
+                      "production_release_authorized","trading_authorized"):
+              assert x[key] is False,key
+          print("V2 test-only screen blocks cross-session; historical as-of scoped, NO-GO")
+          PY
+      - name: Archive sanitized source lock and 16-case synthetic NO-GO receipt only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-v2-session-pit-untrusted-NO-GO
+          path: |
+            /tmp/mst-v2-session-pit-source-lock.json
+            /tmp/mst-a03-v2-session-pit-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

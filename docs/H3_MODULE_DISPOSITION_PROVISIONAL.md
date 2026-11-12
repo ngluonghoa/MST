@@ -21,15 +21,15 @@ these require separate consumer, migration and rollback evidence.
 | cache_fetch_planner | cache_and_persistence | 150 | 30 | 77 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
 | cache_snapshot_bundle | cache_and_persistence | 357 | 24 | 61 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | cache_swap_preview | domain_and_reference | 133 | 16 | 47 | 0 | KEEP | none |
-| causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
+| causal | domain_and_reference | 22 | 4 | 7 | 2 | KEEP | none |
 | causal_indicators | domain_and_reference | 236 | 18 | 58 | 2 | KEEP | none |
-| contracts | domain_and_reference | 59 | 5 | 6 | 7 | KEEP | none |
+| contracts | domain_and_reference | 59 | 5 | 6 | 9 | KEEP | none |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
 | engine | domain_and_reference | 14 | 1 | 7 | 0 | KEEP | none |
-| engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
+| engineering_contracts | engineering_governance | 175 | 10 | 27 | 7 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
 | evidence_recovery | evidence_and_rights | 81 | 4 | 23 | 1 | KEEP | none |
@@ -54,7 +54,7 @@ these require separate consumer, migration and rollback evidence.
 | reference_offline_verified_archive | evidence_and_rights | 159 | 15 | 96 | 0 | IMPROVE | FUNCTION_90_PLUS |
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| replay | domain_and_reference | 26 | 3 | 5 | 31 | KEEP | HIGH_FAN_IN |
+| replay | domain_and_reference | 26 | 3 | 5 | 38 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 191 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -66,6 +66,14 @@ these require separate consumer, migration and rollback evidence.
 | ssi_multivenue_review | source_adapter_and_quality | 129 | 11 | 59 | 0 | KEEP | none |
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 1 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
+| strict_contract_v2 | domain_and_reference | 180 | 13 | 29 | 1 | KEEP | none |
+| v2_cache_fencing_lab | domain_and_reference | 207 | 23 | 42 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| v2_cache_partition_plan | domain_and_reference | 161 | 10 | 25 | 1 | KEEP | none |
+| v2_cloud_publish_verify_lab | domain_and_reference | 214 | 32 | 73 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| v2_cloud_ref_witness_plan | domain_and_reference | 164 | 8 | 26 | 1 | KEEP | none |
+| v2_provider_readiness | domain_and_reference | 167 | 21 | 43 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| v2_replay_port | domain_and_reference | 97 | 10 | 22 | 0 | KEEP | none |
+| v2_source_adapter | domain_and_reference | 230 | 7 | 18 | 2 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |

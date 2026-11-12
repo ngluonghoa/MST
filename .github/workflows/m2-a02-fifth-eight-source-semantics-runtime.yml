@@ -1,0 +1,84 @@
+name: MST A02 Fifth Eight SSI DNSE VCBS Original Source Semantics — Synthetic NO-GO
+
+# Executes EIGHT original, source-byte locked Swing V1 modules with fabricated
+# input test constructors. No external provider, market feeds, auth, Drive
+# real market cache, signer, broker, order, production deployment or release.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-fifth-eight-source-semantics-runtime.yml"
+      - "scripts/m2_a02_fifth_eight_source_semantics_runtime_lab.py"
+      - "tests/test_m2_a02_fifth_eight_source_semantics_runtime_lab.py"
+      - "docs/MST_A02_FIFTH_EIGHT_SSI_DNSE_VCBS_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-v1-provider-meaning-not-authority:
+    name: 8 inherited original V1 SSI/DNSE/VCBS domain behaviors, 40 tests
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install original Swing package in ephemeral GitHub-hosted runner
+        run: python -m pip install -e .
+      - name: Independently verify REAL upstream/main/current PR Git source-byte tree
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-fifth-eight-original-remote-tree.json
+      - name: Execute 40 original inherited SSI/DNSE/VCBS tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_fifth_eight_source_semantics_runtime_lab.py' -v
+      - name: Link 8 original V1 modules under source trust and no-trade preconditions
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m scripts.m2_a02_fifth_eight_source_semantics_runtime_lab \
+            --out /tmp/mst-a02-fifth-eight-original-ssi-dnse-vcbs-NO-GO.json
+          python - <<'PY'
+          import json
+          original=json.load(open("/tmp/mst-a02-fifth-eight-original-remote-tree.json"))
+          r=json.load(open("/tmp/mst-a02-fifth-eight-original-ssi-dnse-vcbs-NO-GO.json"))
+          assert original["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert original["original_python_module_count"] == 63
+          assert original["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert r["distinct_original_this_batch"] == 8
+          assert r["previous_distinct_originals"] == 32
+          assert r["cumulative_scoped_runtime_originals"] == 40
+          assert r["remaining_originals_without_tranche_style_runtime_qa"] == 23
+          assert r["linked_safety_count"] == 8
+          assert all(r["linked_safety_checks"].values())
+          assert r["human_owner_a02_module_dispositions"] == 0
+          for k in (
+              "ssi_date_policy_certified_by_vendor",
+              "ssi_m1_label_gaps_are_missing_bars_proven",
+              "three_venues_prove_provider_independence",
+              "three_vendor_names_prove_independent_authentication",
+              "real_provider_api_or_mcp_called",
+              "full_native_m1_m5_m15_source_verified",
+              "real_vendor_data_rights_verified",
+              "source_quote_retention_approved",
+              "physical_drive_market_cache_read_write",
+              "a03_v2_full_abi_behavior_owner_approved",
+              "g01_g08_external_owner_security_gates_passed",
+              "production_release_authorized",
+              "trading_authorized",
+          ):
+              assert r[k] is False, k
+          print("A02 FIFTH ORIGINAL EIGHT: 40 EXECUTED TESTS; 40 DISTINCT V1 SCOPED; 23 REMAIN; AUTH AND TRADE NO-GO")
+          PY
+      - name: Retain nonauthenticating review metadata only 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-fifth-eight-original-source-semantics-NO-GO
+          path: |
+            /tmp/mst-a02-fifth-eight-original-remote-tree.json
+            /tmp/mst-a02-fifth-eight-original-ssi-dnse-vcbs-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

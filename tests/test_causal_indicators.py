@@ -209,6 +209,39 @@ class CausalATR14Tests(unittest.TestCase):
                          "BAR_NOT_QUALIFIED_AT_CUTOFF")
 
 
+    def test_gapped_daily_fixture_history_is_math_only_without_calendar_attestation(self):
+        """15 ordered bars can be calendar-incomplete: cannot certify coverage."""
+        gapped = tuple(
+            snap(make_bar(i, start=START + timedelta(days=2*i)))
+            for i in range(15)
+        )
+        result = calculate_wilder_atr14(gapped, as_of_utc=AS_OF)
+        self.assertEqual(result.value, Decimal("4"))
+        self.assertEqual(result.state, IndicatorState.COMPUTED_UNCALIBRATED)
+        self.assertFalse(result.data_certified)
+        self.assertFalse(result.parameter_approved)
+        self.assertFalse(result.actionable)
+
+    def test_claimed_endpoint_change_is_not_independent_vendor_proof(self):
+        """Local source context cannot attest actual provider origin/rights."""
+        rows = list(d1())
+        old = rows[7].selected
+        forged = replace(
+            old,
+            provenance=replace(
+                old.provenance,
+                endpoint="synthetic://unverified-other-endpoint",
+                source_snapshot_id="caller-claimed-switch",
+            ),
+        )
+        rows[7] = snap(forged)
+        result = calculate_wilder_atr14(tuple(rows), as_of_utc=AS_OF)
+        self.assertEqual(result.value, Decimal("4"))
+        self.assertEqual(result.state, IndicatorState.COMPUTED_UNCALIBRATED)
+        self.assertFalse(result.data_certified)
+        self.assertFalse(result.actionable)
+
+
 class CausalRVOLTF20Tests(unittest.TestCase):
     def test_constant_daily_volume_is_one(self):
         target,prior=tf20()

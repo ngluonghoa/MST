@@ -1,0 +1,35 @@
+# MST A03 — Multi-segment M5 trading-day gap/market-phase test candidate
+
+Date: 2026-11-10 Asia/Ho_Chi_Minh
+QA ID: MST-A03-MULTI-SEGMENT-GAP-PHASE-20261110
+Status: Draft PR8 ONLY, synthetic negative QA, not a real trading calendar. GitHub exact-head CI pending.
+
+## Evidence motivating this distinct next test
+The previous A03 candidate UntrustedSessionSlot correctly required four contiguous M5 candles in ONE synthetic interval, but a single contiguous grid is insufficient to express a full trading day that includes a break. Verified public educational context: HOSE published English "Trading hours" PDF https://staticfile.hsx.vn/Uploads/UploadDocuments/2372209/2.Trading%20hours.pdf specifies 09:00-09:15 opening auction, 09:15-11:30 continuous morning, 11:30-13:00 lunch, 13:00-14:30 afternoon continuous, and 14:30-14:45 closing call auction. HNX official FAQ https://cbinfo.hnx.vn/vi-vn/hoi-dap.html describes a similar lunch break and distinct HNX/UPCoM matching rules. These are *public background sources*, NOT provider-licensed M5 OHLCV, signed notice validity, instrument/holiday/suspension proof, clock custody or eligibility for a particular issuer/feed. No exchange snapshot or Google Drive licensed bar was fetched.
+
+## Implemented scope: scripts/tests ONLY
+scripts/m2_a03_multi_segment_session_gap_lab.py composes existing test-only A03 UntrustedSessionSlot and screen() with original SessionType enum, V1↔V2 identity mapping, and retained r1/r2 first-known candidate logic. It models two small M5 CONTINUOUS segments on a fabricated HOSE-like day: 11:20–11:30 and 13:00–13:10 Asia/Ho_Chi_Minh, separated by 90 minutes. Each segment has strictly contiguous permitted M5 starts; the daily candidate allows a disjoint, sorted, nonoverlapping union without silently filling lunch. Each candle must match an EXPLICIT claimed segment, matching exchange and full V2/V1 partition binding.
+
+Conservative negative policy: noon break candle, boundary-crossing candle, wrong segment, wrong venue, duplicate labels, overlap/reverse, wrong local date, caller self-verified calendar and unknown segment are rejected. Synthetic AUCTION/AFTER_HOURS segments cannot automatically be interpreted as CONTINUOUS M5 bars: source-specific auction/aggregation semantics require independent owner approval. A historic morning-bar correction first published the following day remains in morning event-time segment but is only selected as revision r2 at exact first-known; just before, r1 is used. All metadata is invented; SHA256 indexes are local consistency, not authority.
+
+32 additional unittest methods plus 16 direct integration assertions run in GitHub-hosted Python 3.12, original 63 inherited V1 and eight opt-in V2 unchanged with upstream/main/PR byte-lock. No calendar provider integration, official holiday/closure inventory, market source entitlement, real Google Drive cache, Mac/MOCHI/local, third cloud or broker.
+
+## Owner decisions / limitations
+The 2x10-minute CONTINUOUS example does NOT assert an official full-session minute-bar inventory, when auction trades form 5-minute candles, whether a particular provider timestamps bar START or END, or any completed first-known ledger. Production calendar issuer, approved exchange/venue phase mapping, instrument suspensions, historical calendar version/notice custody, licensed data-retention and physical Drive cache permissions must be independently verified. A02 owner 0/63, A03 V2 0/8 and A03 owner choices 0/14; G01–G08/OA01–OA06 remain OPEN. No V1 fix, new production V2 module, main/ruleset/ACL change, merge, release or trading.
+
+## QA evidence
+PENDING exact report-containing GitHub Actions readback.
+
+
+## Boundary-test correction (QA process)
+First CI execution at code HEAD b7dad8267fc0828177182d3b3b6bf326cd553d09 flagged a *test authoring error*: [11:25,11:30) was labeled as lunch-crossing although it ends exactly at the 11:30 boundary, a valid final continuous M5 bar. Fixed at 6b7685058fdd48067e804b74b98f7c6433c581cc by using a genuinely crossing [11:27,11:32) synthetic bar, and the GitHub-hosted 31 tests passed. An explicit positive [11:25,11:30) edge assertion was added to prevent future confusion. This test-only correction does not indicate an upstream source bug or a verified real trade/calendar exception.
+
+## Actual GitHub-hosted QA at implementation code commit
+
+At Draft PR8 implementation code HEAD `7459ce226a2d152513ab96aaeb745825af50c562`, **45/45 GitHub Actions workflows SUCCESS**. Dedicated A03 gapped M5 / market phase run https://github.com/ngluonghoa/MST/actions/runs/42849198205 SUCCESS, including 32/32 newly authored negative and positive boundary unit tests, 16/16 original V1/existing V2/revision-as-of synthetic integration observations, source-lock of 63 inherited original V1 + eight existing opt-in V2 against pinned Swing/main/PR, and sanitized 14-day synthetic-only artifact.
+
+The receipt digest `fd6a191057ccec858dffc20fa46c9fb8bc87f0f713f990833d860451490e4a37` is a LOCAL QA fingerprint, not an independent exchange or licensed source attestation. The first implementation HEAD b7dad8267fc0828177182d3b3b6bf326cd553d09 failed because the new test mislabeled [11:25,11:30) as a crossing candle; corrected to an actual crossing [11:27,11:32) at 6b7685058fdd48067e804b74b98f7c6433c581cc (31 cases PASS) and added explicit valid [11:25,11:30) positive regression at `7459ce226a2d152513ab96aaeb745825af50c562` (32 cases PASS). No original source module bug is inferred from that test-authoring correction.
+
+Source remains locked, no official full-session per-security calendar, signed vendor first-known/auction-aggregation custody, licensed cache rights, real Google Drive OHLCV, independent source floor/CAS, owner approvals, release or trades. Permanent native Drive QA: https://docs.google.com/document/d/1oBO61FUYSJSxNFiXs2TOawoo7f9ntKRrGCM-jCsJHBM/edit .
+
+The appended GitHub QA update creates another report-containing PR HEAD; verify all 45 workflows at that exact final SHA before stating final CI success.

@@ -1,0 +1,85 @@
+name: MST A02 Sixth Eight Original Replay Evidence Migration Weekly Cache Runtime - NO GO
+
+# Executes 8 REAL inherited V1 modules. Synthetic test data, ephemeral
+# SQLite and in-process weekly chunks; no real market feed or Drive market
+# cache, independent custodian, licensed provider, GitHub admin or trade.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-sixth-eight-replay-evidence-migration-runtime.yml"
+      - "scripts/m2_a02_sixth_eight_replay_evidence_migration_runtime_lab.py"
+      - "tests/test_m2_a02_sixth_eight_replay_evidence_migration_runtime_lab.py"
+      - "docs/MST_A02_SIXTH_EIGHT_REPLAY_EVIDENCE_MIGRATION_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-eight-replay-evidence-source-locked:
+    name: Real eight V1 replay/evidence/migration/cache functions; 40 tests NO GO
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install original inherited Swing package on GitHub hosted runner
+        run: python -m pip install -e .
+      - name: Independently verify actual upstream/main/current PR source Git tree
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-sixth-eight-real-original-source-lock.json
+      - name: Execute 40 actual inherited V1 replay, quality, migration and recovery cases
+        env:
+          PYTHONPATH: tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_sixth_eight_replay_evidence_migration_runtime_lab.py' -v
+      - name: Execute 8-module joined real original V1 runtime and NO-GO matrix
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m scripts.m2_a02_sixth_eight_replay_evidence_migration_runtime_lab \
+            --out /tmp/mst-a02-sixth-eight-replay-evidence-weekly-NO-GO.json
+          python - <<'PY'
+          import json
+          lock=json.load(open("/tmp/mst-a02-sixth-eight-real-original-source-lock.json"))
+          r=json.load(open("/tmp/mst-a02-sixth-eight-replay-evidence-weekly-NO-GO.json"))
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert r["distinct_originals_this_tranche"] == 8
+          assert r["prior_distinct_originals"] == 40
+          assert r["cumulative_originals_with_scoped_runtime_qa"] == 48
+          assert r["originals_not_yet_in_this_tranche_style_review"] == 15
+          assert r["linked_safety_count"] == 16 and all(r["linked_safety_checks"].values())
+          assert r["synthetic_evidence_checkpoint_count"] == 2
+          assert r["synthetic_prefix_with_unapproved_suffix_count"] == 3
+          assert r["synthetic_weekly_windows_first"] == 3
+          assert r["synthetic_reused_weekly_windows"] == 3
+          assert r["synthetic_revised_weekly_windows_created"] == 1
+          assert r["human_owner_a02_module_dispositions"] == 0
+          for k in ("actual_external_evidence_custodian_authenticated",
+                    "vendor_raw_source_bytes_authenticated",
+                    "self_held_checkpoint_is_external_monotonic_floor",
+                    "actual_drive_market_cache_read_write",
+                    "real_multiwriter_server_cas_verified",
+                    "real_provider_market_license_verified",
+                    "original_v1_to_v2_full_behavior_equivalence_approved",
+                    "a03_v2_full_abi_owner_approved",
+                    "g01_g08_independent_security_gates_closed",
+                    "production_release_authorized","trading_authorized"):
+              assert r[k] is False, k
+          print("A02 SIXTH EIGHT ACTUAL V1 EXECUTED; 40/40 NEW TESTS; 48 DISTINCT V1 SCOPED, 15 UNTESTED; NO REAL RIGHTS")
+          PY
+      - name: Upload synthetic-only no-license receipt for review, 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-sixth-eight-replay-evidence-migration-NO-GO
+          path: |
+            /tmp/mst-a02-sixth-eight-real-original-source-lock.json
+            /tmp/mst-a02-sixth-eight-replay-evidence-weekly-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

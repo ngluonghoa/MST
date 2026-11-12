@@ -1,0 +1,74 @@
+name: MST A02 Fourth Eight Original Routing / Calendar / Source Qualification — Synthetic NO-GO
+
+# Executes real source-locked original Swing V1 domain functions with
+# fabricated inputs only. Probe latency, documented native OHLC endpoints,
+# published closure anchors and self-supplied D1 session inventory are NOT
+# independently authenticated market access or trading permission.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-fourth-eight-routing-calendar-runtime.yml"
+      - "scripts/m2_a02_fourth_eight_routing_calendar_runtime_lab.py"
+      - "tests/test_m2_a02_fourth_eight_routing_calendar_runtime_lab.py"
+      - "docs/MST_A02_FOURTH_EIGHT_ROUTING_CALENDAR_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  original-eight-source-clock-invariants:
+    name: Real original V1 route/C2/ATR/calendar/SSI 40-test no-trade receipt
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned inherited package on ephemeral hosted runner
+        run: python -m pip install -e .
+      - name: Independently check REAL upstream/main/PR Git tree byte identity
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-fourth-eight-original-1to1-git-tree.json
+      - name: Run 40 original routing/calendar/market data boundary tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_fourth_eight_routing_calendar_runtime_lab.py' -v
+      - name: Run independent joined eight-module positive and negative execution
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m scripts.m2_a02_fourth_eight_routing_calendar_runtime_lab \
+            --out /tmp/mst-a02-fourth-eight-source-calendar-NO-GO.json
+          python - <<'PY'
+          import json
+          lock=json.load(open("/tmp/mst-a02-fourth-eight-original-1to1-git-tree.json"))
+          p=json.load(open("/tmp/mst-a02-fourth-eight-source-calendar-NO-GO.json"))
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"] == 63
+          assert lock["approved_opt_in_v2_sidecar_module_count"] == 8
+          assert p["this_tranche_distinct_modules"] == 8
+          assert p["prior_tranches_distinct_modules"] == 24
+          assert p["cumulative_distinct_original_v1_module_count"] == 32
+          assert p["remaining_original_v1_without_tranche_runtime_qa"] == 31
+          assert p["linked_check_count"] == 9 and all(p["linked_checks"].values())
+          assert p["a02_owner_signed_modules"] == 0
+          for k in ("source_license_verified", "official_full_exchange_calendar_verified",
+                    "real_provider_source_credential_bound", "real_minute_history_coverage_verified",
+                    "actual_provider_network_call_made","actual_drive_market_cache_read_write",
+                    "a03_v2_full_abi_approved","g01_g08_actual_security_gates_closed",
+                    "production_release_authorized","trading_authorized"):
+              assert p[k] is False, k
+          print("A02 4TH EIGHT ORIGINAL V1 EXECUTED 40/40; 32/63 SCOPED, 31 UNTESTED; NO MARKET/TRADING AUTHORITY")
+          PY
+      - name: Publish only nonauthenticating synthetic denial metadata for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-fourth-eight-routing-calendar-synthetic-no-go
+          path: |
+            /tmp/mst-a02-fourth-eight-original-1to1-git-tree.json
+            /tmp/mst-a02-fourth-eight-source-calendar-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

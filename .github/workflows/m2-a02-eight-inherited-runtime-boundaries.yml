@@ -1,0 +1,66 @@
+name: MST A02 Eight Original V1 Runtime Boundary Matrix - SYNTHETIC NO TRADE
+
+# Real inherited V1 functions run with fabricated market data ONLY.
+# Existing upstream/main/PR Git-tree byte parity is read from GitHub REST
+# independently of fixture behavior; green is not A02 or A03 owner approval.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-eight-inherited-runtime-boundaries.yml"
+      - "scripts/m2_a02_eight_inherited_runtime_boundary_lab.py"
+      - "tests/test_m2_a02_eight_inherited_runtime_boundary_lab.py"
+      - "docs/MST_A02_EIGHT_INHERITED_BEHAVIOR_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  eight-original-modules-synthetic-runtime-guard:
+    name: Eight real V1 module behaviors; 192 UNVERIFIED decisions and NO-GO
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install immutable inherited package on hosted GitHub runner
+        run: python -m pip install -e .
+      - name: Recheck actual upstream/main/PR Git tree source bytes via REST
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-eight-actual-remote-source-lock.json
+      - name: Execute 48 inherited V1 behavioral and security-gap cases
+        run: python -m unittest discover -s tests -p 'test_m2_a02_eight_inherited_runtime_boundary_lab.py' -v
+      - name: Execute cross-module real V1 source/quality/cache/replay/VN fixture
+        run: |
+          python -m scripts.m2_a02_eight_inherited_runtime_boundary_lab \
+            --out /tmp/mst-a02-eight-v1-runtime-matrix-UNVERIFIED.json
+          python - <<'PY'
+          import json
+          source=json.load(open("/tmp/mst-a02-eight-actual-remote-source-lock.json"))
+          v1=json.load(open("/tmp/mst-a02-eight-v1-runtime-matrix-UNVERIFIED.json"))
+          assert source["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert source["original_python_module_count"] == 63
+          assert v1["actual_module_count"] == 8
+          assert v1["six_snapshots_two_strategies_sixteen_zones"] == 192
+          assert v1["owner_a02_module_dispositions_approved"] == 0
+          assert v1["v1_v2_full_parity_claimed"] is False
+          for flag in ("production_cache_read_authorized","production_cache_write_authorized",
+                       "production_release_authorized","trading_authorized",
+                       "physical_drive_cache_read_or_written"):
+              assert v1[flag] is False
+          print("EIGHT ACTUAL ORIGINAL MODULES + 192 UNVERIFIED DECISIONS; SOURCE 1:1; ALL OWNER/PRODUCTION GATES OPEN")
+          PY
+      - name: Review receipts only - no owner attestation or real vendor bytes
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-eight-real-v1-behaviors-synthetic-UNVERIFIED
+          path: |
+            /tmp/mst-a02-eight-actual-remote-source-lock.json
+            /tmp/mst-a02-eight-v1-runtime-matrix-UNVERIFIED.json
+          retention-days: 14
+          if-no-files-found: error

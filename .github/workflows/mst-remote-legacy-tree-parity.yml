@@ -1,0 +1,41 @@
+name: MST V1 1-to-1 Remote Git Tree and Package Source Lock
+
+# Executes on GitHub-hosted runner with read-only token. Upstream original
+# commit and MST main must expose EXACT same 216-entry Git tree; candidate
+# may add V2 sidecars but must preserve all inherited package source objects.
+# Passing does NOT certify behavior, vendor rights, owner A02 signoff or release.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/mst-remote-legacy-tree-parity.yml"
+      - "scripts/mst_remote_legacy_tree_lock.py"
+      - "tests/test_mst_remote_legacy_tree_lock.py"
+      - "docs/MST_OPTION_A_ADMIN_ROOT_FEASIBILITY_AND_FULL_TREE_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  pin-original-and-reject-inherited-source-drift:
+    name: Cross-repo SHA + all 63 legacy Python source path parity
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compare GitHub live original/main and candidate package tree
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-original-tree-1to1-readonly.json
+      - name: Retain remote original/PR tree lock proof, not runtime entitlement
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-v1-full-tree-remote-parity-readonly
+          path: /tmp/mst-original-tree-1to1-readonly.json
+          if-no-files-found: error
+          retention-days: 14

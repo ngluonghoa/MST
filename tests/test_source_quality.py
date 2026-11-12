@@ -199,5 +199,60 @@ class SourceQualityTests(unittest.TestCase):
             replace(c, quality_flags=frozenset({""}))
 
 
+    def test_provenance_endpoint_is_only_a_claim_not_authenticated_binding(self):
+        """v1.2's Boolean prerequisites cannot certify an actual vendor endpoint."""
+        original = candle()
+        claimed_elsewhere = replace(
+            original,
+            provenance=replace(
+                original.provenance,
+                endpoint="synthetic://unrelated-claimed-endpoint",
+                source_snapshot_id="different-self-claimed-snapshot",
+            ),
+        )
+        self.assertEqual(original.observation_key, claimed_elsewhere.observation_key)
+        self.assertNotEqual(original.provenance.endpoint, claimed_elsewhere.provenance.endpoint)
+        self.assertTrue(original.confirmation_prerequisites(m(30)))
+        self.assertTrue(claimed_elsewhere.confirmation_prerequisites(m(30)))
+        # Both are conditional data checks, never independent data-source rights.
+
+    def test_revision_visible_before_retrieval_is_not_eligible_before_verification(self):
+        """First-known-only visibility must not be conflated with readiness."""
+        c = candle()
+        as_of = m(16)
+        snapshot = resolve_as_known(c.market_bar_key, (c,), as_of)
+        self.assertEqual(snapshot.reason, "SINGLE_VISIBLE_REVISION")
+        self.assertIs(snapshot.selected, c)
+        self.assertGreater(c.retrieved_at_utc, as_of)
+        self.assertFalse(snapshot.confirmation_prerequisites(as_of))
+        self.assertTrue(snapshot.confirmation_prerequisites(m(30)))
+
+    def test_future_correction_visibility_starts_at_exact_first_known_boundary(self):
+        c = candle()
+        second_rev = replace(
+            c.observation_revision,
+            source_revision_or_payload_digest="late-r2",
+            first_known_time_utc=m(40),
+            retrieved_at_utc=m(45),
+        )
+        second = replace(
+            c,
+            observation_revision=second_rev,
+            retrieved_at_utc=m(45),
+            verified_at_utc=m(46),
+            raw_digest_sha256="c" * 64,
+            normalized_digest_sha256="d" * 64,
+        )
+        before = resolve_as_known(c.market_bar_key, (c, second), m(39))
+        at = resolve_as_known(c.market_bar_key, (c, second), m(40))
+        self.assertIs(before.selected, c)
+        self.assertEqual(before.visible_candidate_count, 1)
+        self.assertIsNone(at.selected)
+        self.assertEqual(at.visible_candidate_count, 2)
+        self.assertEqual(at.reason, "SOURCE_OR_REVISION_CONFLICT")
+        self.assertFalse(at.confirmation_prerequisites(m(50)))
+
+
+
 if __name__ == "__main__":
     unittest.main()

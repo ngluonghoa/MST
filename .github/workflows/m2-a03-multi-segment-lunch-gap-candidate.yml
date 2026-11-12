@@ -1,0 +1,72 @@
+name: MST A03 M5 Multi Segment Lunch Gap and Phase Candidate - NO GO
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-multi-segment-lunch-gap-candidate.yml"
+      - "scripts/m2_a03_multi_segment_session_gap_lab.py"
+      - "tests/test_m2_a03_multi_segment_session_gap_lab.py"
+      - "docs/MST_A03_MULTI_SEGMENT_SESSION_GAP_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-multisegment-phase-no-go:
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked unchanged original and opt-in V2 package
+        run: python -m pip install -e .
+      - name: Check live original Swing/main/PR 63 V1 plus 8 V2 source-byte lock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python -m scripts.mst_remote_legacy_tree_lock --out /tmp/mst-multisegment-source-lock.json
+      - name: Run 32 strict gapped interval/phase and PIT negative tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_multi_segment_session_gap_lab.py' -v
+      - name: Compare before/at correction and deny lunch-crossing fake M5 candles
+        run: |
+          python -m scripts.m2_a03_multi_segment_session_gap_lab --out /tmp/mst-a03-gapped-session-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-a03-gapped-session-NO-GO.json").read_text())
+          s=json.loads(Path("/tmp/mst-multisegment-source-lock.json").read_text())
+          assert s["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert s["original_python_module_count"]==63
+          assert s["approved_opt_in_v2_sidecar_module_count"]==8
+          assert x["assertion_count"]==16
+          assert x["modeled_lunch_gap_minutes"]==90
+          assert x["morning_early_revision"]=="r1"
+          assert x["morning_late_revision"]=="r2"
+          assert x["afternoon_independent_revision"]=="r1"
+          assert x["break_candle_rejected_by_synthetic_slot"]
+          assert x["auction_candle_unqualified_and_blocked"]
+          for k in ("exchange_calendar_issuer_authenticated",
+                   "official_auction_bar_aggregation_verified",
+                   "source_bar_first_known_and_revision_issuer_verified",
+                   "licensed_market_data_or_cache_rights",
+                   "complete_holiday_and_halt_handling_verified",
+                   "historical_vendor_correction_closure_verified",
+                   "original_v1_or_v2_changed",
+                   "market_data_or_production_cache_activated",
+                   "owner_a02_signed","owner_a03_v2_signed",
+                   "owner_a03_gate_approved",
+                   "production_release_authorized","trading_authorized"):
+              assert x[k] is False,k
+          print("M5 MULTI-SEGMENT SCREEN COMPLETE; REAL ISSUER/CALENDAR STILL NO-GO")
+          PY
+      - name: Save only synthetic no-market-data QA receipts for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-multi-segment-session-gap-synthetic-NO-GO
+          path: |
+            /tmp/mst-multisegment-source-lock.json
+            /tmp/mst-a03-gapped-session-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

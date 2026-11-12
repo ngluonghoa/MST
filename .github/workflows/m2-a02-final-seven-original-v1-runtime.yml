@@ -1,0 +1,88 @@
+name: MST A02 Final Seven Original V1 Paths — Synthetic NOT Owner Certified
+
+# Six original production domain V1 modules executed with completely fabricated
+# inputs. Original __init__ checks VERSION/METADATA ONLY, never domain behavior.
+# Ed25519 key is fixed ephemeral test fixture, not a real independent signer.
+# POSIX SQLite metadata archive is ephemeral GH Actions, not real Drive cache.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-final-seven-original-v1-runtime.yml"
+      - "scripts/m2_a02_final_seven_original_v1_runtime_lab.py"
+      - "tests/test_m2_a02_final_seven_original_v1_runtime_lab.py"
+      - "docs/MST_A02_FINAL_SEVEN_ORIGINAL_V1_QA_20261110.md"
+
+permissions:
+  contents: read
+
+jobs:
+  six-real-original-domain-and-init-metadata:
+    name: 40 original-domain/MAC/Ed25519/RVOL_TOD fixture tests NO GO
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install original package with V1 optional Ed25519 verification support
+        run: python -m pip install -e '.[custody]'
+      - name: Verify live immutable upstream/main/PR source-byte tree first
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m scripts.mst_remote_legacy_tree_lock \
+            --out /tmp/mst-a02-final-seven-real-original-tree-lock.json
+      - name: Run 40 source-locked original V1 negative and positive tests
+        env:
+          PYTHONPATH: tests
+        run: python -m unittest discover -s tests -p 'test_m2_a02_final_seven_original_v1_runtime_lab.py' -v
+      - name: Execute joined real V1 module tests and inspect no-go metadata
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m scripts.m2_a02_final_seven_original_v1_runtime_lab \
+            --out /tmp/mst-a02-final-seven-original-runtime-NO-GO.json
+          python - <<'PY'
+          import json
+          lock=json.load(open("/tmp/mst-a02-final-seven-real-original-tree-lock.json"))
+          x=json.load(open("/tmp/mst-a02-final-seven-original-runtime-NO-GO.json"))
+          assert lock["all_inherited_package_paths_unchanged_on_pr"] is True
+          assert lock["original_python_module_count"]==63
+          assert lock["approved_opt_in_v2_sidecar_module_count"]==8
+          assert x["prior_distinct_scoped_v1"]==56
+          assert x["new_distinct_scoped_v1_files"]==7
+          assert x["cumulative_scoped_original_v1_files"]==63
+          assert x["remaining_original_v1_files_without_scoped_test"]==0
+          assert len(x["domain_function_modules_executed"])==6
+          assert x["package_init_coverage"]=="IMPORT_VERSION_AND_METADATA_ONLY"
+          assert x["full_behavioral_module_acceptances"]==0
+          assert x["human_a02_owner_dispositions"]==0
+          assert x["linked_invariant_count"]==13
+          assert all(x["linked_invariants"].values())
+          for name in (
+              "a03_full_v1_v2_abi_owner_accepted",
+              "trusted_out_of_band_public_key_verified",
+              "independent_HMAC_custodian_verified",
+              "ed25519_independent_external_signer_enrolled",
+              "actual_external_monotonic_floor_proven",
+              "real_vendor_data_rights_verified",
+              "real_mcp_provider_network_called",
+              "real_google_drive_market_cache_accessed",
+              "real_multiwriter_server_cas_verified",
+              "vn_exchange_calendar_or_trading_authority_verified",
+              "production_release_authorized","trading_authorized",
+          ):
+              assert x[name] is False, name
+          print("A02 ORIGINAL 63/63 PATHS SELECTED SYNTHETIC RUNTIME/METADATA REVIEWED, NOT 63 FULL BEHAVIOR CERTIFIED OR OWNER APPROVED")
+          PY
+      - name: Store synthetic untrusted review receipts for 14 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-final-seven-original-scoped-synthetic-NO-GO
+          path: |
+            /tmp/mst-a02-final-seven-real-original-tree-lock.json
+            /tmp/mst-a02-final-seven-original-runtime-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

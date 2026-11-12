@@ -1,0 +1,38 @@
+name: MST A02 V1 Incremental Cache vs Independent EMA20 ATR14 Oracle - FIXTURE ONLY
+
+# GitHub-hosted temporary SQLite is a synthetic test fixture, never a
+# production cache or independent protected Drive/Git witness. No write token.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a02-incremental-cache-independent-oracle.yml"
+      - "scripts/m2_a02_incremental_cache_oracle_lab.py"
+      - "tests/test_m2_a02_incremental_cache_oracle_lab.py"
+      - "docs/MST_A02_V1_INCREMENTAL_CACHE_INDEPENDENT_EMA_ATR_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  independent-oracle-vs-transactional-v1-synthetic-cache:
+    name: Cloud-only 36-bar SQLite cold/warm/correction/rollback/ATR oracle
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned source without live vendor adapters
+        run: python -m pip install -e ".[custody]"
+      - name: Execute original synthetic SQLite, independent Decimal oracle, no cloud data access
+        run: |
+          python -m scripts.m2_a02_incremental_cache_oracle_lab \
+            --out /tmp/mst-a02-v1-cache-independent-oracle-no-authority.json
+      - name: Preserve untrusted reproducible fixture evidence for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-v1-incremental-independent-ema-atr-fixtures-NO-AUTH
+          path: /tmp/mst-a02-v1-cache-independent-oracle-no-authority.json
+          retention-days: 14
+          if-no-files-found: error

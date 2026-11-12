@@ -1,0 +1,208 @@
+{
+  "schema": "mst.m4.option-a.g01-g03.owner-decision-bridge.unapproved.v1",
+  "project": "MST",
+  "date_local": "2026-11-10",
+  "scope": "GITHUB_GOOGLE_DRIVE_ONLY_OPTION_A",
+  "status": "OWNER_DECISION_BRIDGE_READONLY_G01_G02_G03_OPEN",
+  "repository": "ngluonghoa/MST",
+  "default_branch": "main",
+  "protected_main_source_sha": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "source_upstream_sha": "cd90c1babae8912db31490ad614fc2ad2f868042",
+  "original_source_tree_sha": "d61bad11af6d7c21bfb922a4f80d379d4dfe3e8e",
+  "work_pr": 8,
+  "work_branch": "mst/m2-a03-opt-in-v2-sidecar-20261109",
+  "work_branch_must_remain_draft": true,
+  "implementation_style": "ADDITIVE_NO_V1_OR_EXISTING_V2_MUTATIONS",
+  "evidence_tiers": {
+    "github_live_ci": "READ_ONLY_TOKEN_LIMITED_REST_METADATA_NOT_ADMIN_ATTESTATION",
+    "google_drive_live_connector": "FIVE_FOLDER_METADATA_CURRENT_CONNECTOR_VIEW_NOT_DURABLE_ATTESTATION",
+    "github_role_proposal": "SIGNED_OWNER_IDENTITY_BINDINGS_ABSENT",
+    "a03_test_result": "SIMULATED_DUAL_READER_WRITER_FALSIFICATION_NO_REMOTE_CAS"
+  },
+  "exact_observations": {
+    "github_main_ruleset_id": 26801439,
+    "github_main_required_approvals": 0,
+    "github_main_has_required_foundation_checks": true,
+    "github_main_no_signatures_required_in_inspected_rule": true,
+    "github_actions_bypass_actor_list_visible": false,
+    "github_witness_ref": "refs/heads/mst/m4-witness/v1",
+    "github_witness_exists_in_latest_read": false,
+    "github_m4_live_custody_run_id": 42754471257,
+    "github_m4_readiness_run_id": 42754471316,
+    "github_m4_role_matrix_run_id": 42754471547,
+    "github_a03_dual_reader_writer_run_id": 42754471450,
+    "github_foundation_run_id": 42754471295,
+    "github_review_gate_code_head_sha": "b38ae77ac4ea9ba26fa893ae867c5244ee3ffbc3",
+    "github_code_head_workflows_success": 18,
+    "a03_new_synthetic_tests_pass": 48,
+    "foundation_python311_pass": 2277,
+    "foundation_python312_pass": 2277,
+    "foundation_engineering_source_modules_pass": 63,
+    "proposed_role_count": 8,
+    "approved_actual_principal_bindings": 0,
+    "required_distinct_principal_pairs": 25,
+    "open_owner_role_decisions": 8,
+    "connected_drive_folder_metadata_count": 5,
+    "connected_drive_visible_owner_role_count_each": 1,
+    "connected_drive_independent_custodian_verified": false,
+    "drive_observation_not_github_actions_live": true
+  },
+  "gates": {
+    "G01": {
+      "label": "INDEPENDENT_SIGNER_ROOT",
+      "state": "OPEN",
+      "owner_approved": false,
+      "independent_root_identity_verified": false,
+      "signer_key_custody_proven": false,
+      "actual_admin_bypass_graph_verified": false,
+      "counterexample": "SELF_ATTESTED_SHA_AND_RESET_FRESH_READER_ACCEPTS_FORK",
+      "evidence_to_accept": [
+        "Owner-approved actual isolated signer/registry custody and policy controller, with independent root-of-trust challenge",
+        "Complete effective root/admin/bypass/recovery permission graph from separately authorized readbacks",
+        "Tamper and signer key enrollment/revocation cross-principal negative proof"
+      ]
+    },
+    "G02": {
+      "label": "DURABLE_NONRESETTABLE_MONOTONIC_FLOOR",
+      "state": "OPEN",
+      "owner_approved": false,
+      "protected_witness_ref_provisioned": false,
+      "immutable_remote_floor_verified": false,
+      "admin_rollback_proof_verified": false,
+      "counterexample": "RESET_READER_ACCEPTS_OLDER_G1_AND_ISOLATED_FORK_G2",
+      "evidence_to_accept": [
+        "Owner-authorized genesis/head linked to verified rights/source identity and external protected signer registry",
+        "Cross-run high-water persistence through process resets, key rotations, epoch change, administrative recovery and adversarial rollback",
+        "Owner acknowledges or resolves shared GitHub-admin root reset; never claim absolute immutability when it remains possible"
+      ]
+    },
+    "G03": {
+      "label": "TWO_AUTHENTICATED_WRITER_SERVER_ATOMIC_CAS",
+      "state": "OPEN",
+      "owner_approved": false,
+      "two_distinct_writer_accounts_verified": false,
+      "real_server_one_winner_loser_proven": false,
+      "drive_github_atomic_transaction_proven": false,
+      "counterexample": "ISOLATED_INMEMORY_SEQUENCERS_ACCEPT_CONFLICTING_G2",
+      "evidence_to_accept": [
+        "Two genuinely independent, restricted, authenticated writer principals and separate read-only verifier (not just string labels)",
+        "Adversarial sibling-head race on owner-approved protected witness, exactly one winner, loser re-reads current remote head",
+        "Ambiguous-timeout, crash-before-visible, stale signed manifest, protected-ref rollback and Drive/Git split-brain fail-closed receipts"
+      ]
+    }
+  },
+  "linked_gates": {
+    "A02_final_owner_module_signoff": "OPEN_0_OF_63",
+    "A03_full_v2_abi_owner_signoff": "OPEN",
+    "G04_licensed_market_source": "OPEN",
+    "G05_real_physical_drive_market_cache_and_recovery": "OPEN",
+    "G06_global_revocation": "OPEN",
+    "G07_independent_provenance": "OPEN",
+    "G08_owner_release": "OPEN",
+    "M3_M4_M5_M8_production": "BLOCKED"
+  },
+  "owner_decisions": [
+    {
+      "id": "OA01",
+      "related": [
+        "G01",
+        "C01",
+        "C02",
+        "R01",
+        "R02"
+      ],
+      "topic": "PRIVATE_ACTUAL_CUSTODIAN_IDENTITY_AND_ROOT_ADMIN_BYPASS_REVIEW",
+      "state": "OPEN",
+      "choice": null,
+      "owner_attestation_uri": null
+    },
+    {
+      "id": "OA02",
+      "related": [
+        "G01",
+        "G02",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "topic": "APPROVE_PROTECTED_WITNESS_SCOPE_SIGNER_KEY_GENESIS_AND_NONRESETTABLE_FLOOR_DESIGN",
+      "state": "OPEN",
+      "choice": null,
+      "owner_attestation_uri": null
+    },
+    {
+      "id": "OA03",
+      "related": [
+        "G03",
+        "C05",
+        "C06",
+        "R03"
+      ],
+      "topic": "APPROVE_REAL_TWO_WRITER_IDENTITIES_READ_ONLY_VERIFIER_AND_CAS_TEST",
+      "state": "OPEN",
+      "choice": null,
+      "owner_attestation_uri": null
+    },
+    {
+      "id": "OA04",
+      "related": [
+        "G02",
+        "G03",
+        "C07"
+      ],
+      "topic": "APPROVE_DRIVE_CHUNK_CUSTODY_SOURCE_RIGHTS_TWO_SERVICE_CRASH_AND_REVOKE_DESIGN",
+      "state": "OPEN",
+      "choice": null,
+      "owner_attestation_uri": null
+    },
+    {
+      "id": "OA05",
+      "related": [
+        "G01",
+        "G02",
+        "G03",
+        "C01",
+        "C06"
+      ],
+      "topic": "ACCEPT_OR_REJECT_RESIDUAL_SHARED_PLATFORM_ROOT_ADMIN_THREAT",
+      "state": "OPEN",
+      "choice": null,
+      "owner_attestation_uri": null
+    },
+    {
+      "id": "OA06",
+      "related": [
+        "G08",
+        "C08"
+      ],
+      "topic": "CONFIRM_NO_PRODUCTION_RELEASE_UNTIL_ALL_OWNER_ABI_RIGHTS_RECOVERY_GATES_ACCEPTED",
+      "state": "OPEN",
+      "choice": null,
+      "owner_attestation_uri": null
+    }
+  ],
+  "source_documents": [
+    "docs/MST_M4_OPTION_A_ROLE_SEPARATION_PROPOSAL_20261109.json",
+    "docs/MST_M4_OPTION_A_DRIVE_ACL_OBSERVATION_20261109.json",
+    "docs/MST_M4_OPTION_A_WITNESS_OWNER_CHANGE_PACKET_20261109.json",
+    "docs/MST_M4_OPTION_A_SCOPE_SELECTION_20261109.json",
+    "docs/MST_A03_DUAL_READER_WRITER_RACE_RESET_QA_20261110.md"
+  ],
+  "forbidden_claims": [
+    "GREEN_SYNTHETIC_QA_PROVES_G01_OR_G02_OR_G03",
+    "GH_FAST_FORWARD_EQUALS_TWO_AUTH_SERVER_CAS",
+    "DRIVE_FOLDER_OWNER_COUNT_EQUALS_INDEPENDENT_CUSTODY",
+    "INPROCESS_WRITER_LABEL_EQUALS_AUTHENTICATED_GITHUB_PRINCIPAL",
+    "CALLER_RESETTABLE_SESSION_FLOOR_EQUALS_NONRESETTABLE_EXTERNAL_FLOOR",
+    "BYPASS_METADATA_OMITTED_EQUALS_EMPTY_BYPASS_GRAPH",
+    "SIGNED_MANIFEST_EQUALS_LICENSED_VENDOR_SOURCE_TRUTH"
+  ],
+  "production_cache_read_authorized": false,
+  "production_cache_write_authorized": false,
+  "production_release_authorized": false,
+  "trading_authorized": false,
+  "privileged_actions_performed": false,
+  "new_cloud_service_approved": false,
+  "owner_approval_received": false,
+  "next_step": "OWNER_PRIVATE_DECISIONS_AND_INDEPENDENT_CUSTODY_PROOF_ONLY_NO_APPLY"
+}

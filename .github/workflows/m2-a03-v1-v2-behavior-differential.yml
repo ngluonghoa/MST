@@ -1,0 +1,38 @@
+name: MST A02 A03 V1 V2 Synthetic Behavior Differential - OWNER GATED
+
+# This is an opt-in engineering diff, not detector/source/production parity.
+# Never inject licensed vendor secrets or deploy V2.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-v1-v2-behavior-differential.yml"
+      - "scripts/m2_a03_behavior_equivalence_lab.py"
+      - "tests/test_m2_a03_behavior_equivalence_lab.py"
+      - "docs/MST_A02_A03_V1_V2_SAFE_BEHAVIOR_PARITY_QA_20261109.md"
+
+permissions:
+  contents: read
+
+jobs:
+  compare-v1-and-v2-synthetic-replay:
+    name: 16 zones x 2 strategies x 4 as-of timestamps / no real entitlement
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked Python package
+        run: python -m pip install -e ".[custody]"
+      - name: Run differential fixture matrix with V1 and V2 executing
+        run: |
+          python -m scripts.m2_a03_behavior_equivalence_lab \
+            --out /tmp/mst-a02-a03-v1-v2-synthetic-parity-unapproved.json
+      - name: Archive safe fixture observations, not production admission
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a02-a03-v1-v2-synthetic-128-decision-matrix
+          path: /tmp/mst-a02-a03-v1-v2-synthetic-parity-unapproved.json
+          if-no-files-found: error
+          retention-days: 14

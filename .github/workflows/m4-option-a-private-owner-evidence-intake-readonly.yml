@@ -1,0 +1,53 @@
+name: MST M4 Option A Private Owner Evidence Intake - ZERO INTAKE NO APPLY
+
+# Public repository contains only the 14 requirements, zero real identities
+# or private evidence. The hosted API readbacks only use GITHUB_TOKEN with
+# contents:read; the previous Drive connector snapshot is historical.
+# A green check asserts PRODUCTION BLOCKED, never authorizes keys/custody.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m4-option-a-private-owner-evidence-intake-readonly.yml"
+      - "docs/MST_M4_OPTION_A_PRIVATE_OWNER_EVIDENCE_INTAKE_20261110.json"
+      - "docs/MST_M4_OPTION_A_PRIVATE_OWNER_EVIDENCE_INTAKE_QA_20261110.md"
+      - "scripts/m4_option_a_private_owner_evidence_intake_preflight.py"
+      - "tests/test_m4_option_a_private_owner_evidence_intake_preflight.py"
+
+permissions:
+  contents: read
+
+jobs:
+  private-proof-requirements-with-zero-public-credentials:
+    name: Fourteen owner proof requirements, zero receipts and zero release authority
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked source and custody tooling for synthetic-only validation
+        run: python -m pip install -e ".[custody]"
+      - name: Run privacy and NO-GO negative tests (mocked REST receipts only)
+        run: python -m unittest discover -s tests -p 'test_m4_option_a_private_owner_evidence_intake_preflight.py' -v
+      - name: Independently refresh GitHub REST scope-limited metadata with read-only token
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m scripts.m4_option_a_live_custody_audit \
+            > /tmp/mst-m4-private-intake-live-github-historical-drive.json
+          python -m scripts.m4_reader_readiness_preflight \
+            > /tmp/mst-m4-private-intake-readiness-denied.json
+      - name: Reconcile thirteen plus one private owner evidence classes with both actual REST observations
+        run: |
+          python -m scripts.m4_option_a_private_owner_evidence_intake_preflight \
+            --live-custody /tmp/mst-m4-private-intake-live-github-historical-drive.json \
+            --live-readiness /tmp/mst-m4-private-intake-readiness-denied.json \
+            --out /tmp/mst-m4-private-intake-REQUIREMENTS-ONLY-NO-AUTH.json
+      - name: Review-only artifact; no private subjects or independent root
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-m4-private-owner-evidence-14requirements-zero-proof-NO-AUTH
+          path: /tmp/mst-m4-private-intake-REQUIREMENTS-ONLY-NO-AUTH.json
+          retention-days: 14
+          if-no-files-found: error

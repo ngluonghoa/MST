@@ -1,0 +1,519 @@
+name: MST A03 Full-Policy V2 Manifest Local Chain - SYNTHETIC NO APPLY
+
+# Cloud-hosted only, no real Google Drive cache or source data I/O.
+# A passing local SHA chain cannot prove signer custody, immutable floor or CAS.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/m2-a03-v2-manifest-full-policy-local-chain.yml"
+      - "scripts/m2_a03_v2_full_policy_manifest_draft.py"
+      - "tests/test_m2_a03_v2_full_policy_manifest_draft.py"
+      - "docs/MST_A03_V2_FULL_POLICY_MANIFEST_CHAIN_QA_20261109.md"
+      - "scripts/m4_v21_layered_invalidation_lab.py"
+      - "tests/test_m4_v21_layered_invalidation_lab.py"
+      - "docs/MST_M4_CACHE_V21_OWNER_APPROVED_ROADMAP_20261111.md"
+      - "scripts/m4_v21_six_tf_causal_slices.py"
+      - "tests/test_m4_v21_six_tf_causal_slices.py"
+      - "docs/MST_M4_V21_SIX_TF_CAUSAL_SLICES_QA_20261111.md"
+      - "scripts/m4_v21_gap_v1_numeric_parity_lab.py"
+      - "tests/test_m4_v21_gap_v1_numeric_parity_lab.py"
+      - "docs/MST_M4_V21_GAP_V1_NUMERIC_PARITY_QA_20261111.md"
+      - "scripts/m4_v21_multiday_all_tf_atr14_oracle_lab.py"
+      - "tests/test_m4_v21_multiday_all_tf_atr14_oracle_lab.py"
+      - "docs/MST_M4_V21_16DAY_SIX_TF_ATR14_ORACLE_QA_20261111.md"
+      - "scripts/m4_v21_daily_partition_checkpoint_chain_lab.py"
+      - "tests/test_m4_v21_daily_partition_checkpoint_chain_lab.py"
+      - "docs/MST_M4_V21_DAILY_PARTITION_CARRY_QA_20261111.md"
+      - "scripts/m4_v21_source_revision_asof_ledger_lab.py"
+      - "tests/test_m4_v21_source_revision_asof_ledger_lab.py"
+      - "docs/MST_M4_V21_BITEMPORAL_SOURCE_CUSTODY_QA_20261111.md"
+      - "scripts/m4_v21_calendar_revision_quarantine_lab.py"
+      - "tests/test_m4_v21_calendar_revision_quarantine_lab.py"
+      - "docs/MST_M4_V21_CALENDAR_REVISION_QUARANTINE_QA_20261111.md"
+      - "scripts/m4_v21_vendor_rights_evidence_gate_lab.py"
+      - "tests/test_m4_v21_vendor_rights_evidence_gate_lab.py"
+      - "docs/MST_M3_PUBLIC_VENDOR_RIGHTS_EVIDENCE_MATRIX_QA_20261111.md"
+      - "scripts/m4_v21_private_pilot_d1_validation_lab.py"
+      - "tests/test_m4_v21_private_pilot_d1_validation_lab.py"
+      - "docs/MST_M4_LIVE_PILOT_3_SOURCE_FPT_D1_PRIVATE_QA_20261111.md"
+      - "scripts/m4_drive_oidc_readonly_preflight.py"
+      - "tests/test_m4_drive_oidc_readonly_preflight.py"
+      - "docs/MST_M4_GOOGLE_DRIVE_OIDC_READONLY_IDENTITY_GATE_QA_20261111.md"
+      - "scripts/m4_wif_immutable_trust_policy_lab.py"
+      - "tests/test_m4_wif_immutable_trust_policy_lab.py"
+      - "docs/MST_M4_WIF_IMMUTABLE_ID_TRUST_SETUP_QA_20261111.md"
+      - "scripts/m2_a03_vcbs_adjusted_wm_crosscheck_lab.py"
+      - "tests/test_m2_a03_vcbs_adjusted_wm_crosscheck_lab.py"
+      - "docs/MST_A03_VCBS_REAL_D1_W1_MN1_ADJUSTED_PRICE_QA_20261111.md"
+      - "scripts/m2_a03_vcbs_ssi_minute_reference_audit_lab.py"
+      - "tests/test_m2_a03_vcbs_ssi_minute_reference_audit_lab.py"
+      - "docs/MST_A03_VCBS_SSI_REAL_INTRADAY_REFERENCE_ONLY_QA_20261111.md"
+      - "scripts/m2_a03_ssi_intraday_d1_observational_lab.py"
+      - "tests/test_m2_a03_ssi_intraday_d1_observational_lab.py"
+      - "docs/MST_A03_SSI_INTRA_D1_DATE_CONTRACT_REAL_SOURCE_QA_20261111.md"
+      - "scripts/m4_private_d1_dual_schema_manifest_quarantine_lab.py"
+      - "tests/test_m4_private_d1_dual_schema_manifest_quarantine_lab.py"
+      - "docs/MST_M4_REAL_PRIVATE_D1_180_DUAL_SCHEMA_UNIT_MANIFEST_CONFLICT_QA_20261111.md"
+      - "scripts/m4_dnse_documented_stock_unit_overlay_guard.py"
+      - "tests/test_m4_dnse_documented_stock_unit_overlay_guard.py"
+      - "docs/MST_M4_DNSE_OFFICIAL_UNIT_WIF_REAL_BLOCKER_QA_20261111.md"
+      - ".github/workflows/m4-drive-wif-metadata-only-manual.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  full-policy-lineage-and-first-known-review:
+    name: Rights/indicator scoped revision chain, old-as-of denial, no external floor
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.number == 8 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install source-locked package
+        run: python -m pip install -e ".[custody]"
+      - name: Execute V1 numerical oracle backed V2 candidate manifest chain
+        run: |
+          python -m scripts.m2_a03_v2_full_policy_manifest_draft \
+            --out /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
+      - name: Run 28 test-only Cache V2.1 full-policy layered recompute controls
+        run: python -m unittest discover -s tests -p 'test_m4_v21_layered_invalidation_lab.py' -v
+      - name: Demonstrate bounded dependent-only recompute, lineage-only reuse and unknown quarantine
+        run: |
+          python -m scripts.m4_v21_layered_invalidation_lab --out /tmp/mst-v21-layer-impact-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("/tmp/mst-v21-layer-impact-NO-GO.json").read_text())
+          assert d["status"]=="FULL_POLICY_LAYER_INVALIDATION_PREVIEW_SOURCE_AND_DRIVE_NO_GO"
+          assert len(d["fixture_value_correction"]["impacted_nodes"])==6
+          assert len(d["fixture_metadata_revision"]["impacted_nodes"])==2
+          assert len(d["unqualified_change_quarantine"]["impacted_nodes"])==9
+          assert d["provider_market_source_verified"] is False
+          assert d["actual_drive_cache_published"] is False
+          assert d["governance_p0_owner_release_approved"] is False
+          print("V2.1 P0 PLAN PASS SYNTHETIC; MARKET DATA AND DRIVE NO-GO")
+          PY
+      - name: Run 44 six-TF M5-to-M15-M30-H1-H4-D1 causal synthetic tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_six_tf_causal_slices.py' -v
+      - name: Validate artificial six-TF closed-window and indicator-tail receipt is no-go
+        run: |
+          python -m scripts.m4_v21_six_tf_causal_slices --out /tmp/mst-v21-six-tf-slices-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("/tmp/mst-v21-six-tf-slices-NO-GO.json").read_text())
+          assert r["status"]=="SIX_TF_M5_DEPENDENCY_AND_CAUSAL_SUFFIX_SYNTHETIC_NO_GO"
+          assert r["six_tf_total_artificial_closed_windows"]==155
+          v=r["value_revision"]["timeframes"]
+          assert {k:v[k]["numerical_bar_windows_recompute"] for k in ("M5","M15","M30","H1","H4","D1")}=={"M5":[15],"M15":[5],"M30":[2],"H1":[1],"H4":[0],"D1":[0]}
+          assert sum(len(x["causal_indicator_checkpoints_recompute"]) for x in v.values())==132
+          assert sum(len(x["quarantined_window_ordinals"]) for x in r["unqualified_provider_change"]["timeframes"].values())==155
+          for case in ("value_revision","metadata_revision","unqualified_provider_change","unchanged_fixture"):
+              c=r[case]
+              for k in ("numeric_indicators_actually_recomputed","provider_published_first_known_verified",
+                        "official_vn_calendar_and_auction_finality_verified","authorized_real_higher_tf_source_data",
+                        "real_drive_cache_read_write_performed","remote_multiwriter_cas_or_protected_floor_verified",
+                        "production_reuse_or_trading_allowed"):
+                  assert c[k] is False, (case,k)
+          assert r["no_real_google_drive_or_vendor_market_calls"] is True
+          assert r["release_and_trading_no_go"] is True
+          print("SIX TF 44 CASES SYNTHETIC, CALENDAR AND DRIVE NO-GO")
+          PY
+      - name: Run 46 strict gap-aware six-TF V1 numeric EMA20 ATR14 parity tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_gap_v1_numeric_parity_lab.py' -v
+      - name: Validate inherited V1 incremental vs independent actual Decimal oracle on gap
+        run: |
+          python -m scripts.m4_v21_gap_v1_numeric_parity_lab --out /tmp/mst-v21-gap-v1-numeric-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-gap-v1-numeric-NO-GO.json").read_text())
+          assert x["status"]=="GAPPED_M5_SIX_TF_V1_EMA_ATR_NUMERIC_PARITY_FIXTURE_ONLY"
+          assert x["source_m5_count"]==48
+          assert x["toy_tf_window_counts"]=={"M5":48,"M15":16,"M30":8,"H1":4,"H4":1,"D1":1}
+          assert x["nontrading_break_minutes"]==120
+          assert x["total_price_correction_checkpoint_suffix_positions"]==48
+          assert x["inherited_v1_sqlite_incremental_numerically_matches_independent_ema20_atr14"] is True
+          assert all(a["metadata_only_zero_recompute"] for a in x["tf_evidence"].values())
+          for k in ("source_license_verified","official_hose_hnx_upcom_historical_calendar_verified",
+                    "real_provider_aggregation_and_correction_proven","real_source_first_known_verified",
+                    "physical_google_drive_quote_cache_read_write",
+                    "cross_run_authenticated_writer_or_protected_cas_floor",
+                    "live_signal_release_or_trading_authorized"):
+              assert x[k] is False,k
+          print("GAPPED V1 NUMERIC/INDEPENDENT ORACLE PASS; ALL REAL MARKET GATES NO-GO")
+          PY
+      - name: Run 55 full six-TF numerical ATR14 16-day synthetic V1-only replay tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_multiday_all_tf_atr14_oracle_lab.py' -v
+      - name: Validate 16-day actual inherited V1 six-TF ATR14 numeric oracle and no-go
+        run: |
+          python -m scripts.m4_v21_multiday_all_tf_atr14_oracle_lab --out /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("/tmp/mst-v21-16day-six-tf-atr14-NO-GO.json").read_text())
+          assert a["status"]=="SIX_TF_ALL_ATR14_NUMERIC_ORACLE_MULTIDAY_FIXTURE_ONLY_NO_GO"
+          assert a["window_counts"]=={"M5":768,"M15":256,"M30":128,"H1":64,"H4":16,"D1":16}
+          assert a["total_toy_closed_derived_windows"]==1248
+          assert a["actual_v1_indicator_checkpoint_suffix_recomputed"]==204
+          assert a["all_six_tf_atr14_has_numerical_values_after_fourteen_closed_bars"] is True
+          assert a["v2_multiday_candidate_scope_approved"] is False
+          assert a["sixteen_day_v1_fingerprint_only_not_v2_manifest"] is True
+          assert a["all_six_tf_independent_ema20_atr14_oracle_equal"] is True
+          assert a["metadata_only_zero_numeric_indicator_recompute_all_six"] is True
+          assert {k:v["numeric_checkpoint_suffix_recomputed"] for k,v in a["per_tf"].items()}=={"M5":124,"M15":42,"M30":21,"H1":11,"H4":3,"D1":3}
+          for k in ("history_source_issuer_verified","official_vn_exchange_historical_calendar_verified",
+                    "official_h4_d1_provider_aggregation_verified",
+                    "licensed_market_data_retention_or_cache_approved",
+                    "google_drive_market_ohlcv_io_performed",
+                    "independent_multiwriter_cas_signer_highwater_floor_verified",
+                    "release_or_trading_authorized"):
+              assert a[k] is False,k
+          print("MULTIDAY SIX-TF ATR14 V1 NUMERIC ORACLE PASS; NO REAL MARKET CACHE/TRADE RIGHTS")
+          PY
+      - name: Run 35 daily V2 candidate partition chain and inherited V1 carry guard tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_daily_partition_checkpoint_chain_lab.py' -v
+      - name: Verify 96 one-date links and six-TF EMA/ATR rolling state without source authorization
+        run: |
+          python -m scripts.m4_v21_daily_partition_checkpoint_chain_lab --out /tmp/mst-v21-daily-carry-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-daily-carry-NO-GO.json").read_text())
+          assert x["status"]=="SINGLE_DATE_V2_SCOPE_CHAIN_SYNTHETIC_ONLY_ALL_LIVE_GATES_NO_GO"
+          assert x["fake_days"]==16
+          assert x["candidate_single_date_partition_links"]==96
+          assert x["total_cold_checkpoints"]==1248
+          assert x["actual_price_replayed_checkpoint_positions"]==204
+          assert x["metadata_only_replayed_checkpoint_positions"]==0
+          assert x["cross_date_carry_numerically_equal_original_v1"] is True
+          assert x["one_day_v1_v2_guard_unmodified"] is True
+          assert x["multi_day_composite_v2_scope_allowed"] is False
+          for flag in ("official_exchange_calendar_authenticated",
+                       "provider_issued_first_known_revision_authenticated",
+                       "market_data_or_cloud_retention_licensed",
+                       "physical_google_drive_market_cache_read_write",
+                       "protected_external_monotonic_floor_or_two_writer_cas",
+                       "production_release_or_trading_authorized"):
+              assert x[flag] is False,flag
+          print("P0 SINGLE-DATE V2 CARRY FIXTURE PASS, LIVE SOURCE AND DRIVE NO-GO")
+          PY
+      - name: Run 47 synthetic as-of revision and first-known custody tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_source_revision_asof_ledger_lab.py' -v
+      - name: Verify three bitemporal views and preserve source licensing NO-GO
+        run: |
+          python -m scripts.m4_v21_source_revision_asof_ledger_lab --out /tmp/mst-v21-first-known-asof-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-first-known-asof-NO-GO.json").read_text())
+          assert x["status"]=="SOURCE_REVISION_ASOF_CUSTODY_FIXTURE_ONLY_ALL_LIVE_GATES_NO_GO"
+          assert x["untrusted_ledger_events"]==770
+          assert x["declared_synthetic_m5_source_rows"]==768
+          assert x["revision_history_asof_snapshots"]==3
+          assert x["value_revision_invisible_before_known"] is True
+          assert x["metadata_only_zero_numeric_recompute"] is True
+          assert x["six_tf_asof_numeric_oracle_verified"] is True
+          proof=x["source_proof"]
+          for flag in ("issuer_signature_authenticated",
+                       "official_market_calendar_attested",
+                       "authorized_real_source_retention",
+                       "independent_protected_rollback_floor",
+                       "external_concurrent_writer_cas",
+                       "read_write_real_google_drive_quotes",
+                       "production_or_trading_permitted"):
+              assert proof[flag] is False,flag
+          print("ASOF M3/M4 CUSTODY LAB SYNTHETIC PASS; REAL ISSUER AND GOOGLE DRIVE CACHE NO-GO")
+          PY
+      - name: Run 47 fictional calendar-as-of revision and six-TF quarantine tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_calendar_revision_quarantine_lab.py' -v
+      - name: Validate two retro calendar revisions and deny all source or market authority
+        run: |
+          python -m scripts.m4_v21_calendar_revision_quarantine_lab --out /tmp/mst-v21-calendar-revision-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-v21-calendar-revision-NO-GO.json").read_text())
+          assert x["status"]=="ASOF_TOY_CALENDAR_REVISIONS_QUARANTINE_NO_MARKET_AUTHORITY"
+          assert x["initial_fabricated_calendar_days"]==16
+          assert x["untrusted_calendar_events"]==18
+          assert x["two_retroactive_calendar_corrections_at_different_known_times"] is True
+          assert x["baseline_before_calendar_revisions"]["quarantined_known_m5"]==0
+          assert x["after_fake_holiday_correction"]["quarantined_known_m5"]==48
+          final=x["after_fake_halt_correction"]
+          assert final["quarantined_known_m5"]==72
+          assert final["source_observed_m5"]==768
+          assert final["full_policy_rotation_day_ordinals"]==[3,8]
+          assert final["six_tf_affected_windows"]=={"M5":72,"M15":24,"M30":12,"H1":6,"H4":2,"D1":2}
+          assert final["six_tf_affected_total"]==118
+          for k in ("real_calendar_issuer_verified","real_holiday_or_halt_verified",
+                    "rights_for_live_market_data_or_cloud_cache",
+                    "old_calendar_policy_cache_reuse_authorized",
+                    "source_first_known_by_actual_issuer_verified",
+                    "real_gdrive_quote_cache_read_write",
+                    "protected_cloud_signer_floor_cas_verified",
+                    "production_release_or_trading_permitted"):
+              assert final[k] is False,k
+          assert x["real_storage_trading_or_release_authorized"] is False
+          print("TOY CALENDAR REVISION QA PASS, ALL EXTERNAL SOURCE AND CLOUD STORAGE GATES NO-GO")
+          PY
+      - name: Run 54 negative provider evidence and public-source licensing tests
+        run: python -m unittest discover -s tests -p 'test_m4_v21_vendor_rights_evidence_gate_lab.py' -v
+      - name: Audit 7 public documentation references and 15 unlicensed use-case denials
+        run: |
+          python -m scripts.m4_v21_vendor_rights_evidence_gate_lab --out /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-m3-vendor-public-doc-rights-NO-GO.json").read_text())
+          assert x["schema"]=="mst.m3.p0.vendor-public-evidence-rights-gate.synthetic.v1"
+          assert x["status"]=="PUBLIC_DOCS_REVIEWED_NO_LIVE_PROVIDER_LICENSE_OR_CLOUD_CACHE_AUTH"
+          assert x["provider_namespaces"]==["SSI","DNSE","VCBS"]
+          assert x["reviewed_public_document_count"]==7
+          assert x["total_denied_probes"]==15
+          assert len(x["public_source_documents"])==7
+          for provider,cases in x["per_provider_use_denials"].items():
+              assert len(cases)==5,provider
+              assert all(item["status"]=="DENIED_UNVERIFIED_RIGHTS" for item in cases.values())
+              assert all(item["data_rights_or_live_access_approved"] is False for item in cases.values())
+          for flag in ("public_references_fetched_in_github_ci",
+                       "actual_vendor_market_ohlcv_requested_or_retained",
+                       "gdrive_quote_cache_read_write",
+                       "verified_external_issuer_or_license_evidence",
+                       "protected_signer_cas_high_water",
+                       "owner_approved_live_release_or_trading"):
+              assert x[flag] is False,flag
+          print("M3 PUBLIC SOURCE DOCUMENT REVIEW RECEIPT PASS; ALL SSI DNSE VCBS LIVE/DRIVE GATES NO-GO")
+          PY
+      - name: Run 60 synthetic private D1 pilot source manifest and incremental refresh cases
+        run: python -m unittest discover -s tests -p 'test_m4_v21_private_pilot_d1_validation_lab.py' -v
+      - name: Prove fake pilot manifest is parseable, source-isolated and never production eligible
+        run: |
+          python -m scripts.m4_v21_private_pilot_d1_validation_lab --out /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("/tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json").read_text())
+          assert x["status"]=="PRIVATE_D1_SNAPSHOT_CONTRACT_AND_REFRESH_PLAN_NO_PRODUCTION_APPROVAL"
+          assert x["source_records_are_completely_fabricated"] is True
+          assert x["original_real_mcp_market_data_in_github_artifacts"] is False
+          p=x["pilot_contract_validation"]
+          assert p["total_verified_rows"]==6
+          assert set(p["providers"])=={"SSI","DNSE","VCBS"}
+          assert p["cross_source_diagnostic"]["equal_dates_count"]==2
+          assert p["cross_source_diagnostic"]["dnse_unit_and_price_basis_authenticated"] is False
+          assert p["cross_source_diagnostic"]["automatic_refresh_or_production_cache"] is False
+          assert x["idempotent_same_snapshot_refresh_plan"]["proposed_new_closed_sessions"]==[]
+          assert x["idempotent_same_snapshot_refresh_plan"]["drive_write_or_manifest_promotion_authorized"] is False
+          for f in ("github_actions_account_authentication_performed",
+                    "real_drive_docs_read_write_performed_in_ci",
+                    "automatic_live_provider_ingestion_active"):
+              assert x[f] is False
+          assert x["all_production_gates_no_go"] is True
+          print("PRIVATE LIVE DRIVE SNAPSHOT PARSER CONTRACT PASS USING FICTIONAL VALUES; ALL PRODUCTION GATES NO-GO")
+          PY
+      - name: Run 48 fully fake GitHub OIDC Drive metadata preflight guard tests
+        run: python -m unittest discover -s tests -p 'test_m4_drive_oidc_readonly_preflight.py' -v
+      - name: Verify read-only OIDC scope intent without actual Google credentials or market data
+        run: |
+          python -m scripts.m4_drive_oidc_readonly_preflight \
+            --mode synthetic --out /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json').read_text())
+          assert x['schema']=='mst.m4.oidc-drive-metadata-preflight.v1'
+          assert x['status']=='SERVICE_IDENTITY_METADATA_PREFLIGHT_ONLY_PRODUCTION_INGEST_DENIED'
+          assert x['metadata_object_count']==5
+          assert x['provider_namespaces_checked']==['SSI','DNSE','VCBS']
+          for k in ('real_google_drive_credentials_exchanged',
+                    'real_google_drive_resource_metadata_retrieved',
+                    'actual_live_github_identity_configured','actual_docs_content_read',
+                    'vendor_market_api_called','market_ohlcv_downloaded',
+                    'google_drive_write_performed','cloud_cache_automatic_refresh_active',
+                    'external_source_retention_license_attested',
+                    'issuer_first_known_and_official_calendar_attested',
+                    'external_signer_highwater_or_two_writer_cas_attested',
+                    'production_cache_or_trading_enabled'):
+              assert x[k] is False,k
+          print('M4 OIDC CLOUD DRIVE CLOUD IDENTITY SYNTHETIC CONTRACT PASS; NO LIVE AUTH/GDRIVE READ DONE')
+          PY
+      - name: Run 50 immutable GitHub numeric identity and exact WIF trust conditions
+        run: python -m unittest discover -s tests -p 'test_m4_wif_immutable_trust_policy_lab.py' -v
+      - name: Audit fake repo claims and main-only WIF workflow static safety
+        run: |
+          python -m scripts.m4_wif_immutable_trust_policy_lab --out /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json').read_text())
+          assert x['status']=='GCP_WIF_IMMUTABLE_REPO_WORKFLOW_TRUST_PREVIEW_NO_REAL_BINDING'
+          assert x['github_immutable_repository_id']=='1450356304'
+          assert x['github_immutable_owner_id']=='353049266'
+          assert x['synthetic_accepted_claims']['synthetic_claims_satisfy_candidate_condition'] is True
+          assert x['synthetic_wrong_repo_id_rejection']['synthetic_claims_satisfy_candidate_condition'] is False
+          assert x['static_workflow_audit']['static_workflow_contract_pass'] is True
+          assert x['candidate_workflow_ref']=='ngluonghoa/MST/.github/workflows/m4-drive-wif-metadata-only-manual.yml@refs/heads/main'
+          for k,v in x['cloud_readiness'].items():
+              assert v is False,k
+          for k in ('actual_google_cloud_or_github_settings_modified',
+                    'real_gcp_oidc_credentials_or_drive_metadata_accessed',
+                    'real_market_data_or_private_quote_cache_retrieved',
+                    'production_cache_and_trading_enabled'):
+              assert x[k] is False,k
+          print('IMMUTABLE GITHUB NUMERIC REPOSITORY WIF PREVIEW PASS; REAL GOOGLE IAM/DRIVE AND LIVE CACHE NO-GO')
+          PY
+      - name: Run 50 fake VCBS adjusted D1 to W1/MN1 arithmetic and partial-bar guards
+        run: python -m unittest discover -s tests -p 'test_m2_a03_vcbs_adjusted_wm_crosscheck_lab.py' -v
+      - name: Prove VCBS higher timeframe fake adjustment never authorizes quote cache or trades
+        run: |
+          python -m scripts.m2_a03_vcbs_adjusted_wm_crosscheck_lab --out /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json').read_text())
+          assert x["schema"]=="mst.a03.vcbs.d1-w1-mn1-adjusted-observational-crosscheck.v1"
+          assert x["status"]=="SOURCE_OBSERVED_ADJUSTMENT_ARITHMETIC_ONLY_CALENDAR_LICENSE_CACHE_NO_GO"
+          assert x["period_count"]==2 and x["partial_count"]==1
+          assert all(p["adjustment_present"] and p["numeric_mismatch_count"]==0 for p in x["period_comparisons"])
+          assert x["period_comparisons"][1]["classification"]=="QUARANTINED_PARTIAL_PERIOD"
+          for k in ("fully_closed_source_candles_attested","actual_provider_data_queried",
+                    "official_holiday_and_halt_calendar_verified",
+                    "issuer_first_known_authenticated",
+                    "cloud_cache_storage_or_trading_authorized"):
+              assert x[k] is False,k
+          print("VCBS W1/MN1 FULLY FAKE PRICE-ADJUSTMENT QA PASS; NO ACTUAL MARKET DATA OR PRODUCTION APPROVAL")
+          PY
+      - name: Run 50 synthetic VCBS minute price versus SSI OHLCV-shaped source nonpromotion tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_vcbs_ssi_minute_reference_audit_lab.py' -v
+      - name: Deny native M5/Cache authority from coincident VCBS minute prices
+        run: |
+          python -m scripts.m2_a03_vcbs_ssi_minute_reference_audit_lab --out /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json').read_text())
+          assert x['schema']=='mst.a03.vcbs-ssi-minute-price-reference-boundary.synthetic.v1'
+          assert x['status']=='UNTRUSTED_MINUTE_PRICE_REFERENCE_ONLY_NATIVE_VCBS_M5_TO_H4_NO_GO'
+          assert (x['clock_labels_aligned'],x['identical_reference_prices'],x['unequal_reference_prices'])==(3,2,1)
+          assert x['reference_comparison']=='UNTRUSTED_PRICE_MISMATCH_QUARANTINE'
+          assert x['vcbs_top_level_volume_is_session_cumulative_only'] is True
+          for k in ('vcbs_per_minute_open_high_low_close_volume_available',
+                    'ssi_provider_m1_timestamp_start_end_authenticated',
+                    'vcbs_native_m5_m15_m30_h1_h4_ohlcv_verified',
+                    'vcbs_m1_to_m5_aggregation_authorized',
+                    'calendar_auctions_halts_trading_sessions_verified',
+                    'correction_first_known_source_clock_authenticated',
+                    'vendor_google_drive_retention_license_proven',
+                    'github_runner_authenticated_source_access_proven',
+                    'cloud_cache_or_trading_authorized'):
+              assert x[k] is False,k
+          print('VCBS MINUTE PRICE REFERENCE-ONLY SYNTHETIC GUARD PASS, NEVER AUTHORIZE NATIVE M5 OR LIVE CACHE')
+          PY
+      - name: Run 50 fake SSI D1-intraday consistency, contradictory date token and no-M5-source-right tests
+        run: python -m unittest discover -s tests -p 'test_m2_a03_ssi_intraday_d1_observational_lab.py' -v
+      - name: Show fictional SSI day-token conflict and D1 parity never authorize minute candles
+        run: |
+          python -m scripts.m2_a03_ssi_intraday_d1_observational_lab --out /tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json').read_text())
+          assert x['schema']=='mst.a03.ssi-intraday-to-d1-observational-arithmetic.v1'
+          assert x['status']=='SSI_WHOLE_SESSION_D1_PARITY_ONLY_NATIVE_MINUTE_CLOSE_DATE_CONTRACT_NO_GO'
+          assert x['tick_row_count']==3 and x['intraday_to_d1_price_volume_fields_matched']==5
+          assert x['day_token_format_evidence']=='OBSERVED_LITERAL_CONFLICTS_WITH_MMDY_CONNECTOR_DESCRIPTION'
+          assert x['non_60_second_adjacent_clock_differences']==1
+          assert x['other_d1_window_rows_ignored']==1
+          for k in ('date_contract_verified_by_issuer',
+                    'original_raw_price_sys_token_endpoint_authenticated',
+                    'native_m1_m5_bar_closure_or_start_end_verified',
+                    'source_calendar_gaps_backfillable',
+                    'source_event_time_and_first_known_authenticated',
+                    'provider_cloud_retention_license_verified',
+                    'github_runner_market_source_connected',
+                    'official_market_calendar_and_corporate_actions_verified',
+                    'production_cache_or_trading_authorized'):
+              assert x[k] is False,k
+          print('SSI HISTORICAL INTRADAY-D1 NUMERIC PARITY SYNTHETIC PASS; DATE AND NATIVE CANDLE SOURCE NO-GO')
+          PY
+      - name: Run 50 fake dual private D1 schema/source manifest and DNSE unit alias quarantine guards
+        run: python -m unittest discover -s tests -p 'test_m4_private_d1_dual_schema_manifest_quarantine_lab.py' -v
+      - name: Demonstrate two schema manifests never silently normalize three DNSE unit labels
+        run: |
+          python -m scripts.m4_private_d1_dual_schema_manifest_quarantine_lab --out /tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json').read_text())
+          assert x['status']=='MULTISYMBOL_REAL_SHAPE_AUDIT_UNIT_TOKEN_CONFLICT_QUARANTINE_NO_GO'
+          assert x['actual_private_docs_read_by_validator'] is False
+          assert x['source_ohlcv_rows_structurally_checked']==180
+          assert x['source_partition_count']==9
+          assert x['source_manifests_checked']==2
+          assert x['source_manifest_unit_alias_conflicts']==3
+          assert len(x['unit_alias_conflicts'])==3
+          assert all(d['provider']=='DNSE' and d['field']=='unit' for d in x['unit_alias_conflicts'])
+          assert x['all_original_unit_labels_preserved'] is True
+          assert all(d['common_dates']==20 for d in x['source_diagnostics'].values())
+          for k in ('dnse_price_basis_and_scale_issuer_authenticated',
+                    'official_holiday_halt_and_exchange_calendar_verified',
+                    'source_first_known_and_corrections_attested',
+                    'authenticated_github_runner_drive_reader',
+                    'vendor_cloud_storage_rights_verified',
+                    'content_addressed_atomic_cache_or_trade_authorized'):
+              assert x[k] is False,k
+          assert x['production_admission']=='DENIED_UNIT_LABEL_CONFLICT_AND_EXTERNAL_RIGHTS'
+          print('TWO LEGACY PRIVATE PILOT SCHEMAS, THREE FAKE DNSE ALIASES QUARANTINED; REAL DRIVE/PRODUCTION NO GO')
+          PY
+      - name: Run 40 fake DNSE official generic price-unit / connected OHLC scope and WIF no-go gates
+        run: python -m unittest discover -s tests -p 'test_m4_dnse_documented_stock_unit_overlay_guard.py' -v
+      - name: Prove generic official stock thousand-VND evidence does not grant versioned OHLC / Cloud Cache
+        run: |
+          python -m scripts.m4_dnse_documented_stock_unit_overlay_guard --out /tmp/mst-m4-dnse-unit-documentation-SYNTHETIC-NO-GO.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('/tmp/mst-m4-dnse-unit-documentation-SYNTHETIC-NO-GO.json').read_text())
+          assert x['status']=='DOCUMENTED_STOCK_UNIT_GENERAL_ONLY_DNSE_NATIVE_MCP_OHLC_UNATTESTED_PRODUCTION_NO_GO'
+          assert x['three_snapshot_manifest_unit_aliases_quarantined']==3
+          assert x['official_general_stock_unit_in_thousand_vnd_documented'] is True
+          for k in ('historical_ohlc_effective_unit_or_price_basis_issuer_verified',
+                    'historical_connected_mcp_effective_api_version_verified',
+                    'any_source_unit_alias_resolved_for_publishing',
+                    'origin_source_docs_or_manifests_mutated',
+                    'real_drive_or_gcp_connectors_called_by_this_script',
+                    'actual_workflow_dispatch_main_ready',
+                    'dnse_native_ohlc_closed_m5_authenticated',
+                    'licensed_source_cloud_retention_or_production_cache',
+                    'trading_authorized'):
+              assert x[k] is False,k
+          print('GENERAL DNSE STOCK K-VND DOCUMENTARY EVIDENCE RECOGNIZED; SPECIFIC HISTORICAL SOURCE/WIF/CACHE NO-GO')
+          PY
+      - name: Archive temporary untrusted design evidence only
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-a03-manifest-full-policy-local-chain-NO-AUTH
+          path: |
+            /tmp/mst-v2-full-policy-manifest-local-chain-no-auth.json
+            /tmp/mst-v21-layer-impact-NO-GO.json
+            /tmp/mst-v21-six-tf-slices-NO-GO.json
+            /tmp/mst-v21-gap-v1-numeric-NO-GO.json
+            /tmp/mst-v21-16day-six-tf-atr14-NO-GO.json
+            /tmp/mst-v21-daily-carry-NO-GO.json
+            /tmp/mst-v21-first-known-asof-NO-GO.json
+            /tmp/mst-v21-calendar-revision-NO-GO.json
+            /tmp/mst-m3-vendor-public-doc-rights-NO-GO.json
+            /tmp/mst-private-pilot-d1-contract-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-drive-oidc-identity-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-wif-immutable-identity-SYNTHETIC-NO-GO.json
+            /tmp/mst-a03-vcbs-w1-mn1-adjusted-SYNTHETIC-NO-GO.json
+            /tmp/mst-a03-vcbs-ssi-minute-reference-SYNTHETIC-NO-GO.json
+            /tmp/mst-a03-ssi-intra-d1-date-contract-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-dual-schema-private-d1-SYNTHETIC-NO-GO.json
+            /tmp/mst-m4-dnse-unit-documentation-SYNTHETIC-NO-GO.json
+          retention-days: 14
+          if-no-files-found: error

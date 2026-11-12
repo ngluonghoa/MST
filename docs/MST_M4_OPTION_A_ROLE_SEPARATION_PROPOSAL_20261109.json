@@ -1,0 +1,354 @@
+{
+  "schema": "mst.m4.option-a.roles.separation-proposal.v1",
+  "status": "PROPOSED_ROLE_TOPOLOGY_ALL_IDENTITIES_UNASSIGNED",
+  "scope_choice": "A_GITHUB_DRIVE_ONLY",
+  "owner_instruction_source": "EXPLICIT_MST_USER_ARCHITECTURE_CHOICE_NOT_SIGNER_APPROVAL",
+  "repository": "ngluonghoa/MST",
+  "baseline_main_commit": "4048f91beaaa3410116d97e35896c8b688384e19",
+  "witness_ref": "refs/heads/mst/m4-witness/v1",
+  "witness_ref_provisioned": false,
+  "signer_keys_enrolled": false,
+  "independent_owners_attested": false,
+  "actual_identity_bindings_approved": false,
+  "required_real_main_approval_count_already_configured": false,
+  "required_real_witness_signed_commit_policy_configured": false,
+  "external_monotonic_floor_verified": false,
+  "two_independent_authenticated_writer_cas_verified": false,
+  "global_revoke_verified": false,
+  "licensed_vendor_rights_verified": false,
+  "physical_drive_chunk_readback_verified": false,
+  "production_cache_read_authorized": false,
+  "production_cache_write_authorized": false,
+  "trading_authorized": false,
+  "historical_observed_main_pr_review_approval_count": 0,
+  "historical_main_rule_includes_signed_commit": false,
+  "historical_witness_ref_absent": true,
+  "historical_google_drive_visible_owner_count_per_project_folder": 1,
+  "roles": [
+    {
+      "role": "POLICY_CONTROLLER",
+      "trust_boundary": "GITHUB_WITNESS_POLICY_ADMIN",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "propose_witness_ruleset",
+        "review_bypass_inventory"
+      ],
+      "forbidden_capabilities": [
+        "pr_workflow_secret",
+        "publish_cache",
+        "enroll_signer",
+        "verify_own_policy"
+      ],
+      "objective": "Owner-approved separate GitHub policy-controller account; cannot be the sole unreviewed root administrator"
+    },
+    {
+      "role": "SIGNER_ROOT_CUSTODIAN",
+      "trust_boundary": "GITHUB_SIGNER_REGISTRY_CUSTODY",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "propose_root_registry",
+        "approve_signer_key_enrollment"
+      ],
+      "forbidden_capabilities": [
+        "publish_cache",
+        "update_witness_head",
+        "modify_ruleset",
+        "approve_own_registry"
+      ],
+      "objective": "Owner-approved signer key registry authority isolated from writer/PR token and bypass"
+    },
+    {
+      "role": "REVOCATION_CONTROLLER",
+      "trust_boundary": "GITHUB_OWNER_RECOVERY_CUSTODY",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "propose_global_revocation",
+        "review_owner_recovery"
+      ],
+      "forbidden_capabilities": [
+        "publish_cache",
+        "modify_ruleset",
+        "self_approve_revoke"
+      ],
+      "objective": "Independent emergency revocation authority and continuity of protected high-water mark"
+    },
+    {
+      "role": "WITNESS_WRITER_A",
+      "trust_boundary": "GITHUB_NARROW_WITNESS_WRITE",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "propose_append_candidate"
+      ],
+      "forbidden_capabilities": [
+        "modify_ruleset",
+        "force_push",
+        "delete_ref",
+        "enroll_signer",
+        "change_floor_genesis",
+        "create_admin_token"
+      ],
+      "objective": "First distinct authenticated nonadmin publisher, not yet enrolled"
+    },
+    {
+      "role": "WITNESS_WRITER_B",
+      "trust_boundary": "GITHUB_NARROW_WITNESS_WRITE",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "propose_append_candidate"
+      ],
+      "forbidden_capabilities": [
+        "modify_ruleset",
+        "force_push",
+        "delete_ref",
+        "enroll_signer",
+        "change_floor_genesis",
+        "create_admin_token"
+      ],
+      "objective": "Second separately authenticated nonadmin publisher to exercise one-winner CAS"
+    },
+    {
+      "role": "DRIVE_CHUNK_WRITER",
+      "trust_boundary": "GOOGLE_DRIVE_LICENSED_CHUNK_WRITE",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "stage_immutable_chunk"
+      ],
+      "forbidden_capabilities": [
+        "modify_witness_ruleset",
+        "approve_signer",
+        "create_owner_key",
+        "delete_accepted_cache"
+      ],
+      "objective": "Future licensed Drive writer with restricted folder scope and readback"
+    },
+    {
+      "role": "READ_ONLY_VERIFIER",
+      "trust_boundary": "GITHUB_AND_DRIVE_READONLY_VERIFICATION",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "read_witness_floor",
+        "read_registry",
+        "read_drive_bytes"
+      ],
+      "forbidden_capabilities": [
+        "write_witness",
+        "stage_immutable_chunk",
+        "modify_ruleset",
+        "enroll_signer",
+        "approve_own_receipt"
+      ],
+      "objective": "Independent verified reader, must fetch remote current head and actual Drive bytes"
+    },
+    {
+      "role": "PULL_REQUEST_CI",
+      "trust_boundary": "GITHUB_PR_CONTENTS_READ_ONLY",
+      "principal_binding": null,
+      "independent_identity_verified": false,
+      "proposed_capabilities": [
+        "read_repo_source",
+        "run_synthetic_tests"
+      ],
+      "forbidden_capabilities": [
+        "write_witness",
+        "stage_immutable_chunk",
+        "access_signer_private_key",
+        "access_real_vendor_token",
+        "modify_ruleset",
+        "approve_owner_gate"
+      ],
+      "objective": "Untrusted PR8 CI must not receive owner or publisher privileges"
+    }
+  ],
+  "required_distinct_principal_pairs": [
+    [
+      "POLICY_CONTROLLER",
+      "SIGNER_ROOT_CUSTODIAN"
+    ],
+    [
+      "POLICY_CONTROLLER",
+      "WITNESS_WRITER_A"
+    ],
+    [
+      "POLICY_CONTROLLER",
+      "WITNESS_WRITER_B"
+    ],
+    [
+      "POLICY_CONTROLLER",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "SIGNER_ROOT_CUSTODIAN",
+      "REVOCATION_CONTROLLER"
+    ],
+    [
+      "SIGNER_ROOT_CUSTODIAN",
+      "WITNESS_WRITER_A"
+    ],
+    [
+      "SIGNER_ROOT_CUSTODIAN",
+      "WITNESS_WRITER_B"
+    ],
+    [
+      "SIGNER_ROOT_CUSTODIAN",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "WITNESS_WRITER_A",
+      "WITNESS_WRITER_B"
+    ],
+    [
+      "WITNESS_WRITER_A",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "WITNESS_WRITER_B",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "POLICY_CONTROLLER"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "SIGNER_ROOT_CUSTODIAN"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "REVOCATION_CONTROLLER"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "WITNESS_WRITER_A"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "WITNESS_WRITER_B"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "DRIVE_CHUNK_WRITER"
+    ],
+    [
+      "PULL_REQUEST_CI",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "DRIVE_CHUNK_WRITER",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "DRIVE_CHUNK_WRITER",
+      "SIGNER_ROOT_CUSTODIAN"
+    ],
+    [
+      "POLICY_CONTROLLER",
+      "REVOCATION_CONTROLLER"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "WITNESS_WRITER_A"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "WITNESS_WRITER_B"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "READ_ONLY_VERIFIER"
+    ],
+    [
+      "REVOCATION_CONTROLLER",
+      "DRIVE_CHUNK_WRITER"
+    ]
+  ],
+  "owner_signoff_decisions": [
+    {
+      "code": "R01",
+      "topic": "OWNER_POLICY_CONTROLLER_AND_BYPASS_GRAPH",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R02",
+      "topic": "INDEPENDENT_SIGNER_REGISTRY_AND_REVOCATION_AUTHORITY",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R03",
+      "topic": "TWO_SEPARATE_GITHUB_WITNESS_WRITERS_AND_ATOMIC_CAS",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R04",
+      "topic": "INDEPENDENT_GITHUB_DRIVE_READER_AND_CHUNK_WRITER_ACLS",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R05",
+      "topic": "OWNER_APPROVED_WITNESS_REF_RULESET_CREATION",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R06",
+      "topic": "OWNER_DECISION_ON_MAIN_REQUIRED_REVIEW_AND_CI_FRESHNESS",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R07",
+      "topic": "LICENSED_VENDOR_DATA_RIGHTS_RETENTION_FIRST_KNOWN",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    },
+    {
+      "code": "R08",
+      "topic": "NONRESETTABLE_FLOOR_ADMIN_BYPASS_TAMPER_RECOVERY_PROOF",
+      "state": "OPEN",
+      "approver_identity": null,
+      "proof_uri": null
+    }
+  ],
+  "failure_policy": {
+    "on_missing_principal": "BLOCK",
+    "on_duplicate_principal": "BLOCK",
+    "on_pr_ci_privileged_grant": "BLOCK",
+    "on_policy_admin_writer_overlap": "BLOCK",
+    "on_signer_writer_overlap": "BLOCK",
+    "on_revoker_self_approval": "BLOCK",
+    "on_missing_bypass_inventory": "UNVERIFIED_BLOCK",
+    "on_owner_admin_policy_reset": "QUARANTINE_BLOCK",
+    "on_drive_chunk_not_readback": "BLOCK",
+    "on_unlicensed_vendor_data": "BLOCK",
+    "on_missing_external_floor": "BLOCK",
+    "on_missing_evidence": "BLOCK"
+  },
+  "pending_privileged_actions": [
+    "CREATE_PROTECTED_WITNESS_REF",
+    "APPLY_WITNESS_RULESET",
+    "MODIFY_MAIN_RULESET",
+    "ENROLL_SIGNER_KEYS",
+    "ISSUE_WITNESS_WRITER_CREDENTIALS",
+    "SHARE_DRIVE_TO_NEW_WRITER_OR_READER",
+    "WRITE_LICENSED_MARKET_DATA",
+    "MERGE_PR8",
+    "ENABLE_RELEASE_OR_TRADING"
+  ]
+}
