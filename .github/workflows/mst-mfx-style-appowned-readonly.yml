@@ -1,18 +1,20 @@
-name: MST MFX-style app-owned Drive and DNSE read-only preflight - MANUAL DRAFT
+name: MST MFX-style app-owned Drive and DNSE gated Cloud source - MANUAL DRAFT
 
-# No schedule, PR, push, Drive create/upload, stock orders or repository writes.
+# No schedule, PR, push, stock orders or repository writes.
+# Source-stage upload requires independent per-run owner and rights gates.
 # This workflow is NOT callable on main until separately reviewed/merged.
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "drive-probe or separately owner-authorized dnse-d1-readonly"
+        description: "drive-probe, dnse-d1-readonly, or gated unpublished source staging"
         required: true
         type: choice
         default: drive-probe
         options:
           - drive-probe
           - dnse-d1-readonly
+          - dnse-d1-quarantine-stage
       symbol:
         description: "DNSE symbol for read-only D1 probe, never used in log"
         required: false
@@ -40,7 +42,7 @@ concurrency:
 
 jobs:
   exact-app-owned-readonly:
-    name: Manual OAuth app folder proof and optional official DNSE read
+    name: Manual app-owned folder check, optional DNSE read or unpublished source staging
     if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && vars.MST_MFX_APP_OWNED_READONLY_ACCEPTED == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
@@ -68,4 +70,6 @@ jobs:
           MST_DNSE_SYMBOL: ${{ inputs.symbol }}
           MST_DNSE_FROM_UNIX: ${{ inputs.from_unix }}
           MST_DNSE_TO_UNIX: ${{ inputs.to_unix }}
+          MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED: ${{ vars.MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED }}
+          MST_DNSE_STORAGE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_STORAGE_RIGHTS_CONFIRMED }}
         run: python -m scripts.mst_mfx_style_appowned_pipeline
