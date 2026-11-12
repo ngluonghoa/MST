@@ -144,6 +144,23 @@ class DnseNative(unittest.TestCase):
         self.assertIn("Signature keyId=",h["X-Signature"])
         self.assertNotIn("FAKE_SECRET",url+json.dumps(h))
         self.assertEqual(h["version"],m.DNSE_VERSION)
+        # Cross-check the exact signed target against DNSE's official SDK:
+        # the query is not in the HMAC string even though it is on the URL.
+        import base64
+        import hashlib
+        import hmac
+        from urllib.parse import quote
+        signing=("(request-target): get /price/ohlc\\n"
+                 "date: Fri, 13 Nov 2026 00:00:00 +0000\\n"
+                 "nonce: "+("a"*32)).encode()
+        signature=quote(base64.b64encode(
+            hmac.new(b"FAKE_SECRET",signing,hashlib.sha256).digest()
+        ).decode(),safe="")
+        self.assertIn('signature="'+signature+'"',h["X-Signature"])
+        _,second=m.build_dnse_request(
+            "HPG",1794200000,1794500000,"FAKE_KEY","FAKE_SECRET",
+            date_header="Fri, 13 Nov 2026 00:00:00 +0000",nonce="a"*32)
+        self.assertEqual(second["X-Signature"],h["X-Signature"])
 
     def test_ohlcv_native_valid_observation_only(self):
         o=m.validate_dnse_native(self.payload(),1794000000,1794500000)
