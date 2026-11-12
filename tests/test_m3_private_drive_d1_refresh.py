@@ -58,7 +58,9 @@ def batch():
     manifest={"schema":"mst.cloud.drive.private.mcp_d1_capture_manifest.v0.2",
               "project":"MST","source_partition_count":9,
               "snapshots":[{"provider":p,"symbol":s,"timeframe":"D1",
-                            "source_snapshot_doc_id":docid(p,s)}
+                            "source_snapshot_doc_id":docid(p,s),
+                            "persisted_rows":1,"readback_verified":True,
+                            "stored_in_private_folder":True}
                            for s in SYMS for p in PROVIDERS]}
     prior={docid(p,s):doc(p,s) for s in SYMS for p in PROVIDERS}
     now={(p,s):doc(p,s,at="2026-11-12T11:00:00Z")
@@ -301,6 +303,58 @@ class PrivateDriveD1AdapterTests(unittest.TestCase):
         self.assertEqual(provider_from_endpoint(DailyEndpoint.SSI_DETAILED),"SSI")
         self.assertEqual(provider_from_endpoint(DailyEndpoint.DNSE_CONNECTED_DAY),"DNSE")
 
+
+
+    def test_new_daily_session_is_a_new_private_version_not_incomplete_scope(self):
+        manifest,prior,now=batch()
+        current=now[("SSI","AAA")]
+        current["rows"].insert(0,row("SSI","AAA",day="2026-11-11"))
+        current["retained_row_count"]=2
+        current["source_row_count"]=2
+        d=decide_private_d1_refresh(
+            manifest=manifest,prior_documents=prior,candidate_documents=now)
+        self.assertEqual(d["requires_new_private_version_count"],1)
+        self.assertEqual(d["quarantined_partition_count"],0)
+        item=next(x for x in d["partitions"] if x["provider"]=="SSI" and x["symbol"]=="AAA")
+        self.assertEqual(item["decision"],
+                         "REQUIRE_NEW_PRIVATE_SOURCE_VERSION_AND_DEPENDENCY_REBUILD")
+        self.assertEqual(item["comparison"]["added_day_labels"],["2026-11-11"])
+        self.assertFalse(d["all_actual_new_private_source_versions_created"])
+
+    def test_manifest_prior_source_count_disagreement_refused(self):
+        manifest,prior,now=batch()
+        manifest["snapshots"][0]["persisted_rows"]=5
+        with self.assertRaises(ValueError):
+            decide_private_d1_refresh(
+                manifest=manifest,prior_documents=prior,candidate_documents=now)
+
+    def test_manifest_without_private_readback_marker_refused(self):
+        manifest,prior,now=batch()
+        manifest["snapshots"][0]["readback_verified"]=False
+        with self.assertRaises(ValueError):
+            decide_private_d1_refresh(
+                manifest=manifest,prior_documents=prior,candidate_documents=now)
+
+    def test_manifest_without_private_folder_marker_refused(self):
+        manifest,prior,now=batch()
+        manifest["snapshots"][0]["stored_in_private_folder"]=False
+        with self.assertRaises(ValueError):
+            decide_private_d1_refresh(
+                manifest=manifest,prior_documents=prior,candidate_documents=now)
+
+    def test_new_source_first_day_with_old_unchanged_is_not_retroactive_first_known(self):
+        manifest,prior,now=batch()
+        current=now[("SSI","BBB")]
+        current["rows"].insert(0,row("SSI","BBB",day="2026-11-11"))
+        current["source_row_count"]=2
+        current["retained_row_count"]=2
+        d=decide_private_d1_refresh(
+            manifest=manifest,prior_documents=prior,candidate_documents=now)
+        item=next(x for x in d["partitions"] if x["provider"]=="SSI" and x["symbol"]=="BBB")
+        self.assertEqual(item["comparison"]["overlapping_rows"],1)
+        self.assertEqual(item["comparison"]["numeric_ohlcv_revisions"],[])
+        self.assertFalse(item["comparison"]["source_first_known_authenticated"])
+        self.assertFalse(item["issuer_closed_verified"])
 
 if __name__=="__main__":
     unittest.main()
