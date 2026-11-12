@@ -1,0 +1,36 @@
+name: M4 Cache Authority - Read-only NO-GO Preflight
+
+# Pull-request CI only; not an autonomous scheduled task or a writer.
+# This workflow cannot publish cache data or prove CAS/production readiness.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m4-cache-authority-readonly-preflight.yml'
+      - 'scripts/m4_cache_authority_readonly_preflight.py'
+      - 'tests/test_m4_cache_authority_readonly_preflight.py'
+      - 'docs/MST_M4_CLOUD_AUTHORITY_FEASIBILITY_DECISION_20261112.md'
+
+permissions:
+  contents: read
+
+jobs:
+  independent-github-metadata:
+    name: Read-only witness policy NO-GO receipt
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.event.pull_request.head.repo.full_name == 'ngluonghoa/MST' && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR source without persisted credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Run targeted policy regression tests offline
+        run: python -m unittest discover -s tests -p 'test_m4_cache_authority_readonly_preflight.py' -v
+      - name: Read repository rulesets and historical synthetic ref; print NO_GO
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m scripts.m4_cache_authority_readonly_preflight
