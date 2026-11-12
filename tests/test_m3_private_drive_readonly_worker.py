@@ -331,5 +331,87 @@ class ManualContextTests(unittest.TestCase):
             m.require_manual_owner_env(e)
 
 
+
+def nine_partition_fixtures():
+    """Invented 3-provider x 3-symbol v1->v2 fixture, no live source data."""
+    old_files = []
+    new_files = []
+    docs = {}
+    for sym in ("AAA", "BBB", "CCC"):
+        for provider in ("SSI", "DNSE", "VCBS"):
+            prefix = f"Fake9_{provider}_{sym}_00000000000000000"
+            old_id = prefix + "_prior"
+            new_id = prefix + "_current" if provider == "SSI" else old_id
+            if provider == "SSI":
+                old_rows = [{"symbol":sym, "trading_date":"11/11/2026",
+                             "open":"100","high":"103","low":"98",
+                             "close":"101","volume":"200"}]
+                new_rows = [{"symbol":sym, "trading_date":"12/11/2026",
+                             "open":"101","high":"104","low":"99",
+                             "close":"102","volume":"250"}] + deepcopy(old_rows)
+                prev = ssi_snapshot(old_rows,"2026-11-12T10:00:00Z")
+                curr = ssi_snapshot(new_rows,"2026-11-12T11:00:00Z")
+                prev["symbol"]=sym
+                curr["symbol"]=sym
+                docs[old_id]=prev
+                docs[new_id]=curr
+            elif provider == "DNSE":
+                docs[old_id]=dnse_snapshot()
+                docs[old_id]["symbol"]=sym
+            else:
+                docs[old_id]={
+                    "schema":"mst.mcp.d1.private_drive_snapshot.v0.2",
+                    "project":"MST","provider":"VCBS","symbol":sym,"timeframe":"D1",
+                    "source_tool":"MCP_VCBS.vcbs_get_history",
+                    "capture_utc":"2026-11-12T10:00:00Z",
+                    "source_row_count":1,"retained_row_count":1,
+                    "rows":[{"tradingDate":"2026-11-12",
+                             "openPrice":100,"highPrice":103,"lowPrice":98,
+                             "closePrice":101,"volume":200,"adjClosePrice":101,
+                             "adjFactor":1,"price":101}],
+                }
+            old_files.append(record(provider,sym,old_id,1))
+            new_files.append(record(provider,sym,new_id,2 if provider=="SSI" else 1))
+    docs[OLD]=manifest(old_files)
+    docs[NEW]=manifest(new_files)
+    return docs
+
+
+class NinePartitionOfflineCloudReadbackTests(unittest.TestCase):
+    def test_nine_source_partitions_three_new_and_six_reused(self):
+        session=FakeSession(nine_partition_fixtures())
+        report=m.read_two_private_manifests(
+            session,prior_manifest_id=OLD,next_manifest_id=NEW,
+            approved_parents=frozenset([PARENT]))
+        self.assertEqual(report["partition_count"],9)
+        self.assertEqual(report["changed_source_versions"],3)
+        self.assertEqual(report["reused_source_versions"],6)
+        self.assertEqual(report["new_day_labels"],3)
+        self.assertEqual(report["overlapping_rows_checked"],3)
+        self.assertEqual(report["quarantined_scope_or_revision"],0)
+        self.assertEqual(report["distinct_private_docs_read"],14)
+        self.assertFalse(report["private_data_written"])
+        self.assertFalse(report["cross_provider_volume_qa_crosschecked"])
+
+    def test_nine_partition_private_parent_mismatch_fails_entire_run(self):
+        session=FakeSession(nine_partition_fixtures())
+        session.meta[OLD]={"parents":["UnapprovedPrivateParent0000000000"]}
+        with self.assertRaises(m.DriveReadonlyDenied):
+            m.read_two_private_manifests(
+                session,prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+        self.assertEqual(len(session.calls),1)
+
+    def test_nine_partition_one_bad_symbol_refuses_entire_report(self):
+        docs=nine_partition_fixtures()
+        one_id=next(id for id,v in docs.items()
+                    if id.endswith("_current") and v.get("symbol")=="BBB")
+        docs[one_id]["symbol"]="CCC"
+        with self.assertRaises(m.DriveReadonlyDenied):
+            m.read_two_private_manifests(
+                FakeSession(docs),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+
 if __name__ == "__main__":
     unittest.main()
