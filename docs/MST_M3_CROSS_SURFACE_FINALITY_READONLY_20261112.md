@@ -31,3 +31,18 @@ No source market data, GitHub secrets/variables/rulesets, ACL, protected main, W
 Official cross-check: [DNSE historical OHLC REST](https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/), [DNSE OHLC closed WebSocket](https://developers.dnse.com.vn/docs/guide/market-data/connect/), [SSI historical availability](https://developers.ssi.com.vn/docs/faq/market-data).
 
 **Exact-head CI:** to be appended after GitHub Actions verifies this Draft PR; absence of a completed run remains unverified.
+
+
+## 2026-11-12 follow-up — official DNSE OHLC Closed channel, distinct from connected DAY MCP
+
+Public DNSE documentation (read on 12 Nov 2026) explicitly separates the **in-progress** WebSocket subscription `ohlc.{resolution}.{encoding}` from **closed-candle** `ohlc_closed.{resolution}.{encoding}`. The former updates while trades happen; the latter is described as emitted at candle close. The example message's `time` is the **candle START Unix timestamp**, while `lastUpdated` is a last update timestamp; **neither is the independently authenticated earliest publication/first-known receipt**. A theoretical `time + 300s` for M5 is not an official auction/lunch/calendar close attestation.
+
+Documented channel resolutions are `1,3,5,15,30,1H,1D,1W`: within MST's required six timeframes this directly lists **M5/M15/M30/H1/D1**, but **not H4**. H4 therefore remains a derived-timeframe validation obligation; never advertise native DNSE 4H in this product. These WebSocket products and the separate signed HTTP `GET /price/ohlc` are **NOT present** in the currently connected DNSE MCP `price_get_history` DAY-only interface. No market data or feed connection was retrieved through this public-document research.
+
+Narrow new `scripts/m3_dnse_documented_closed_channel.py` and `tests/test_m3_dnse_documented_closed_channel.py` distinguish formers vs closed channel *envelope labels* (exact resolution and type, start/last-updated ordering, explicit UTC observation, no fictitious fixed D1/W close), reject REST/DAY-MCP impersonation and caller-asserted entitlement or first-known, and always keep `source_native_closed_event_verified=false`, `licensed_cache_retention=false`, `cache_publish_authorized=false`, `signal_eligible=false`. These synthetic tests cannot simulate an authenticated vendor WebSocket connection. Real owner/vendor rights and identity, client-side receipt provenance, reconnect/gap/revision/duplicate behavior, H4 derived semantics and exchange calendar still need a separate approved authorized cloud client.
+
+Official primary sources:
+- https://developers.dnse.com.vn/docs/guide/market-data/connect/ — WS channels, candle-start time and lastUpdated examples
+- https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/ — signed REST history, independently documented API product
+
+**Engineering interpretation:** DNSE's description of unchanged closed events is vendor documentation, NOT proof that the user's account may subscribe, or that a late arriving/revised historical record can never exist. Never treat `ohlc_closed` string, `lastUpdated` or client receipt time as independently authenticated first-known.
