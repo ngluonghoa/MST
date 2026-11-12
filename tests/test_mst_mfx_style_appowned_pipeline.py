@@ -234,10 +234,10 @@ class FakeQuarantineDrive(FakeDrive):
         assert params["uploadType"]=="multipart"
         boundary=headers["Content-Type"].split("boundary=",1)[1]
         first=b"--"+boundary.encode()
-        assert data.startswith(first+b"\\r\\nContent-Type:")
+        assert data.startswith(first+b"\r\nContent-Type:")
         parts=data.split(first)
-        metadata=json.loads(parts[1].split(b"\\r\\n\\r\\n",1)[1].strip())
-        body=parts[2].split(b"\\r\\n\\r\\n",1)[1].removesuffix(b"\\r\\n")
+        metadata=json.loads(parts[1].split(b"\r\n\r\n",1)[1].strip())
+        body=parts[2].split(b"\r\n\r\n",1)[1].removesuffix(b"\r\n")
         self.media=body
         import hashlib
         self.file_info={
