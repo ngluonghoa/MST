@@ -93,12 +93,13 @@ def require_manual_owner_env(env: Mapping[str, str]) -> tuple[OAuthSecrets, str,
     return secrets, old_id, new_id, parents
 
 
-def fetch_private_doc_readonly(session: Any, file_id: str,
-                               approved_parents: frozenset[str]) -> dict[str, Any]:
-    """Metadata-verify parent and MIME before exact-ID text export.
+def _verified_doc_version(
+    session: Any, file_id: str, approved_parents: frozenset[str],
+) -> str:
+    """Read exact file metadata; require Drive's monotone per-file version.
 
-    Returning parsed quote rows is confined to this private process memory.
-    A denied Drive access proves nothing about the user-owned Doc's existence.
+    Docs versions detect modifications *observed* during this manual read,
+    but cannot provide atomic consistency across multiple Google Docs.
     """
     _id(file_id)
     if (type(approved_parents) is not frozenset or not approved_parents or
@@ -107,18 +108,43 @@ def fetch_private_doc_readonly(session: Any, file_id: str,
         raise DriveReadonlyDenied("MST_M3_APPROVED_PRIVATE_PARENT_REQUIRED")
     try:
         resp = session.get(_API + file_id, params={
-            "fields": "id,mimeType,parents,trashed,capabilities(canDownload)",
+            "fields": "id,mimeType,parents,trashed,version,capabilities(canDownload)",
         }, timeout=20)
         if resp.status_code != 200:
             raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_NOT_ACCESSIBLE_WITH_SCOPED_OAUTH")
         meta = resp.json()
-        if (type(meta) is not dict or meta.get("id") != file_id
+        if type(meta) is not dict:
+            raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_METADATA_SCOPE_FAILURE")
+        capabilities = meta.get("capabilities")
+        version = meta.get("version")
+        if (meta.get("id") != file_id
                 or meta.get("mimeType") != _DOC_MIME or meta.get("trashed") is not False
                 or type(meta.get("parents")) is not list
                 or len(meta["parents"]) != 1
                 or meta["parents"][0] not in approved_parents
-                or meta.get("capabilities", {}).get("canDownload") is not True):
-            raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_METADATA_SCOPE_FAILURE")
+                or type(capabilities) is not dict or capabilities.get("canDownload") is not True
+                or type(version) is not str
+                or not re.fullmatch(r"[1-9][0-9]{0,19}", version)):
+            raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_METADATA_OR_VERSION_FAILURE")
+        return version
+    except DriveReadonlyDenied:
+        raise
+    except Exception:
+        raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_METADATA_READ_FAILED_CLOSED") from None
+
+
+def fetch_private_doc_readonly(
+    session: Any, file_id: str, approved_parents: frozenset[str],
+    *, observed_versions: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Read a single permitted Doc between TWO identical metadata versions.
+
+    Caller can pass an internal collector for a final all-document version
+    sweep after every source has been compared. Nothing returns quote values
+    to user-visible logs; no Drive mutation is performed.
+    """
+    before = _verified_doc_version(session, file_id, approved_parents)
+    try:
         exported = session.get(_API + file_id + "/export",
                                params={"mimeType": "text/plain"}, timeout=35)
         if exported.status_code != 200:
@@ -126,15 +152,25 @@ def fetch_private_doc_readonly(session: Any, file_id: str,
         raw = exported.content
         if type(raw) is not bytes or not 0 < len(raw) <= _MAX_JSON_BYTES:
             raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_TEXT_SIZE_INVALID")
-        return parse_google_doc_json(raw.decode("utf-8-sig"))
+        parsed = parse_google_doc_json(raw.decode("utf-8-sig"))
     except DriveReadonlyDenied:
         raise
     except (ValueError, UnicodeError, TypeError, AttributeError):
         raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_UNTRUSTED_JSON_OR_METADATA") from None
     except Exception:
-        # Never include URL, OAuth token, Google body or source rows in logs.
         raise DriveReadonlyDenied("MST_M3_PRIVATE_DOC_HTTP_READ_FAILED_CLOSED") from None
 
+    after = _verified_doc_version(session, file_id, approved_parents)
+    if after != before:
+        raise DriveReadonlyDenied("MST_M3_DOC_MUTATED_DURING_EXPORT_QUARANTINE")
+    if observed_versions is not None:
+        if type(observed_versions) is not dict:
+            raise DriveReadonlyDenied("MST_M3_INTERNAL_VERSION_COLLECTOR_REQUIRED")
+        earlier = observed_versions.get(file_id)
+        if earlier is not None and earlier != before:
+            raise DriveReadonlyDenied("MST_M3_DOC_VERSION_DRIFT_DURING_READ")
+        observed_versions[file_id] = before
+    return parsed
 
 def read_two_private_manifests(
     session: Any, *,
@@ -150,8 +186,11 @@ def read_two_private_manifests(
     """
     if _id(prior_manifest_id) == _id(next_manifest_id):
         raise DriveReadonlyDenied("MST_M3_DISTINCT_PRIVATE_MANIFESTS_REQUIRED")
-    earlier = fetch_private_doc_readonly(session, prior_manifest_id, approved_parents)
-    later = fetch_private_doc_readonly(session, next_manifest_id, approved_parents)
+    versions: dict[str, str] = {}
+    earlier = fetch_private_doc_readonly(
+        session, prior_manifest_id, approved_parents, observed_versions=versions)
+    later = fetch_private_doc_readonly(
+        session, next_manifest_id, approved_parents, observed_versions=versions)
     try:
         previous = _read_manifest(earlier)
         current = _read_manifest(later)
@@ -162,8 +201,9 @@ def read_two_private_manifests(
     ids = sorted(set(previous.values()) | set(current.values()))
     if len(ids) > 2 * _MAX_DOCS:
         raise DriveReadonlyDenied("MST_M3_EXCESSIVE_PRIVATE_DOCUMENT_READ_SCOPE")
-    documents = {id: fetch_private_doc_readonly(session, id, approved_parents)
-                 for id in ids}
+    documents = {id: fetch_private_doc_readonly(
+        session, id, approved_parents, observed_versions=versions)
+        for id in ids}
     prev_rows = { (r["provider"],r["symbol"]):r for r in earlier["snapshots"] }
     next_rows = { (r["provider"],r["symbol"]):r for r in later["snapshots"] }
     states = {"reused_source_versions": 0, "changed_source_versions": 0,
@@ -215,8 +255,17 @@ def read_two_private_manifests(
             states["quarantined_scope_or_revision"] += 1
         else:
             states["changed_source_versions"] += 1
+    # Catch cross-document races (e.g. first manifest edited after the
+    # final source export). Google Drive file.version rises even when content
+    # changes are not visible to the viewer. This is NOT a transaction.
+    for id, original in sorted(versions.items()):
+        if _verified_doc_version(session, id, approved_parents) != original:
+            raise DriveReadonlyDenied("MST_M3_CROSS_DOC_VERSION_DRIFT_QUARANTINE")
     return {
-        "schema": "mst.m3.scoped-oauth.readonly-two-manifest-reconciliation.v1",
+        "schema": "mst.m3.scoped-oauth.readonly-two-manifest-reconciliation.v2",
+        "read_only_file_versions_stable_during_sweep": True,
+        "cross_document_transactional_snapshot_verified": False,
+        "independent_signed_highwater_verified": False,
         "partition_count": len(previous),
         "distinct_private_docs_read": len(ids) + 2,
         **states,
