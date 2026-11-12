@@ -168,15 +168,12 @@ def decide_private_d1_refresh(
     manifest: dict[str, Any],
     prior_documents: dict[str, dict[str, Any]],
     candidate_documents: dict[tuple[str, str], dict[str, Any]],
-    prior_source_document_ids: bool = True,
 ) -> dict[str, Any]:
     """Evaluate ALL source partitions atomically in-memory, emit receipt plan only.
 
     candidate_documents come from a private Cloud-fetch stage and are not
     persisted by this pure function. A successful decision is NOT an upload.
     """
-    if prior_source_document_ids is not True:
-        raise PermissionError("MANIFEST_DOCUMENT_PROVENANCE_REQUIRED")
     expected = _read_manifest(manifest)
     if type(prior_documents) is not dict or set(prior_documents) != set(expected.values()):
         raise ValueError("EXACT_PRIOR_DOCUMENT_SET_REQUIRED")
@@ -185,8 +182,18 @@ def decide_private_d1_refresh(
     partitions: list[dict[str, Any]] = []
     for (provider, symbol), prior_doc_id in sorted(expected.items()):
         prior = read_private_d1_document(prior_documents[prior_doc_id], document_id=prior_doc_id)
-        if (prior.symbol,prior.endpoint) == (None,None):  # defensive type-independent no-op
-            raise ValueError("INVALID_PRIOR_SOURCE")
+        source_record = next(
+            r for r in manifest["snapshots"]
+            if r["provider"] == provider and r["symbol"] == symbol
+        )
+        # Verify the manifest points to the exact content count of the
+        # immutable-by-convention prior private document, not another symbol.
+        if (type(source_record.get("persisted_rows")) is not int or
+                source_record["persisted_rows"] != prior.exact_rows_retained):
+            raise ValueError("MANIFEST_PRIOR_SOURCE_ROW_COUNT_MISMATCH")
+        if (source_record.get("readback_verified") is not True or
+                source_record.get("stored_in_private_folder") is not True):
+            raise ValueError("MANIFEST_PRIVATE_READBACK_EVIDENCE_REQUIRED")
         if (provider,symbol) != (provider_from_endpoint(prior.endpoint),prior.symbol):
             raise ValueError("MANIFEST_SOURCE_AND_DOCUMENT_IDENTITY_DISAGREE")
 
