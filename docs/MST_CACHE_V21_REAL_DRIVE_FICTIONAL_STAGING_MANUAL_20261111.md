@@ -125,3 +125,67 @@ These are deterministic **failure demonstrations**, not mock tests claiming the 
 **Real-authority design consequence:** it is insufficient to add an atomic claim *only before* a bare Google Drive files.create and check the token after upload. The actual published/consumed manifest or logical cache-head transition must be committed through an authority-enforced conditional transaction/fencing boundary. Any pre-publish raw Drive artifact must be quarantined as non-authoritative; no reader may treat it as committed without verifying the independent authoritative head/highwater, exact source/version chain and ownership. Reconciliation must distinguish precommit orphan, committed-but-ACK-lost, stale epoch and rolled-back snapshots. No provider, authorization, real signed highwater store or production commit path has yet been selected/implemented. Scope remains owner-gated Draft PR23 only; do not turn on production or claim CAS/exactly-once.
 
 Remaining owner gates: PR23 review and explicit protected-main merge; default OAuth Drive probe (read-only) on main; distinct approval for a single fictional JSON upload/two media reads and immediate reset of repository write variable. Independent durable authority design, security/cost and real service testing require a new owner-scoped decision.
+
+## Proposed durable authority protocol v0 (design review only; not executable)
+
+**Status:** Draft architectural contract for future Cloud-only MST, **NOT implementation, deployment, permission or GO decision**. This section intentionally has no API keys, external deployment, IAM grants or production defaults. There is currently no selected durable authority service. The manually gated fictional JSON demonstration remains separate and must not call the fake test-only authority.
+
+### Trust boundary and object model
+
+The OAuth `drive.file` namespace is a **byte/object store**, not the authoritative cache-head or transaction log. A Drive `files.create`, file-version readback or complete name census must never be counted as a committed logical cache update. The authoritative cache state must be maintained by a different, durably enforced, monotonically versioned service whose current head and antirollback state cannot be rolled back by a principal that can mutate the Drive cache.
+
+Proposed per-key durable state (precise schema still subject to review):
+- `cache_key`: canonical `(MST schema, provider, exchange, symbol, timeframe, authorized data product)`. A key's source license/access entitlement is checked independently before any ingest.
+- `fencing_epoch`: monotonically incremented, never reused, assigned by a server-atomic claim. Lease validity is decided by the **authority's clock**, not a GitHub runner's clock.
+- `claim`: bound `run_id`, `run_attempt`, unique idempotency key, owner principal, expected prior head/version, expected source closed-bar fingerprint, authority-issued expiry and unforgeable credential. No claim credential in Drive metadata, logs or PRs.
+- `head`: sole authoritative published manifest ID + canonical hash, generation, source provenance and closed-bar `first_known` watermark.
+- `trusted_highwater`: separately authenticated monotonic generation/source checkpoint and previous-commit hash, stored outside mutable Drive Cache with independent access controls. A signed record alone is insufficient without checking **the latest trusted nonrollbackable head**: an older legitimately signed record may be replayed.
+- `commit_receipt`: idempotency key, committed head generation/hash, authority epoch, trusted highwater pointer and authoritative commit timestamp. Receipt is authoritative only after a durably committed conditional state transition.
+
+### Candidate state machine
+
+`EMPTY / PUBLISHED(head N)`
+  → `CLAIMED(epoch E, expected head N, expires T)`
+  → `PREPARED(untrusted Drive file ID + verified SHA256 + exact metadata)`
+  → `COMMIT_ATTEMPT(epoch E, compare head N, check source/first_known/highwater)`
+  → `PUBLISHED(head N+1, signed highwater checkpoint, immutable receipt)`
+  → `RECONCILED` if the successful commit acknowledgment was lost.
+
+Alternate paths:
+- Claim denied/outage, expired lease, token invalid, changed source fingerprint, rollback or unauthorized entitlement → **DENIED** with **no publication**; never automatically bypass or downgrade enforcement.
+- Crash after raw Drive upload but before authority commit → **ORPHAN/PENDING**, not readable as Cache; inspect/reconcile by exact idempotency key. No blind new upload, overwrite or deletion.
+- Commit succeeds but ACK lost → query the authority for the idempotency key and current head. If already committed, reuse the exact receipt. If uncertain/unavailable, remain **UNKNOWN**, not “retry as a new writer”.
+- Two writers preflight the same old head: both may physically create quarantined Drive bytes, but exactly one epoch must pass the **authority-enforced** conditional publish; the loser must never become the visible logical cache head.
+- Highwater chain cannot be verified or authority is unavailable on a cache read → **fail closed** for any claim of verified latest/fresh data. No fallback to a locally cached Drive manifest as though current.
+
+### Minimum authority operations and atomicity requirements
+
+`claim(cache_key, expected_head, expected_source, idempotency_key, owner, ttl)`:
+- Strong serializable claim-or-deny; increments a server-maintained epoch; no stale claims or reused epochs; server timestamp defines expiry.
+
+`prepare(ticket, drive_id, canonical_sha256, source_manifest)`:
+- Validates ownership, exact source/TF entitlement, closed-bar causality, size/provenance and expected head; records only an **unpublished** artifact. A `prepare` receipt must never authorize reads.
+
+`commit_if_current(ticket, expected_head, prepared_id, highwater_expectation)`:
+- One durably atomic compare-and-set of current epoch/owner/expiry + prior head + previous trusted highwater, advancing the authoritative head, source/checkpoint highwater and immutable idempotency receipt together. If the head and highwater cannot be committed in one trusted atomic boundary, production safety is NOT met.
+- Publish certificate must bind key, epoch, expected/new head hashes, source first-known/closed-bar fingerprint, signer/key version, checkpoint sequence and prior-record hash. Authenticity key management and independent audit need a provider-specific design.
+
+`get_current_head_and_receipt(cache_key, idempotency_key?)`:
+- Reads a strongly consistent authoritative current head/highwater and optional previously committed receipt. Revalidates signature and monotonic chain with independent latest-trusted anchor; then fetches referenced Drive bytes, checking SHA256, same file ID, origin and access scope. Never infer currentness from Drive listing alone.
+
+`abort_or_expire(ticket)`:
+- Invalidates commit permission; may quarantine uncommitted Drive objects. No destructive cleanup without a separately designed safe and approved retention process.
+
+### Non-negotiable tests before any real writer GO
+
+1. Two simultaneous first-attempt writers, synchronized after the same empty-folder preflight: **exactly one authoritative publish**; loser bytes remain untrusted.
+2. Expired lease with stale writer uploading raw bytes, then a new epoch winner: stale writer's **publish denied**, no stale content ever served by Cache readers.
+3. Crash before uploading, after upload-before-prepare, after prepare-before-commit, after durable commit-before-ACK: each state distinguishes uncommitted orphan vs exact already-committed receipt without duplicate publication.
+4. Authority outage/partition, clock skew, invalid/forged ticket, authorization revoked, replayed idempotency key, changed prior-head/source fingerprint and rolling back both Drive content+metadata: fail-closed, with independently trusted floor.
+5. Two distinct cache keys can advance without cross-contamination; conflicting publishers on the same key cannot; timestamps/first-known semantics must be vendor-verified across M5/M15/M30/H1/H4/D1.
+6. Reader checks current trusted highwater, certificate, manifest lineage, actual Drive bytes and entitlement. Older validly signed checkpoint replay must fail even if its payload hash matches.
+7. Operator-visible audit trail documents observed authorization decision, outcome, run SHA, CI link and remediation without disclosing secrets/file IDs in public logs.
+
+### Decision and owner approval gates
+
+A provider-specific design must still identify a real service supporting durable transactional claim/CAS, strong reads, server clock, service authentication and a genuinely independent signed/nonrollbackable highwater. Assess cost, IAM, locality, operational recovery and whether a new cloud provider is permitted within MST's GitHub + Google Drive Cloud-only charter. GitHub Actions `concurrency` alone, a local `threading.Lock`, a repository variable flag or Google Drive `files.list` are explicitly **insufficient** for externally enforceable fencing. No new billable service, secret, protected branch update, deployment, permission change, Google Drive upload or production Cache activation is approved by this design section.
