@@ -34,6 +34,7 @@ WORKFLOW = (
 MODE_DRIVE = "drive-probe"
 MODE_DNSE = "dnse-d1-readonly"
 MODE_STAGE = "dnse-d1-quarantine-stage"
+MODE_SSI = "ssi-d1-readonly"
 DRIVE_ROOT = "MST_OAUTH_CACHE_V1"
 DRIVE_CHILDREN = ("STAGING_ONLY", "CHUNKS", "MANIFESTS", "AUDIT")
 DRIVE_URL = "https://www.googleapis.com/drive/v3/files/"
@@ -65,7 +66,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
     if any(env.get(k) != v for k, v in required.items()):
         raise CloudGateDenied("MST_MFX_MANUAL_MAIN_OWNER_GATE_REQUIRED")
     mode = env.get("MST_MFX_SOURCE_MODE", MODE_DRIVE)
-    if mode not in (MODE_DRIVE, MODE_DNSE, MODE_STAGE):
+    if mode not in (MODE_DRIVE, MODE_DNSE, MODE_STAGE, MODE_SSI):
         raise CloudGateDenied("MST_MFX_UNKNOWN_READONLY_MODE")
     if (env.get("MST_OAUTH_BOOTSTRAP_ACCEPTED") == "true"
             or env.get("MST_GDRIVE_SERVICE_ACCOUNT_JSON")):
@@ -89,6 +90,9 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
         a, b = int(start), int(end)
         if a <= 0 or b <= a or b - a > 95 * 86400:
             raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
+    if mode == MODE_SSI:
+        from scripts.mst_mfx_ssi_readonly import guard_ssi
+        guard_ssi(env)
     if mode == MODE_STAGE:
         if (env.get("MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED") != "true"
                 or env.get("MST_DNSE_STORAGE_RIGHTS_CONFIRMED") != "true"):
@@ -450,6 +454,10 @@ def main() -> None:
             receipt["unpublished_source_staging"] = stage_unpublished_dnse_source(
                 session,os.environ,payload)
             receipt["status"] = "MST_MFX_STYLE_UNPUBLISHED_SOURCE_ONLY"
+    elif mode == MODE_SSI:
+        import requests
+        from scripts.mst_mfx_ssi_readonly import read_ssi_d1_once
+        receipt["provider"] = read_ssi_d1_once(requests.Session(),os.environ)
 
     print(json.dumps(receipt, sort_keys=True))
 
