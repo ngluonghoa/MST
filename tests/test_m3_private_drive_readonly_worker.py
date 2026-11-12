@@ -270,6 +270,8 @@ class TwoManifestReadOnlyTests(unittest.TestCase):
         data[SSI_NEW]["retained_row_count"]=1
         data[SSI_NEW]["source_row_count"]=1
         data[NEW]["snapshots"][0]["persisted_rows"]=1
+        data[NEW]["total_saved_ohlcv_rows"]=2
+        data[NEW]["rows_by_provider"]["SSI"]=1
         out=m.read_two_private_manifests(
             FakeSession(data),prior_manifest_id=OLD,next_manifest_id=NEW,
             approved_parents=frozenset([PARENT]))
