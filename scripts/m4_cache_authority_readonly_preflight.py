@@ -48,7 +48,7 @@ def _get(path: str, token: str):
     """Fixed-path GitHub REST GET; reject non-allowlisted paths, bound bytes."""
     if type(token) is not str or not token:
         raise PreflightError("READ_ONLY_TOKEN_REQUIRED")
-    paths = {"/", "/rulesets", "/git/ref/heads/mst/m4-ref-cas-lab-20261109",
+    paths = {"", "/rulesets", "/git/ref/heads/mst/m4-ref-cas-lab-20261109",
              "/branches/mst/m4-ref-cas-lab-20261109"}
     if path not in paths and not re.fullmatch(r"/rulesets/[1-9][0-9]{0,12}", path):
         raise PreflightError("NON_READONLY_OR_OUT_OF_SCOPE_ENDPOINT")
@@ -69,7 +69,7 @@ def _get(path: str, token: str):
             if response.headers.get("Link", "").find('rel="next"') != -1:
                 raise PreflightError("GITHUB_RESULT_PAGINATED_INCOMPLETE")
             body = response.read(MAX_BODY + 1)
-    except (HTTPError, URLError, OSError) as exc:
+    except (HTTPError, URLError, OSError):
         # No URLs, bearer tokens, or raw exception details in status/logs.
         raise PreflightError("GITHUB_READ_UNAVAILABLE") from None
     if len(body) > MAX_BODY:
@@ -180,7 +180,7 @@ def main() -> None:
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
         raise PreflightError("READ_ONLY_TOKEN_REQUIRED")
-    info = _get("/", token)
+    info = _get("", token)
     ref = _get("/git/ref/heads/mst/m4-ref-cas-lab-20261109", token)
     branch = _get("/branches/mst/m4-ref-cas-lab-20261109", token)
     rulesets = _get("/rulesets", token)
