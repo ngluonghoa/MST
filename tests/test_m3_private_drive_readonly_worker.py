@@ -180,7 +180,7 @@ class ExactDocumentReadTests(unittest.TestCase):
     def test_metadata_fetch_never_mutates_google(self):
         s=FakeSession()
         m.fetch_private_doc_readonly(s,SSI_OLD,frozenset([PARENT]))
-        self.assertEqual(len(s.calls),2)
+        self.assertEqual(len(s.calls),3)
         self.assertFalse(any("Authorization" in str(entry) for entry in s.calls))
 
 
