@@ -1,6 +1,7 @@
 """Review-only metadata classifier tests; NO real GitHub/Drive writes or CAS."""
 from copy import deepcopy
 import unittest
+from unittest.mock import patch
 
 from scripts import m4_cache_authority_readonly_preflight as m
 
@@ -131,6 +132,34 @@ class M4CacheAuthorityReadonlyPreflightTests(unittest.TestCase):
         ):
             with self.subTest(path=bad), self.assertRaises(m.PreflightError):
                 m._get(bad, "not-a-real-token")
+
+    def test_repo_get_uses_canonical_url_without_trailing_slash(self):
+        class Response:
+            status = 200
+            headers = {}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, limit):
+                self_limit = limit
+                assert self_limit <= m.MAX_BODY + 1
+                return b'{"full_name":"ngluonghoa/MST"}'
+
+        observed = []
+
+        def fake_urlopen(req, timeout):
+            observed.append((req.full_url, timeout, req.get_method()))
+            return Response()
+
+        with patch.object(m, "urlopen", fake_urlopen):
+            self.assertEqual(m._get("", "non-secret-fake-token")["full_name"], m.REPO)
+        self.assertEqual(observed, [(m.API_ROOT, 15, "GET")])
+        with self.assertRaises(m.PreflightError):
+            m._get("/", "non-secret-fake-token")
 
     def test_empty_ruleset_list_remains_no_go_not_an_authority(self):
         v = sample()
