@@ -198,6 +198,27 @@ def read_two_private_manifests(
         raise DriveReadonlyDenied("MST_M3_PRIVATE_MANIFEST_SCHEMA_REJECTED") from None
     if set(previous) != set(current) or not 1 <= len(current) <= _MAX_DOCS:
         raise DriveReadonlyDenied("MST_M3_MANIFEST_SOURCE_PARTITION_SET_DRIFT")
+    # The newer private manifest must explicitly link to the exact previous
+    # manifest; timestamps alone are not provenance. Also verify its recorded
+    # per-provider and overall counts from referenced partition metadata.
+    if later.get("previous_manifest_document_id") != prior_manifest_id:
+        raise DriveReadonlyDenied("MST_M3_MANIFEST_PREDECESSOR_LINK_MISMATCH")
+    for doc in (earlier, later):
+        source_entries = doc["snapshots"]
+        reported_by_provider = doc.get("rows_by_provider")
+        if type(reported_by_provider) is not dict:
+            raise DriveReadonlyDenied("MST_M3_MANIFEST_PROVIDER_COUNTERS_REQUIRED")
+        expected_by_provider: dict[str, int] = {}
+        for entry in source_entries:
+            provider, count = entry["provider"], entry.get("persisted_rows")
+            if type(count) is not int or count < 1:
+                raise DriveReadonlyDenied("MST_M3_MANIFEST_POSITIVE_ROW_COUNT_REQUIRED")
+            expected_by_provider[provider] = expected_by_provider.get(provider, 0) + count
+        total = sum(expected_by_provider.values())
+        if (type(doc.get("total_saved_ohlcv_rows")) is not int
+                or doc["total_saved_ohlcv_rows"] != total
+                or reported_by_provider != expected_by_provider):
+            raise DriveReadonlyDenied("MST_M3_MANIFEST_ROW_TOTALS_INCONSISTENT")
     ids = sorted(set(previous.values()) | set(current.values()))
     if len(ids) > 2 * _MAX_DOCS:
         raise DriveReadonlyDenied("MST_M3_EXCESSIVE_PRIVATE_DOCUMENT_READ_SCOPE")
