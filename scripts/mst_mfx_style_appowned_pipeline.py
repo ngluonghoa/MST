@@ -264,7 +264,7 @@ def read_dnse_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
 
 def _exact_named_quarantine(session: Any, parent: str, name: str) -> list[str]:
     if not DRIVE_ID_RE.fullmatch(parent) or not re.fullmatch(
-            r"MST_UNPUBLISHED_DNSE_D1_[1-9][0-9]{5,19}_1_[0-9a-f]{16}\.json",name):
+            r"MST_UNPUBLISHED_DNSE_D1_[1-9][0-9]{5,19}_1\.json",name):
         raise CloudGateDenied("MST_MFX_SOURCE_QUARANTINE_SCOPE_INVALID")
     try:
         r=session.get("https://www.googleapis.com/drive/v3/files",params={
@@ -367,8 +367,9 @@ def stage_unpublished_dnse_source(
     if not 0<len(body)<=1_500_000:
         raise CloudGateDenied("MST_MFX_SOURCE_CHUNK_SIZE_DENIED")
     sha=hashlib.sha256(body).hexdigest()
-    name=("MST_UNPUBLISHED_DNSE_D1_"
-          +env["GITHUB_RUN_ID"]+"_1_"+sha[:16]+".json")
+    # Stable attempt identity is essential: content/clock-derived names would
+    # allow a lost upload ACK to mint another candidate on retry.
+    name="MST_UNPUBLISHED_DNSE_D1_"+env["GITHUB_RUN_ID"]+"_1.json"
     if _exact_named_quarantine(session,parent,name):
         raise CloudGateDenied("MST_MFX_SOURCE_PREEXISTING_ATTEMPT_NEEDS_MANUAL_REVIEW")
     # Google Drive multipart/related metadata+bytes, never a native Google Doc.
