@@ -86,7 +86,7 @@ class FakeSession:
             return FakeResponse(403)
         metadata={"id":suffix,"mimeType":"application/vnd.google-apps.document",
                   "parents":[PARENT],"trashed":False,
-                  "capabilities":{"canDownload":True}}
+                  "capabilities":{"canDownload":True},"version":"17"}
         metadata.update(self.meta.get(suffix,{}))
         return FakeResponse(json_value=metadata)
 
@@ -129,7 +129,7 @@ class ExactDocumentReadTests(unittest.TestCase):
         s=FakeSession()
         data=m.fetch_private_doc_readonly(s,SSI_OLD,frozenset([PARENT]))
         self.assertEqual(data["rows"][0]["volume"],"200")
-        self.assertEqual(len(s.calls),2)
+        self.assertEqual(len(s.calls),3)
         self.assertTrue(all(method=="GET" for method,*_ in s.calls))
 
     def test_wrong_google_parent_denied_without_export(self):
@@ -182,6 +182,40 @@ class ExactDocumentReadTests(unittest.TestCase):
         m.fetch_private_doc_readonly(s,SSI_OLD,frozenset([PARENT]))
         self.assertEqual(len(s.calls),2)
         self.assertFalse(any("Authorization" in str(entry) for entry in s.calls))
+
+
+    def test_missing_drive_file_version_denied(self):
+        s=FakeSession()
+        s.meta[SSI_OLD]={"version":None}
+        with self.assertRaises(m.DriveReadonlyDenied):
+            m.fetch_private_doc_readonly(s,SSI_OLD,frozenset([PARENT]))
+        self.assertEqual(len(s.calls),1)
+
+    def test_invalid_drive_file_version_denied(self):
+        for value in (0,True,"", "0", "17.5", "not-a-number"):
+            with self.subTest(value=value):
+                s=FakeSession()
+                s.meta[SSI_OLD]={"version":value}
+                with self.assertRaises(m.DriveReadonlyDenied):
+                    m.fetch_private_doc_readonly(s,SSI_OLD,frozenset([PARENT]))
+
+    def test_single_doc_mutated_during_export_denied(self):
+        class MutatingSession(FakeSession):
+            def get(self,url,*,params,timeout):
+                result=super().get(url,params=params,timeout=timeout)
+                if url.endswith("/export"):
+                    self.meta[SSI_OLD]={"version":"18"}
+                return result
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"MUTATED_DURING_EXPORT"):
+            m.fetch_private_doc_readonly(MutatingSession(),SSI_OLD,frozenset([PARENT]))
+
+    def test_single_doc_stable_version_reports_internal_only(self):
+        s=FakeSession()
+        versions={}
+        m.fetch_private_doc_readonly(s,SSI_OLD,frozenset([PARENT]),
+                                     observed_versions=versions)
+        self.assertEqual(versions,{SSI_OLD:"17"})
+
 
 
 class TwoManifestReadOnlyTests(unittest.TestCase):
@@ -280,6 +314,42 @@ class TwoManifestReadOnlyTests(unittest.TestCase):
         text=json.dumps(out)
         for id in (OLD,NEW,SSI_OLD,SSI_NEW,DNSE,PARENT):
             self.assertNotIn(id,text)
+
+
+    def test_first_manifest_modified_after_all_exports_denied(self):
+        class LateMutation(FakeSession):
+            def get(self,url,*,params,timeout):
+                result=super().get(url,params=params,timeout=timeout)
+                if url.endswith(DNSE+"/export"):
+                    self.meta[OLD]={"version":"18"}
+                return result
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"CROSS_DOC_VERSION_DRIFT"):
+            m.read_two_private_manifests(
+                LateMutation(),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+    def test_version_change_in_reused_source_midread_denied(self):
+        class MutatingReuse(FakeSession):
+            def get(self,url,*,params,timeout):
+                result=super().get(url,params=params,timeout=timeout)
+                if url.endswith(DNSE+"/export"):
+                    self.meta[DNSE]={"version":"18"}
+                return result
+        with self.assertRaisesRegex(m.DriveReadonlyDenied,"MUTATED_DURING_EXPORT"):
+            m.read_two_private_manifests(
+                MutatingReuse(),prior_manifest_id=OLD,next_manifest_id=NEW,
+                approved_parents=frozenset([PARENT]))
+
+    def test_successful_two_manifest_read_is_not_atomic_transaction(self):
+        result=m.read_two_private_manifests(
+            FakeSession(),prior_manifest_id=OLD,next_manifest_id=NEW,
+            approved_parents=frozenset([PARENT]))
+        self.assertTrue(result["read_only_file_versions_stable_during_sweep"])
+        self.assertFalse(result["cross_document_transactional_snapshot_verified"])
+        self.assertFalse(result["independent_signed_highwater_verified"])
+        self.assertEqual(result["schema"],
+                         "mst.m3.scoped-oauth.readonly-two-manifest-reconciliation.v2")
+
 
 
 class ManualContextTests(unittest.TestCase):
