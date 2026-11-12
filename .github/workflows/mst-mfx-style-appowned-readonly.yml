@@ -15,8 +15,9 @@ on:
           - drive-probe
           - dnse-d1-readonly
           - dnse-d1-quarantine-stage
+          - ssi-d1-readonly
       symbol:
-        description: "DNSE symbol for read-only D1 probe, never used in log"
+        description: "FPT/DCM/HPG symbol for owner-gated D1 read-only source"
         required: false
         default: FPT
         type: choice
@@ -30,6 +31,14 @@ on:
         type: string
       to_unix:
         description: "DNSE D1 ending UNIX timestamp"
+        required: false
+        type: string
+      from_date:
+        description: "SSI D1 from, YYYY-MM-DD (max 95 days; market-data-only)"
+        required: false
+        type: string
+      to_date:
+        description: "SSI D1 to, YYYY-MM-DD"
         required: false
         type: string
 
@@ -72,4 +81,11 @@ jobs:
           MST_DNSE_TO_UNIX: ${{ inputs.to_unix }}
           MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED: ${{ vars.MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED }}
           MST_DNSE_STORAGE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_STORAGE_RIGHTS_CONFIRMED }}
+          MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
+          MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}
+          MST_SSI_API_KEY: ${{ secrets.MST_SSI_API_KEY }}
+          MST_SSI_API_SECRET: ${{ secrets.MST_SSI_API_SECRET }}
+          MST_SSI_SYMBOL: ${{ inputs.symbol }}
+          MST_SSI_FROM_DATE: ${{ inputs.from_date }}
+          MST_SSI_TO_DATE: ${{ inputs.to_date }}
         run: python -m scripts.mst_mfx_style_appowned_pipeline
