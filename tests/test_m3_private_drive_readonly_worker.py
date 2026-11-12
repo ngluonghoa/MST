@@ -504,6 +504,43 @@ class NinePartitionOfflineCloudReadbackTests(unittest.TestCase):
         self.assertEqual(report["distinct_private_docs_read"],14)
         self.assertFalse(report["private_data_written"])
         self.assertFalse(report["cross_provider_volume_qa_crosschecked"])
+        self.assertFalse(report["cross_provider_volume_scope_attested"])
+        self.assertFalse(report["cross_provider_raw_vs_adjusted_prices_normalized"])
+        self.assertEqual(report["prior_volume_observations"], {
+            "complete_symbol_sets":3,
+            "common_symbol_session_triples":0,
+            "unequal_volume_triples":0,
+        })
+        self.assertEqual(report["current_volume_observations"], {
+            "complete_symbol_sets":3,
+            "common_symbol_session_triples":3,
+            "unequal_volume_triples":3,
+        })
+
+    def test_volume_observation_counts_equal_source_native_numbers_only(self):
+        data=nine_partition_fixtures()
+        for id,doc in data.items():
+            if id.endswith("_current") and doc.get("provider")=="SSI":
+                doc["rows"][0]["volume"]="200"
+        report=m.read_two_private_manifests(
+            FakeSession(data),prior_manifest_id=OLD,next_manifest_id=NEW,
+            approved_parents=frozenset([PARENT]))
+        self.assertEqual(
+            report["current_volume_observations"]["common_symbol_session_triples"],3)
+        self.assertEqual(
+            report["current_volume_observations"]["unequal_volume_triples"],0)
+        self.assertFalse(report["cross_provider_volume_scope_attested"])
+        self.assertFalse(report["cross_provider_raw_vs_adjusted_prices_normalized"])
+
+    def test_no_cross_provider_volume_inference_from_partial_provider_set(self):
+        report=m.read_two_private_manifests(
+            FakeSession(),prior_manifest_id=OLD,next_manifest_id=NEW,
+            approved_parents=frozenset([PARENT]))
+        self.assertEqual(report["current_volume_observations"], {
+            "complete_symbol_sets":0,
+            "common_symbol_session_triples":0,
+            "unequal_volume_triples":0,
+        })
 
     def test_nine_partition_private_parent_mismatch_fails_entire_run(self):
         session=FakeSession(nine_partition_fixtures())
