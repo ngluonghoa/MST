@@ -22,7 +22,11 @@ from typing import Any
 from scripts.m3_private_drive_d1_refresh import (
     parse_google_doc_json, read_private_d1_document, _read_manifest,
 )
-from scripts.m3_source_native_ohlcv_delta import diff_native_d1_versions
+from scripts.m3_source_native_ohlcv_delta import (
+    _day as _native_day,
+    _number as _native_number,
+    diff_native_d1_versions,
+)
 from scripts.mst_oauth_manual_drive_bootstrap import (
     OAuthSecrets, _new_authorized_session,
 )
@@ -172,6 +176,46 @@ def fetch_private_doc_readonly(
         observed_versions[file_id] = before
     return parsed
 
+
+def _count_observed_common_d1_volumes(
+    validated: Mapping[tuple[str, str], Any],
+) -> dict[str, int]:
+    """Count source-native volume observations; NEVER assert scope equivalence.
+
+    Three provider-native D1 bars with the same session label may report the
+    same number yet still have different venue/match/deal semantics. This
+    observer does not compare adjusted or raw prices and never logs names,
+    dates, prices, volumes or any private source identifiers.
+    """
+    providers = ("SSI", "DNSE", "VCBS")
+    complete_symbol_sets = 0
+    common_symbol_session_triples = 0
+    unequal_volume_triples = 0
+    for symbol in sorted({key[1] for key in validated}):
+        keys = tuple((provider, symbol) for provider in providers)
+        if not all(key in validated for key in keys):
+            continue
+        per_provider: dict[str, dict[str, Any]] = {}
+        for provider, key in zip(providers, keys):
+            source = validated[key]
+            per_provider[provider] = {
+                _native_day(source.endpoint, row): _native_number(row["volume"])
+                for row in source.native.rows
+            }
+        aligned = set.intersection(*(set(per_provider[p]) for p in providers))
+        complete_symbol_sets += 1
+        common_symbol_session_triples += len(aligned)
+        unequal_volume_triples += sum(
+            len({per_provider[p][day] for p in providers}) != 1
+            for day in aligned
+        )
+    return {
+        "complete_symbol_sets": complete_symbol_sets,
+        "common_symbol_session_triples": common_symbol_session_triples,
+        "unequal_volume_triples": unequal_volume_triples,
+    }
+
+
 def read_two_private_manifests(
     session: Any, *,
     prior_manifest_id: str, next_manifest_id: str,
@@ -232,6 +276,8 @@ def read_two_private_manifests(
               "overlapping_rows_checked": 0, "numeric_ohlcv_revisions": 0,
               "adjustment_revisions": 0, "candle_start_revisions": 0,
               "metadata_only_revisions": 0}
+    verified_previous: dict[tuple[str, str], Any] = {}
+    verified_current: dict[tuple[str, str], Any] = {}
     for key in sorted(previous):
         old_id,new_id=previous[key],current[key]
         try:
@@ -253,6 +299,8 @@ def read_two_private_manifests(
         if not o.full_source_result_observed or not n.full_source_result_observed:
             states["quarantined_scope_or_revision"] += 1
             continue
+        verified_previous[key] = o
+        verified_current[key] = n
         if old_id==new_id:
             # One current read cannot prove what mutable Doc contained earlier!
             states["reused_source_versions"] += 1
@@ -276,6 +324,8 @@ def read_two_private_manifests(
             states["quarantined_scope_or_revision"] += 1
         else:
             states["changed_source_versions"] += 1
+    previous_volumes = _count_observed_common_d1_volumes(verified_previous)
+    current_volumes = _count_observed_common_d1_volumes(verified_current)
     # Catch cross-document races (e.g. first manifest edited after the
     # final source export). Google Drive file.version rises even when content
     # changes are not visible to the viewer. This is NOT a transaction.
@@ -293,7 +343,12 @@ def read_two_private_manifests(
         "oauth_drive_file_access_to_exact_docs_observed": True,
         "previous_mutable_docs_immutable_proof": False,
         "same_id_mutability_change_undetectable": True,
+        # Observable overlaps are useful but not equivalent source scopes.
         "cross_provider_volume_qa_crosschecked": False,
+        "cross_provider_volume_scope_attested": False,
+        "cross_provider_raw_vs_adjusted_prices_normalized": False,
+        "prior_volume_observations": previous_volumes,
+        "current_volume_observations": current_volumes,
         "private_data_written": False,
         "new_vendor_data_fetched": False,
         "automatic_cache_v2_writer_authorized": False,
