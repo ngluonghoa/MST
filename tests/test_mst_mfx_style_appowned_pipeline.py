@@ -150,8 +150,8 @@ class DnseNative(unittest.TestCase):
         import hashlib
         import hmac
         from urllib.parse import quote
-        signing=("(request-target): get /price/ohlc\\n"
-                 "date: Fri, 13 Nov 2026 00:00:00 +0000\\n"
+        signing=("(request-target): get /price/ohlc\n"
+                 "date: Fri, 13 Nov 2026 00:00:00 +0000\n"
                  "nonce: "+("a"*32)).encode()
         signature=quote(base64.b64encode(
             hmac.new(b"FAKE_SECRET",signing,hashlib.sha256).digest()
