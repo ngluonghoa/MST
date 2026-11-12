@@ -274,5 +274,31 @@ class NativeOHLCVRevisionTests(unittest.TestCase):
         self.assertFalse(d["production_authorized"])
 
 
+
+    def test_dnse_same_day_source_start_revision_invalidates(self):
+        before=dnse()
+        after=dnse(source_unix_seconds=1794448860)
+        d=compare([before],[after],endpoint=DailyEndpoint.DNSE_CONNECTED_DAY,
+                  basis="source_native",unit="native_unverified")
+        self.assertEqual(d["numeric_ohlcv_revisions"],[])
+        self.assertEqual(d["source_candle_start_timestamp_revisions"],
+                         [{"day":"2026-11-12",
+                           "changed_fields":["source_unix_seconds"]}])
+        self.assertEqual(d["affected_research_day_labels"],["2026-11-12"])
+        self.assertEqual(d["unchanged_rows"],0)
+
+    def test_dnse_same_timestamp_no_revision(self):
+        d=compare([dnse()],[dnse()],endpoint=DailyEndpoint.DNSE_CONNECTED_DAY,
+                  basis="source_native",unit="native_unverified")
+        self.assertEqual(d["source_candle_start_timestamp_revisions"],[])
+        self.assertEqual(d["unchanged_rows"],1)
+
+    def test_dnse_source_start_does_not_become_issuer_first_known(self):
+        d=compare([dnse()],[dnse(source_unix_seconds=1794448860)],
+                  endpoint=DailyEndpoint.DNSE_CONNECTED_DAY,
+                  basis="source_native",unit="native_unverified")
+        self.assertFalse(d["source_first_known_authenticated"])
+        self.assertFalse(d["automatic_cache_v2_write_authorized"])
+
 if __name__ == "__main__":
     unittest.main()
