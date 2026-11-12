@@ -30,3 +30,23 @@ References: https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/ ; https:/
 
 ## Next milestone
 After CI and separate owner deployment approval, perform a **real GitHub manual drive-probe**, observe private app-owned 5/5 folder metadata, then an owner-authorized DNSE D1 GET-only trial. Only if rights/storage/write approvals are independently granted should one quarantined source be written; then plan analogous SSI, VCBS connectors and independent authoritative Cache commit. Do not enable hourly MST automation; task ID 6af4b3f1b0408191a6265d4308a20eba stays DISABLED.
+
+
+## §171 — Independently gated SSI FastConnect V3 market-data-only D1 ingress
+
+MST Stage 1 now has **two separately credentialed Cloud source-read paths**, neither live-authorized yet. This is not a simulated second SSI source masquerading as an authenticated API read.
+
+- Official endpoint: \`POST https://api.ssi.com.vn/api/v3/auth/token\` with \`apiKey\`/\`apiSecret\` but **no OTP**; a Bearer market-data token stays entirely in GitHub Actions memory. Next \`GET https://api.ssi.com.vn/api/v3/data/ohlc\` sends the bounded \`symbol\`, \`from\`, \`to\`, \`timeFrame=1d\`, \`pageIndex\`, \`pageSize\` and Bearer header. No trading token, account query, purchase/sell or write API is imported.
+- Implementation: \`scripts/mst_mfx_ssi_readonly.py\`, called under distinct \`ssi-d1-readonly\` option in the **same existing** \`.github/workflows/mst-mfx-style-appowned-readonly.yml\` and \`scripts/mst_mfx_style_appowned_pipeline.py\`. No new workflow, merge, production data publication or scheduled process.
+- Dedicated PRIVATE GitHub Secrets: \`MST_SSI_API_KEY\`, \`MST_SSI_API_SECRET\`. Owner-accepted repo Variables: \`MST_SSI_READONLY_OWNER_ACCEPTED=true\`, \`MST_SSI_SOURCE_RIGHTS_CONFIRMED=true\`. Manual workflow additionally requires the previously approved exact-MST app-owned Drive gate and existing OAuth secret trio. In read-only SSI mode, **no DNSE secret is required**.
+- Bounded manual inputs: \`symbol\` among FPT, DCM, HPG; \`from_date\`/\`to_date\` as ISO \`YYYY-MM-DD\`, with max 95-day interval; max five pages of 100 records. Reject null/empty/oversized or pagination-drifting, duplicate, wrong-symbol, outside-window or invalid-price-volume source responses. Never print raw prices, dates, token, bearer JWT, API key/secret, source rows or private Drive IDs.
+- **Price basis caveat:** SSI FastConnect's official OHLC response has string price fields; the connected MCP SSI compact series uses a different product/basis and cannot be silently equated or transformed. Corporate actions such as FPT's 2026-09-21 10% bonus event remain explicit adjustment-provenance requirements before signal use.
+- The official API documentation says authenticated market-data token can be obtained without OTP; it does not independently prove that an owner's future API key has the necessary market-data scope or data-retention rights. Only a live owner-provisioned GitHub Actions GET can establish that access.
+
+Official references:
+- https://developers.ssi.com.vn/docs/api-reference/auth-token
+- https://developers.ssi.com.vn/docs/api-reference/data-ohlc
+- https://developers.ssi.com.vn/docs/tutorials/ohlc
+
+**NO-GO remains:** real SSI vendor entitlement/API secret, actual GitHub OAuth vendor run, source-use/storage rights, native 5m/15m/30m/H1/H4/D1 and official closed-bar semantics, independent monotonic CAS/fencing, Cache release and Signal Engine/UI. SSI D1 read-only is a Cloud ingress capability under owner gate, not a Cache producer.
+
