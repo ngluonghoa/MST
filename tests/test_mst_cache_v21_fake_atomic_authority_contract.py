@@ -200,7 +200,9 @@ class FakeAuthorityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ClaimDenied, "stale fencing"):
             authority.commit(first, 40)
         newer = authority.claim(first.key, "runB", expected_version=41)
-        with self.assertRaisesRegex(ClaimDenied, "replay or rollback"):
+        # Version binding denies the attempted old payload before the model
+        # gets to its monotonic highwater comparison. Either must fail closed.
+        with self.assertRaisesRegex(ClaimDenied, "not bound"):
             authority.commit(newer, 40)
         authority.commit(newer, 41)
 
