@@ -264,7 +264,7 @@ def read_dnse_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
 
 def _exact_named_quarantine(session: Any, parent: str, name: str) -> list[str]:
     if not DRIVE_ID_RE.fullmatch(parent) or not re.fullmatch(
-            r"MST_UNPUBLISHED_DNSE_D1_[1-9][0-9]{5,19}_1_[0-9a-f]{16}\\.json",name):
+            r"MST_UNPUBLISHED_DNSE_D1_[1-9][0-9]{5,19}_1_[0-9a-f]{16}\.json",name):
         raise CloudGateDenied("MST_MFX_SOURCE_QUARANTINE_SCOPE_INVALID")
     try:
         r=session.get("https://www.googleapis.com/drive/v3/files",params={
@@ -380,10 +380,10 @@ def stage_unpublished_dnse_source(
             "mst_unpublished":"true","source_sha256":sha,"schema":"dnse_source_candidate_v1",
         },
     }
-    prefix=("--"+boundary+"\\r\\nContent-Type: application/json; charset=UTF-8\\r\\n\\r\\n"
+    prefix=("--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
             +json.dumps(metadata,separators=(",",":"))
-            +"\\r\\n--"+boundary+"\\r\\nContent-Type: application/json\\r\\n\\r\\n").encode()
-    multipart=prefix+body+("\\r\\n--"+boundary+"--\\r\\n").encode()
+            +"\r\n--"+boundary+"\r\nContent-Type: application/json\r\n\r\n").encode()
+    multipart=prefix+body+("\r\n--"+boundary+"--\r\n").encode()
     try:
         r=session.post("https://www.googleapis.com/upload/drive/v3/files",
             params={"uploadType":"multipart","ignoreDefaultVisibility":"true",
