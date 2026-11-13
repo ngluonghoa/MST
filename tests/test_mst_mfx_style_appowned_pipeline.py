@@ -325,7 +325,7 @@ class DnseNativeTimeframeTests(unittest.TestCase):
         outputs=[]
         for tf in ("M5","M15","M30","H1","D1"):
             url,headers=m.build_dnse_request(
-                "FPT",1794000000,1794500000,"FAKE_KEY","FAKE_SECRET",
+                "FPT",1794000000,1794200000,"FAKE_KEY","FAKE_SECRET",
                 date_header="Fri, 13 Nov 2026 00:00:00 +0000",
                 nonce="a"*32,timeframe=tf)
             outputs.append(headers["X-Signature"])
