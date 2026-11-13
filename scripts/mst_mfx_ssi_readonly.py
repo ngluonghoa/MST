@@ -113,7 +113,7 @@ def _native_source_row(
             d = date.fromisoformat(label)
         else:
             # Keep the native minute/second label; do not collapse to a D1 key.
-            if not re.fullmatch(r"\\d{4}[-/]\\d{2}[-/]\\d{2} \\d{2}:\\d{2}:\\d{2}", label):
+            if not re.fullmatch(r"\d{4}[-/]\d{2}[-/]\d{2} \d{2}:\d{2}:\d{2}", label):
                 raise ValueError("not a native intraday timestamp")
             native_clock = datetime.strptime(label.replace("/", "-"), "%Y-%m-%d %H:%M:%S")
             d = native_clock.date()
