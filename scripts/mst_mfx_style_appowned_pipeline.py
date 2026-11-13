@@ -121,7 +121,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
         if (mode not in (MODE_STAGE, MODE_STAGE_NATIVE)
                 or env.get("MST_SOURCE_TF", "D1") != "D1"
                 or type(prior_id) is not str
-                or not DRIVE_ID_RE.fullmatch(prior_id)):
+                or (prior_id != "auto" and not DRIVE_ID_RE.fullmatch(prior_id))):
             raise CloudGateDenied("MST_MFX_PREVIOUS_D1_STAGE_ONLY")
     if mode in (MODE_STAGE, MODE_STAGE_NATIVE):
         if (env.get("MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED") != "true"
@@ -476,6 +476,9 @@ def stage_unpublished_dnse_source(
         "description":"UNPUBLISHED quarantined source - NOT Cache/Signals",
         "appProperties":{
             "mst_unpublished":"true","source_sha256":sha,
+            "source_symbol":env["MST_DNSE_SYMBOL"],
+            "source_native_tf":tf,
+            "source_run_id":env["GITHUB_RUN_ID"],
             "schema":("dnse_source_candidate_v1" if mode == MODE_STAGE
                       else "dnse_native_candidate_v1"),
         },

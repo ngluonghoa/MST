@@ -48,7 +48,7 @@ on:
         required: false
         type: string
       previous_dnse_d1_file_id:
-        description: "Optional exact prior UNPUBLISHED private DNSE D1 chunk id for append-only delta; empty for first capture"
+        description: "DNSE D1 prior: auto (private discovery), exact prior chunk ID, or blank (first capture)"
         required: false
         type: string
       from_date:

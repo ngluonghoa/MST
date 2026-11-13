@@ -466,6 +466,165 @@ class PriorDnseD1IncrementalStage(unittest.TestCase):
                 m.stage_unpublished_dnse_source(d,env,self.new_payload())
             self.assertEqual(d.post_calls,0)
 
+
+class AutoDnseD1PriorDiscovery(unittest.TestCase):
+    """Cloud source-candidate selection, all request/media interactions faked."""
+
+    class Drive(PriorDnseD1IncrementalStage.Drive):
+        def __init__(self, archive):
+            super().__init__(archive)
+            self.old_info["appProperties"].update({
+                "source_symbol":"FPT",
+                "source_native_tf":"D1",
+                "source_run_id":"43269999999",
+            })
+            self.enumerations=0
+            self.override_records=None
+            self.overwrite_listing=None
+
+        def item(self):
+            return {k:self.old_info[k] for k in
+                    ("id","name","mimeType","parents","trashed","appProperties")}
+
+        def get(self,url,*,params,timeout,**kwargs):
+            if (url=="https://www.googleapis.com/drive/v3/files"
+                    and "name contains 'MST_UNPUBLISHED_DNSE_'" in params.get("q","")):
+                self.enumerations+=1
+                if self.overwrite_listing is not None:
+                    return FakeResponse(self.overwrite_listing)
+                return FakeResponse({"files":(
+                    self.override_records if self.override_records is not None
+                    else [self.item()]
+                )})
+            return super().get(url,params=params,timeout=timeout,**kwargs)
+
+    def prior(self):
+        return PriorDnseD1IncrementalStage().prior()
+
+    def payload(self):
+        return PriorDnseD1IncrementalStage().new_payload()
+
+    def run_auto(self, d, **updates):
+        env=stage_owner_env(MST_DNSE_PREVIOUS_SOURCE_FILE_ID="auto")
+        env.update(updates)
+        return m.stage_unpublished_dnse_source(d,env,self.payload())
+
+    def test_auto_reads_verified_predecessor_then_stages_delta(self):
+        d=self.Drive(self.prior())
+        receipt=self.run_auto(d)
+        self.assertEqual(d.enumerations,1)
+        self.assertEqual(d.old_media_reads,2)
+        self.assertEqual(d.media_reads,2)
+        self.assertEqual(d.post_calls,1)
+        self.assertTrue(receipt["source_delta_linked_to_prior_private_d1"])
+        self.assertEqual(receipt["source_delta_added_rows"],1)
+        self.assertEqual(receipt["source_delta_revised_rows"],1)
+        archive=json.loads(d.media)
+        self.assertEqual(archive["prior_source_incremental_delta"][
+            "prior_private_file_id"],PriorDnseD1IncrementalStage.PRIOR_ID)
+        self.assertEqual(archive["prior_source_incremental_delta"]["delta"][
+            "revised"][0]["after"]["volume"],255)
+        self.assertEqual(d.file_info["appProperties"]["source_symbol"],"FPT")
+        self.assertEqual(d.file_info["appProperties"]["source_native_tf"],"D1")
+        self.assertEqual(d.file_info["appProperties"]["source_run_id"],"43270010001")
+        self.assertFalse(receipt["signals_and_trading_eligible"])
+
+    def test_empty_complete_census_is_first_capture(self):
+        d=self.Drive(self.prior())
+        d.override_records=[]
+        result=self.run_auto(d)
+        self.assertTrue(result["unpublished_private_source_document_stored"])
+        self.assertFalse(result["source_delta_linked_to_prior_private_d1"])
+        self.assertEqual(d.enumerations,1)
+        self.assertEqual(d.old_media_reads,0)
+        self.assertEqual(d.post_calls,1)
+
+    def test_other_symbol_not_used_as_predecessor(self):
+        d=self.Drive(self.prior())
+        d.old_info["appProperties"]["source_symbol"]="DCM"
+        result=self.run_auto(d)
+        self.assertFalse(result["source_delta_linked_to_prior_private_d1"])
+        self.assertEqual(d.old_media_reads,0)
+        self.assertEqual(d.post_calls,1)
+
+    def test_legacy_unlabeled_d1_must_not_be_ignored(self):
+        d=self.Drive(self.prior())
+        del d.old_info["appProperties"]["source_symbol"]
+        with self.assertRaisesRegex(m.CloudGateDenied,"LEGACY_OR_UNLABELED"):
+            self.run_auto(d)
+        self.assertEqual(d.post_calls,0)
+
+    def test_highest_previous_run_chosen_from_unsorted_census(self):
+        d=self.Drive(self.prior())
+        older=d.item()
+        older["id"]="FAKE_OLDER_DNSE_1234567890"
+        older["name"]="MST_UNPUBLISHED_DNSE_D1_43268888888_1.json"
+        older["appProperties"]=dict(older["appProperties"],
+                                    source_run_id="43268888888")
+        d.override_records=[older,d.item()]
+        result=self.run_auto(d)
+        self.assertTrue(result["source_delta_linked_to_prior_private_d1"])
+        self.assertEqual(d.old_media_reads,2)
+        self.assertEqual(d.post_calls,1)
+
+    def test_tied_latest_run_is_ambiguous(self):
+        d=self.Drive(self.prior())
+        second=d.item()
+        second["id"]="FAKE_NATIVE_DNSE_1234567890"
+        second["name"]="MST_UNPUBLISHED_DNSE_NATIVE_D1_43269999999_1.json"
+        d.override_records=[d.item(),second]
+        with self.assertRaisesRegex(m.CloudGateDenied,"AMBIGUOUS"):
+            self.run_auto(d)
+        self.assertEqual(d.post_calls,0)
+
+    def test_future_or_current_run_id_denied(self):
+        for run in ("43270010001","43270010002"):
+            d=self.Drive(self.prior())
+            d.old_info["name"]="MST_UNPUBLISHED_DNSE_D1_"+run+"_1.json"
+            d.old_info["appProperties"]["source_run_id"]=run
+            with self.subTest(run=run),self.assertRaisesRegex(
+                    m.CloudGateDenied,"FUTURE_OR_SELF"):
+                self.run_auto(d)
+            self.assertEqual(d.post_calls,0)
+
+    def test_census_missing_page_or_bad_token_rejected(self):
+        for token in ("page2","bad"*300):
+            d=self.Drive(self.prior())
+            d.overwrite_listing={"files":[d.item()],"nextPageToken":token}
+            with self.subTest(token=token[:10]),self.assertRaises(
+                    m.CloudGateDenied):
+                self.run_auto(d)
+            self.assertEqual(d.post_calls,0)
+            self.assertLessEqual(d.enumerations,8)
+
+    def test_duplicate_or_unknown_scope_denied(self):
+        d=self.Drive(self.prior())
+        d.override_records=[d.item(),d.item()]
+        with self.assertRaisesRegex(m.CloudGateDenied,"DUPLICATE_CENSUS"):
+            self.run_auto(d)
+        self.assertEqual(d.post_calls,0)
+        d=self.Drive(self.prior())
+        bad=d.item()
+        bad["name"]="MST_UNPUBLISHED_DNSE_UNEXPECTED_43269999999_1.json"
+        d.override_records=[bad]
+        with self.assertRaisesRegex(m.CloudGateDenied,"UNKNOWN_SOURCE_FILENAME"):
+            self.run_auto(d)
+        self.assertEqual(d.post_calls,0)
+
+    def test_auto_guard_wrong_tf_or_owner_denied_before_census(self):
+        for change in (
+            {"MST_SOURCE_TF":"M5"},
+            {"MST_MFX_SOURCE_MODE":m.MODE_DNSE_NATIVE},
+            {"GITHUB_RUN_ATTEMPT":"2"},
+            {"MST_DNSE_SOURCE_RIGHTS_CONFIRMED":"false"},
+            {"GITHUB_REF":"refs/heads/dev"},
+        ):
+            d=self.Drive(self.prior())
+            with self.subTest(change=change),self.assertRaises(m.CloudGateDenied):
+                self.run_auto(d,**change)
+            self.assertEqual(d.enumerations,0)
+            self.assertEqual(d.post_calls,0)
+
 class NativeQuarantineStage(unittest.TestCase):
     def native_env(self, tf="M5", **updates):
         env=stage_owner_env(

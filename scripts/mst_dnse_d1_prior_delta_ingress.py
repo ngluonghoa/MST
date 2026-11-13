@@ -41,6 +41,11 @@ def plan_prior_dnse_d1_from_private_drive(
     supplied = env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID", "")
     if not supplied:
         return None
+    if supplied == "auto":
+        from scripts.mst_dnse_d1_auto_prior import discover_previous_dnse_d1
+        supplied = discover_previous_dnse_d1(session, env, parent_id)
+        if supplied is None:
+            return None
     if (mode not in (cloud.MODE_STAGE, cloud.MODE_STAGE_NATIVE)
             or env.get("MST_SOURCE_TF", "D1") != "D1"):
         raise cloud.CloudGateDenied("MST_MFX_PREVIOUS_D1_STAGE_ONLY")
