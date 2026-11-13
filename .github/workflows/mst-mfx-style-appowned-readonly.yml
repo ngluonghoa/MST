@@ -16,6 +16,19 @@ on:
           - dnse-d1-readonly
           - dnse-d1-quarantine-stage
           - ssi-d1-readonly
+          - dnse-native-readonly
+          - ssi-native-readonly
+      native_tf:
+        description: "Source-native time frame for native-readonly modes (H4 not native)"
+        required: true
+        type: choice
+        default: D1
+        options:
+          - D1
+          - M5
+          - M15
+          - M30
+          - H1
       symbol:
         description: "FPT/DCM/HPG symbol for owner-gated D1 read-only source"
         required: false
@@ -67,6 +80,7 @@ jobs:
       - name: Validate app-owned Drive folders and optional official DNSE D1 source
         env:
           MST_MFX_SOURCE_MODE: ${{ inputs.mode }}
+          MST_SOURCE_TF: ${{ inputs.native_tf }}
           MST_MFX_APP_OWNED_READONLY_ACCEPTED: ${{ vars.MST_MFX_APP_OWNED_READONLY_ACCEPTED }}
           MST_OAUTH_BOOTSTRAP_ACCEPTED: ${{ vars.MST_OAUTH_BOOTSTRAP_ACCEPTED }}
           MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
