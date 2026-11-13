@@ -98,10 +98,10 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
             provider_resolution("DNSE", tf)
         except NativeTfDenied:
             raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
-        if a <= 0 or b <= a or b - a > MAX_SINGLE_PROBE_CALENDAR_DAYS[tf]*86400:
-            raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
         if mode in (MODE_DNSE, MODE_STAGE) and tf != "D1":
             raise CloudGateDenied("MST_MFX_DNSE_D1_MODE_CANNOT_PROMOTE_OTHER_TF")
+        if a <= 0 or b <= a or b - a > MAX_SINGLE_PROBE_CALENDAR_DAYS[tf]*86400:
+            raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
     if mode in (MODE_SSI, MODE_SSI_NATIVE):
         from scripts.mst_mfx_ssi_readonly import guard_ssi
         guard_ssi(env)
