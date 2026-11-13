@@ -169,6 +169,7 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
 
     seen: set[str] = set()
     expected_pages: int | None = None
+    expected_items: int | None = None
     pages = 0
     for page in range(1, MAX_PAGES+1):
         # SSI FastConnect V3 requires YYYY/MM/DD for 1d, but
@@ -203,12 +204,26 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         rows = data.get("data")
         if type(rows) is not list or len(rows) > PAGE_SIZE:
             raise SsiSourceDenied("MST_SSI_OHLC_PAGE_INVALID")
-        # Server pageIndex/pageNumber and pageCount metadata are optional,
-        # but when present they must agree exactly with this request.
-        observed_page = data.get("pageIndex", data.get("pageNumber"))
-        if observed_page is not None and (
-                type(observed_page) is not int or observed_page != page):
+        # Official V3 documentation includes pageIndex or pageNumber and pageSize.
+        # A server silently ignoring the requested pageSize or returning an
+        # inconsistent index is NOT a safe, complete source read.
+        if (type(data.get("pageSize")) is not int
+                or data["pageSize"] != PAGE_SIZE):
+            raise SsiSourceDenied("MST_SSI_SOURCE_PAGE_SIZE_DRIFT")
+        indices = [
+            data[k] for k in ("pageIndex", "pageNumber") if k in data
+        ]
+        if (not indices or any(type(i) is not int or i != page for i in indices)):
             raise SsiSourceDenied("MST_SSI_SOURCE_PAGE_NUMBER_DRIFT")
+        announced_items = data.get("itemsCount")
+        if announced_items is not None:
+            if (type(announced_items) is not int or
+                    not 1 <= announced_items <= MAX_ROWS):
+                raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_UNBOUNDED")
+            if expected_items is None:
+                expected_items = announced_items
+            elif expected_items != announced_items:
+                raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MUTATED")
         announced = data.get("pageCount")
         if announced is not None:
             if type(announced) is not int or not 1 <= announced <= MAX_PAGES:
@@ -223,22 +238,39 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
             if label in seen:
                 raise SsiSourceDenied("MST_SSI_DUPLICATE_SOURCE_BAR_TIMESTAMP")
             seen.add(label)
+        if expected_items is not None and len(seen) > expected_items:
+            raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_EXCEEDED")
         if expected_pages is not None:
             if not rows and page < expected_pages:
                 raise SsiSourceDenied("MST_SSI_PAGING_EARLY_EMPTY_PAGE")
             if page == expected_pages:
+                if expected_items is not None and len(seen) != expected_items:
+                    raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MISMATCH")
                 break
+            if expected_items is not None and len(seen) == expected_items:
+                raise SsiSourceDenied("MST_SSI_PAGECOUNT_EXCEEDS_SOURCE_ITEMS")
+        elif expected_items is not None:
+            # Even a short page is incomplete until all server-declared
+            # items have actually been read, never silently truncate.
+            if len(seen) == expected_items:
+                break
+            if not rows:
+                raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MISMATCH")
         elif len(rows) < PAGE_SIZE:
             break
     else:
         raise SsiSourceDenied("MST_SSI_BOUND_PAGINATION_EXHAUSTED")
     if not seen or len(seen) > MAX_ROWS:
         raise SsiSourceDenied("MST_SSI_EMPTY_OR_EXCESSIVE_SOURCE_SCOPE")
+    if expected_items is not None and len(seen) != expected_items:
+        raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MISMATCH")
     return {
         "provider":"SSI_FASTCONNECT_V3_MARKET_DATA",
         **source_tf_metadata("SSI",tf),
         "native_source_rows_observed":len(seen),
         "source_pages_verified":pages,
+        "source_items_count_verified": expected_items is not None,
+        "complete_historical_source_coverage_proven":False,
         "market_data_token_used_without_otp":True,
         "source_ohlcv_invariants_verified":True,
         "price_unit_or_adjusted_basis_verified":False,
