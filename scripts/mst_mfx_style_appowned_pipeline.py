@@ -90,14 +90,16 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
         if not start.isdecimal() or not end.isdecimal():
             raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
         a, b = int(start), int(end)
-        if a <= 0 or b <= a or b - a > 95 * 86400:
-            raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
-        from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+        from scripts.mst_mfx_native_timeframes import (
+            provider_resolution, NativeTfDenied, MAX_SINGLE_PROBE_CALENDAR_DAYS,
+        )
         tf = env.get("MST_SOURCE_TF", "D1")
         try:
             provider_resolution("DNSE", tf)
         except NativeTfDenied:
             raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
+        if a <= 0 or b <= a or b - a > MAX_SINGLE_PROBE_CALENDAR_DAYS[tf]*86400:
+            raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
         if mode in (MODE_DNSE, MODE_STAGE) and tf != "D1":
             raise CloudGateDenied("MST_MFX_DNSE_D1_MODE_CANNOT_PROMOTE_OTHER_TF")
     if mode in (MODE_SSI, MODE_SSI_NATIVE):
@@ -187,14 +189,17 @@ def build_dnse_request(
     """
     if (not SYMBOL_RE.fullmatch(symbol) or not api_key or not api_secret
             or not re.fullmatch(r"[0-9a-f]{32}", nonce)
-            or from_unix <= 0 or to_unix <= from_unix
-            or to_unix-from_unix > 95*86400):
+            or from_unix <= 0 or to_unix <= from_unix):
         raise CloudGateDenied("MST_MFX_INVALID_DNSE_REQUEST")
-    from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+    from scripts.mst_mfx_native_timeframes import (
+        provider_resolution, NativeTfDenied, MAX_SINGLE_PROBE_CALENDAR_DAYS,
+    )
     try:
         resolution = provider_resolution("DNSE", timeframe)
     except NativeTfDenied:
         raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
+    if to_unix-from_unix > MAX_SINGLE_PROBE_CALENDAR_DAYS[timeframe]*86400:
+        raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
     q = urlencode({"symbol":symbol,"type":"STOCK","resolution":resolution,
                    "from":from_unix,"to":to_unix})
     target = DNSE_PATH + "?" + q
