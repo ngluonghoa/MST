@@ -311,5 +311,54 @@ class UnpublishedSourceStage(unittest.TestCase):
             m.stage_unpublished_dnse_source(d,stage_owner_env(),DnseNative().payload())
         self.assertEqual(d.post_calls,1)
 
+
+class DnseNativeTimeframeTests(unittest.TestCase):
+    def test_native_mapping_all_supported_and_unproven_h4_denied(self):
+        from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+        expected={"M5":"5","M15":"15","M30":"30","H1":"1H","D1":"1D"}
+        for tf,resolution in expected.items():
+            self.assertEqual(provider_resolution("DNSE",tf),resolution)
+        with self.assertRaisesRegex(NativeTfDenied,"NATIVE_H4"):
+            provider_resolution("DNSE","H4")
+
+    def test_request_signs_vendor_path_for_every_native_timeframe(self):
+        outputs=[]
+        for tf in ("M5","M15","M30","H1","D1"):
+            url,headers=m.build_dnse_request(
+                "FPT",1794000000,1794500000,"FAKE_KEY","FAKE_SECRET",
+                date_header="Fri, 13 Nov 2026 00:00:00 +0000",
+                nonce="a"*32,timeframe=tf)
+            outputs.append(headers["X-Signature"])
+            self.assertIn("resolution=",url)
+        self.assertEqual(len(set(outputs)),1)
+        with self.assertRaises(m.CloudGateDenied):
+            m.build_dnse_request(
+                "FPT",1794000000,1794500000,"FAKE_KEY","FAKE_SECRET",
+                date_header="Fri, 13 Nov 2026 00:00:00 +0000",
+                nonce="a"*32,timeframe="H4")
+
+    def test_original_d1_mode_cannot_request_m5_under_owner_gate(self):
+        env=owner_env(
+            MST_MFX_SOURCE_MODE=m.MODE_DNSE,
+            MST_SOURCE_TF="M5",
+            MST_DNSE_READONLY_OWNER_ACCEPTED="true",
+            MST_DNSE_SOURCE_RIGHTS_CONFIRMED="true",
+            MST_DNSE_API_KEY="FAKE_KEY",MST_DNSE_API_SECRET="FAKE_SECRET",
+            MST_DNSE_SYMBOL="FPT",
+            MST_DNSE_FROM_UNIX="1794000000",MST_DNSE_TO_UNIX="1794500000",
+        )
+        with self.assertRaisesRegex(m.CloudGateDenied,"D1_MODE_CANNOT_PROMOTE"):
+            m.guard(env)
+        env["MST_MFX_SOURCE_MODE"]=m.MODE_DNSE_NATIVE
+        self.assertEqual(m.guard(env)[0],m.MODE_DNSE_NATIVE)
+        env["MST_SOURCE_TF"]="H4"
+        with self.assertRaises(m.CloudGateDenied):
+            m.guard(env)
+
+    def test_quarantine_staging_cannot_use_intra_tf_behind_d1_contract(self):
+        with self.assertRaisesRegex(m.CloudGateDenied,"D1_MODE_CANNOT_PROMOTE"):
+            m.guard(stage_owner_env(MST_SOURCE_TF="M5"))
+
+
 if __name__=="__main__":
     unittest.main()
