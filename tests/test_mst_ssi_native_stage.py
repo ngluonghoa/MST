@@ -36,7 +36,7 @@ def env(tf="M5", **extra):
         "MST_SSI_API_SECRET":"FAKE_READONLY_SECRET",
         "MST_SSI_SYMBOL":"FPT",
         "MST_SSI_FROM_DATE":"2026-11-11",
-        "MST_SSI_TO_DATE":"2026-11-12",
+        "MST_SSI_TO_DATE":"2026-11-13" if tf=="D1" else "2026-11-12",
         "GITHUB_RUN_ID":"43270010001",
         "GITHUB_RUN_ATTEMPT":"1",
     }
@@ -325,15 +325,22 @@ class SsiSourceStaging(unittest.TestCase):
 
 class ReadOnlyNotLeakingSource(unittest.TestCase):
     def test_native_fetch_includes_bounded_source_while_public_receipt_does_not(self):
-        from tests.test_mst_mfx_ssi_readonly import FakeSsiApi,settings
+        class FakeSsiApi:
+            def post(self, *args, **kwargs):
+                return Response({"tokenType":"Bearer",
+                                 "accessToken":"FAKE_MARKETDATA_JWT_"+("x"*30)})
+            def get(self, *args, **kwargs):
+                return Response({"pageIndex":1,"pageSize":100,"pageCount":1,
+                                 "data":[bar("2026-11-12")]})
         api=FakeSsiApi()
-        report,rows=ssi._fetch_ssi_native_once(api,settings())
-        self.assertEqual(len(rows),3)
+        settings=env("D1",MST_MFX_SOURCE_MODE=cloud.MODE_SSI)
+        report,rows=ssi._fetch_ssi_native_once(api,settings)
+        self.assertEqual(len(rows),1)
         self.assertEqual(set(rows[0]),set(stage.NATIVE_KEYS))
         self.assertNotIn("value",rows[0])
         self.assertNotIn("accessToken",str(report))
         self.assertNotIn("tradingDate",str(report))
-        summary=ssi.read_ssi_native_once(FakeSsiApi(),settings())
+        summary=ssi.read_ssi_native_once(FakeSsiApi(),settings)
         self.assertNotIn("tradingDate",str(summary))
         self.assertFalse(summary["private_data_stored_to_drive"])
 
