@@ -221,5 +221,50 @@ class SsiNativeTimeframeTests(unittest.TestCase):
             m.read_ssi_native_once(api,env)
 
 
+
+class SsiRealApiWireContractTests(unittest.TestCase):
+    def test_intraday_query_has_ssi_required_calendar_and_clock(self):
+        api=FakeSsiApi()
+        api.pages[1]["data"]=[
+            row("2026-11-12 09:00:00"),row("2026-11-12 09:05:00"),
+        ]
+        api.pages[2]["data"]=[row("2026-11-11 14:45:00")]
+        env=settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF="M5")
+        m.read_ssi_native_once(api,env)
+        for request in api.calls[1:]:
+            params=request[2]
+            self.assertEqual(params["from"],"2026/11/01 00:00:00")
+            self.assertEqual(params["to"],"2026/11/12 23:59:59")
+            self.assertEqual(params["timeFrame"],"5m")
+
+    def test_d1_wire_query_still_requires_date_without_clock(self):
+        api=FakeSsiApi()
+        m.read_ssi_d1_once(api,settings())
+        for request in api.calls[1:]:
+            self.assertEqual(request[2]["from"],"2026/11/01")
+            self.assertEqual(request[2]["to"],"2026/11/12")
+            self.assertEqual(request[2]["timeFrame"],"1d")
+
+    def test_two_different_native_delimiter_strings_are_same_candle(self):
+        api=FakeSsiApi()
+        api.pages[1]["data"]=[
+            row("2026-11-12 09:00:00"),row("2026/11/12 09:00:00"),
+        ]
+        api.pages[2]["data"]=[row("2026-11-11 14:45:00")]
+        env=settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF="M5",
+                     MST_SSI_FROM_DATE="2026-11-10",MST_SSI_TO_DATE="2026-11-12")
+        with self.assertRaisesRegex(m.SsiSourceDenied,"DUPLICATE_SOURCE_BAR_TIMESTAMP"):
+            m.read_ssi_native_once(api,env)
+
+    def test_intraday_probes_must_stay_bounded(self):
+        for tf, limit in m.MAX_CALENDAR_SPAN_BY_TF.items():
+            env=settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF=tf,
+                         MST_SSI_FROM_DATE="2026-01-01",MST_SSI_TO_DATE="2026-11-12")
+            with self.subTest(tf=tf), self.assertRaisesRegex(
+                    m.SsiSourceDenied,"TF_BOUNDED_WINDOW_REQUIRED"):
+                m.guard_ssi(env)
+        self.assertEqual(m.MAX_CALENDAR_SPAN_BY_TF["D1"],95)
+
+
 if __name__=="__main__":
     unittest.main()
