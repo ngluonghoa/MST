@@ -689,7 +689,7 @@ class NativeQuarantineStage(unittest.TestCase):
                 self.assertEqual(d.name_lookup_count,3)  # full TF census + name before/after
                 self.assertEqual(d.post_calls,1)
                 with self.assertRaisesRegex(
-                        m.CloudGateDenied,"PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE"):
+                        m.CloudGateDenied,"PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE|INTRA_SELF_OR_FUTURE_RUN"):
                     m.stage_unpublished_dnse_source(
                         d,env,self.native_payload(second=period))
                 self.assertEqual(d.post_calls,1)
