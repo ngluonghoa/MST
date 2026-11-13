@@ -245,7 +245,7 @@ class NativeIntradayContinuity(unittest.TestCase):
             if kind=="owner":d.old_info["ownedByMe"]=False
             if kind=="sha":d.old_info["appProperties"]["source_sha256"]="0"*64
             if kind=="version":d.metadata_drift=True
-            if kind=="symbol":d.old_info["appProperties"]["source_symbol"]="HPG"
+            if kind=="symbol":d.old_info["appProperties"]["source_symbol"]="NOT_A_STOCK"
             if kind=="mime":d.old_info["mimeType"]="text/plain"
             with self.subTest(kind=kind), self.assertRaises(m.CloudGateDenied):
                 self.stage(d)
