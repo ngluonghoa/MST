@@ -229,7 +229,7 @@ class FakeQuarantineDrive(FakeDrive):
     def get(self,url,*,params,timeout,**kwargs):
         if url=="https://www.googleapis.com/drive/v3/files":
             q=params.get("q","")
-            if "MST_UNPUBLISHED_DNSE_D1_" in q:
+            if "MST_UNPUBLISHED_DNSE_" in q:
                 self.name_lookup_count+=1
                 files=[]
                 if self.file_info:
@@ -311,6 +311,96 @@ class UnpublishedSourceStage(unittest.TestCase):
             m.stage_unpublished_dnse_source(d,stage_owner_env(),DnseNative().payload())
         self.assertEqual(d.post_calls,1)
 
+
+
+class NativeQuarantineStage(unittest.TestCase):
+    def native_env(self, tf="M5", **updates):
+        env=stage_owner_env(
+            MST_MFX_SOURCE_MODE=m.MODE_STAGE_NATIVE,
+            MST_SOURCE_TF=tf,
+            MST_DNSE_FROM_UNIX="1794000000",
+            MST_DNSE_TO_UNIX="1794172800",
+        )
+        env.update(updates)
+        return env
+
+    def native_payload(self, second=300):
+        return {"t":[1794000000,1794000000+second],
+                "o":[100,101],"h":[102,103],"l":[99,100],
+                "c":[101,102],"v":[200,250],"nextTime":0}
+
+    def test_each_native_tf_has_own_quarantined_name_and_source_resolution(self):
+        expected={"M5":("5",300),"M15":("15",900),"M30":("30",1800),
+                  "H1":("1H",3600),"D1":("1D",86400)}
+        for tf,(resolution,period) in expected.items():
+            with self.subTest(tf=tf):
+                d=FakeQuarantineDrive()
+                env=self.native_env(tf)
+                receipt=m.stage_unpublished_dnse_source(
+                    d,env,self.native_payload(second=period))
+                self.assertTrue(receipt["unpublished_private_source_document_stored"])
+                self.assertEqual(receipt["source_native_tf"],tf)
+                self.assertEqual(receipt["source_rows_observed"],2)
+                self.assertFalse(receipt["signals_and_trading_eligible"])
+                self.assertFalse(receipt["independent_atomic_cas_ready"])
+                body=json.loads(d.media)
+                self.assertEqual(body["source_native_tf"],tf)
+                self.assertEqual(body["resolution"],resolution)
+                self.assertEqual(
+                    body["schema"],"mst.cloud.dnse_native_unpublished_candidate.v0.1")
+                self.assertFalse(body["eligible_for_signals"])
+                self.assertFalse(body["official_venue_closed_verified"])
+                self.assertEqual(
+                    d.file_info["name"],"MST_UNPUBLISHED_DNSE_NATIVE_"
+                    +tf+"_43270010001_1.json")
+                self.assertEqual(d.media_reads,2)
+                self.assertEqual(d.name_lookup_count,2)
+                self.assertEqual(d.post_calls,1)
+                with self.assertRaisesRegex(
+                        m.CloudGateDenied,"PREEXISTING_ATTEMPT"):
+                    m.stage_unpublished_dnse_source(
+                        d,env,self.native_payload(second=period))
+                self.assertEqual(d.post_calls,1)
+
+    def test_native_stage_denies_missing_rights_or_storage_or_approval(self):
+        for gate in ("MST_DNSE_SOURCE_RIGHTS_CONFIRMED",
+                     "MST_DNSE_STORAGE_RIGHTS_CONFIRMED",
+                     "MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED"):
+            d=FakeQuarantineDrive()
+            with self.subTest(gate=gate),self.assertRaises(m.CloudGateDenied):
+                m.stage_unpublished_dnse_source(
+                    d,self.native_env(**{gate:"false"}),self.native_payload())
+            self.assertEqual(d.post_calls,0)
+
+    def test_native_stage_rejects_h4_long_window_and_rerun(self):
+        invalid=[
+            self.native_env("H4"),
+            self.native_env("M5",MST_DNSE_TO_UNIX=str(1794000000+6*86400)),
+            self.native_env("M5",GITHUB_RUN_ATTEMPT="2"),
+            self.native_env("M5",GITHUB_REF="refs/heads/feature"),
+        ]
+        for env in invalid:
+            d=FakeQuarantineDrive()
+            with self.subTest(env=env.get("MST_SOURCE_TF")),self.assertRaises(
+                    m.CloudGateDenied):
+                m.stage_unpublished_dnse_source(d,env,self.native_payload())
+            self.assertEqual(d.post_calls,0)
+
+    def test_m5_source_bounds_and_readback_mismatch_fail_closed(self):
+        d=FakeQuarantineDrive()
+        d.mutate_media=True
+        with self.assertRaisesRegex(
+                m.CloudGateDenied,"MEDIA_READBACK_MISMATCH"):
+            m.stage_unpublished_dnse_source(
+                d,self.native_env(),self.native_payload())
+        self.assertEqual(d.post_calls,1)
+        d=FakeQuarantineDrive()
+        with self.assertRaisesRegex(
+                m.CloudGateDenied,"NATIVE_TIMESTAMP_MISMATCH"):
+            m.stage_unpublished_dnse_source(
+                d,self.native_env(
+                    MST_DNSE_TO_UNIX="1794005000"),self.native_payload(second=9000))
+        self.assertEqual(d.post_calls,0)
 
 class DnseNativeTimeframeTests(unittest.TestCase):
     def test_native_intraday_count_is_never_labeled_daily(self):

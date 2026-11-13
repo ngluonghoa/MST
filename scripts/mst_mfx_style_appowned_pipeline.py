@@ -35,6 +35,7 @@ MODE_DRIVE = "drive-probe"
 MODE_DNSE = "dnse-d1-readonly"
 MODE_DNSE_NATIVE = "dnse-native-readonly"
 MODE_STAGE = "dnse-d1-quarantine-stage"
+MODE_STAGE_NATIVE = "dnse-native-quarantine-stage"
 MODE_SSI = "ssi-d1-readonly"
 MODE_SSI_NATIVE = "ssi-native-readonly"
 DRIVE_ROOT = "MST_OAUTH_CACHE_V1"
@@ -68,7 +69,8 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
     if any(env.get(k) != v for k, v in required.items()):
         raise CloudGateDenied("MST_MFX_MANUAL_MAIN_OWNER_GATE_REQUIRED")
     mode = env.get("MST_MFX_SOURCE_MODE", MODE_DRIVE)
-    if mode not in (MODE_DRIVE, MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE, MODE_SSI, MODE_SSI_NATIVE):
+    if mode not in (MODE_DRIVE, MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE,
+                    MODE_STAGE_NATIVE, MODE_SSI, MODE_SSI_NATIVE):
         raise CloudGateDenied("MST_MFX_UNKNOWN_READONLY_MODE")
     if (env.get("MST_OAUTH_BOOTSTRAP_ACCEPTED") == "true"
             or env.get("MST_GDRIVE_SERVICE_ACCOUNT_JSON")):
@@ -77,7 +79,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
             "MST_GDRIVE_OAUTH_REFRESH_TOKEN")
     if any(type(env.get(k)) is not str or not env[k].strip() for k in keys):
         raise CloudGateDenied("MST_MFX_COMPLETE_EXISTING_OAUTH_TRIO_REQUIRED")
-    if mode in (MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE):
+    if mode in (MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE, MODE_STAGE_NATIVE):
         if (env.get("MST_DNSE_READONLY_OWNER_ACCEPTED") != "true"
                 or env.get("MST_DNSE_SOURCE_RIGHTS_CONFIRMED") != "true"):
             raise CloudGateDenied("MST_MFX_DNSE_SOURCE_AND_RIGHTS_GATES_REQUIRED")
@@ -105,7 +107,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
     if mode in (MODE_SSI, MODE_SSI_NATIVE):
         from scripts.mst_mfx_ssi_readonly import guard_ssi
         guard_ssi(env)
-    if mode == MODE_STAGE:
+    if mode in (MODE_STAGE, MODE_STAGE_NATIVE):
         if (env.get("MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED") != "true"
                 or env.get("MST_DNSE_STORAGE_RIGHTS_CONFIRMED") != "true"):
             raise CloudGateDenied("MST_MFX_DISTINCT_PRIVATE_STAGE_AND_LICENSE_GATES")
@@ -305,7 +307,7 @@ def read_dnse_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
 
 def _exact_named_quarantine(session: Any, parent: str, name: str) -> list[str]:
     if not DRIVE_ID_RE.fullmatch(parent) or not re.fullmatch(
-            r"MST_UNPUBLISHED_DNSE_D1_[1-9][0-9]{5,19}_1\.json",name):
+            r"MST_UNPUBLISHED_DNSE_(?:D1|NATIVE_(?:M5|M15|M30|H1|D1))_[1-9][0-9]{5,19}_1\.json",name):
         raise CloudGateDenied("MST_MFX_SOURCE_QUARANTINE_SCOPE_INVALID")
     try:
         r=session.get("https://www.googleapis.com/drive/v3/files",params={
@@ -375,10 +377,13 @@ def stage_unpublished_dnse_source(
     are not atomic CAS; no consumer may read this as Cache without authority.
     """
     mode,_ = guard(env)
-    if mode!=MODE_STAGE:
+    if mode not in (MODE_STAGE, MODE_STAGE_NATIVE):
         raise CloudGateDenied("MST_MFX_STAGE_NOT_AUTHORIZED")
+    tf = env.get("MST_SOURCE_TF", "D1")
     start,end=int(env["MST_DNSE_FROM_UNIX"]),int(env["MST_DNSE_TO_UNIX"])
-    validated=validate_dnse_native(payload,start,end)
+    validated=validate_dnse_native(payload,start,end,timeframe=tf)
+    from scripts.mst_mfx_native_timeframes import provider_resolution
+    native_resolution = provider_resolution("DNSE", tf)
     try:
         root=_list_exact_child(session,DRIVE_ROOT,None)
         chunks=_list_exact_child(session,"CHUNKS",root["id"]) if root else None
@@ -390,11 +395,14 @@ def stage_unpublished_dnse_source(
     except Exception:
         raise CloudGateDenied("MST_MFX_SOURCE_CHUNKS_FOLDER_LOOKUP_FAILED") from None
     archive={
-        "schema":"mst.cloud.dnse_unpublished_source_candidate.v0.1",
+        "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"
+                  if mode == MODE_STAGE
+                  else "mst.cloud.dnse_native_unpublished_candidate.v0.1"),
         "project":"MST",
         "source":"DNSE_OFFICIAL_OPENAPI",
         "symbol":env["MST_DNSE_SYMBOL"],
-        "resolution":"1D",
+        "resolution":native_resolution,
+        "source_native_tf":tf,
         "from_unix":start,
         "to_unix":end,
         "local_receive_utc":datetime.now(timezone.utc).isoformat(),
@@ -410,7 +418,9 @@ def stage_unpublished_dnse_source(
     sha=hashlib.sha256(body).hexdigest()
     # Stable attempt identity is essential: content/clock-derived names would
     # allow a lost upload ACK to mint another candidate on retry.
-    name="MST_UNPUBLISHED_DNSE_D1_"+env["GITHUB_RUN_ID"]+"_1.json"
+    # Legacy D1-only and new native-TF attempts are separately named.
+    namespace = "D1" if mode == MODE_STAGE else "NATIVE_"+tf
+    name="MST_UNPUBLISHED_DNSE_"+namespace+"_"+env["GITHUB_RUN_ID"]+"_1.json"
     if _exact_named_quarantine(session,parent,name):
         raise CloudGateDenied("MST_MFX_SOURCE_PREEXISTING_ATTEMPT_NEEDS_MANUAL_REVIEW")
     # Google Drive multipart/related metadata+bytes, never a native Google Doc.
@@ -419,7 +429,9 @@ def stage_unpublished_dnse_source(
         "name":name,"mimeType":"application/json","parents":[parent],
         "description":"UNPUBLISHED quarantined source - NOT Cache/Signals",
         "appProperties":{
-            "mst_unpublished":"true","source_sha256":sha,"schema":"dnse_source_candidate_v1",
+            "mst_unpublished":"true","source_sha256":sha,
+            "schema":("dnse_source_candidate_v1" if mode == MODE_STAGE
+                      else "dnse_native_candidate_v1"),
         },
     }
     prefix=("--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
@@ -460,7 +472,8 @@ def stage_unpublished_dnse_source(
         raise CloudGateDenied("MST_MFX_SOURCE_UPLOAD_CENSUS_CHANGED")
     return {
         "unpublished_private_source_document_stored":True,
-        "source_rows_observed":validated["observed_native_d1_rows"],
+        "source_rows_observed":validated["observed_native_rows"],
+        "source_native_tf":tf,
         "stored_object_count":1,
         "readback_sha256_verified":True,
         "not_a_cache_publish_commit":True,
@@ -477,17 +490,17 @@ def main() -> None:
         "status": "MST_MFX_STYLE_APP_OWNED_READONLY_PREFLIGHT",
         "drive": observed,
         "provider": None,
-        "read_only": mode != MODE_STAGE,
+        "read_only": mode not in (MODE_STAGE, MODE_STAGE_NATIVE),
         "cloud_cache_publisher_ready": False,
         "independent_atomic_cas_ready": False,
         "automatic_scheduling_enabled_by_this_workflow": False,
         "trade_orders": 0,
     }
-    if mode in (MODE_DNSE,MODE_DNSE_NATIVE,MODE_STAGE):
+    if mode in (MODE_DNSE,MODE_DNSE_NATIVE,MODE_STAGE,MODE_STAGE_NATIVE):
         import requests
         observation, payload = _fetch_dnse_once(requests.Session(),os.environ)
         receipt["provider"] = {"name":"DNSE_OFFICIAL_OPENAPI","read_only_observation":observation}
-        if mode == MODE_STAGE:
+        if mode in (MODE_STAGE, MODE_STAGE_NATIVE):
             receipt["unpublished_source_staging"] = stage_unpublished_dnse_source(
                 session,os.environ,payload)
             receipt["status"] = "MST_MFX_STYLE_UNPUBLISHED_SOURCE_ONLY"

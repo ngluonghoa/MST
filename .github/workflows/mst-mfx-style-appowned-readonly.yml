@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "OAuth Drive probe, SSI/DNSE read-only or explicitly gated DNSE quarantine"
+        description: "OAuth Drive probe, SSI/DNSE readonly, or rights-gated DNSE unpublished quarantine"
         required: true
         type: choice
         default: drive-probe
@@ -15,11 +15,12 @@ on:
           - drive-probe
           - dnse-d1-readonly
           - dnse-d1-quarantine-stage
+          - dnse-native-quarantine-stage
           - ssi-d1-readonly
           - dnse-native-readonly
           - ssi-native-readonly
       native_tf:
-        description: "Source-native time frame for native-readonly modes (H4 not native)"
+        description: "Native source time frame for native-readonly/native-quarantine modes (no H4)"
         required: true
         type: choice
         default: D1
