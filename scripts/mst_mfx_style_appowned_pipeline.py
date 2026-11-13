@@ -444,6 +444,14 @@ def stage_unpublished_dnse_source(
         prior_link = plan_prior_dnse_d1_from_private_drive(
             session, prior_env, parent, payload,
         )
+    elif tf != "D1" and mode == MODE_STAGE_NATIVE:
+        # Auto-link native intraday observations on the same TF+symbol only.
+        # Any ambiguous/corrupt prior aborts before a new upload; no merge
+        # with a D1 predecessor or across unrelated market-data providers.
+        from scripts.mst_dnse_intraday_delta import read_previous_native_delta
+        prior_link = read_previous_native_delta(
+            session, env, parent, payload,
+        )
     archive={
         "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"
                   if mode == MODE_STAGE
@@ -529,7 +537,8 @@ def stage_unpublished_dnse_source(
         "unpublished_private_source_document_stored":True,
         "source_rows_observed":validated["observed_native_rows"],
         "source_native_tf":tf,
-        "source_delta_linked_to_prior_private_d1":prior_link is not None,
+        "source_delta_linked_to_prior_private_d1":tf == "D1" and prior_link is not None,
+        "source_delta_linked_to_prior_private_native_tf":tf != "D1" and prior_link is not None,
         "source_delta_added_rows":len(prior_link["delta"]["added"]) if prior_link else 0,
         "source_delta_revised_rows":len(prior_link["delta"]["revised"]) if prior_link else 0,
         "source_delta_window_exited_not_deleted":(
