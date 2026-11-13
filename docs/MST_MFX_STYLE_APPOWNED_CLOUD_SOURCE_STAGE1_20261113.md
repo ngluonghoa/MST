@@ -126,3 +126,22 @@ Vendor contracts: https://developers.ssi.com.vn/en/docs/getting-started/first-ap
 
 **Still NO-GO:** GitHub OAuth manual real Drive read, independent SSI/DNSE vendor credentials and retention rights, source-first-known and venue closed bar, VCBS standalone API, partitioned source-versioned history/backfill, independent signed persistent CAS/highwater, protected Signal Engine parity and any schedule/trading. No ChatGPT MCP secret/permission is reused or serialized to GitHub.
 
+
+
+## §175 — Real Google OAuth proof recovered; genuine connected-provider intraday QA (13 Nov 2026)
+
+**Corrected historical gate finding.** Read the actual GitHub-hosted manual bootstrap logs on protected `main`:
+- [GitHub Actions 43036386359](https://github.com/ngluonghoa/MST/actions/runs/43036386359) completed with `MST_OAUTH_DRIVE_FILE_READ_ONLY_PROBE_PASS` and `actual_google_drive_metadata_read=true`. This proves a **real GitHub-origin OAuth Drive read on 11 Nov 2026**, not a simulated CI test.
+- [GitHub Actions 43037551110](https://github.com/ngluonghoa/MST/actions/runs/43037551110) completed with `MST_OAUTH_APP_OWNED_FOLDERS_METADATA_READBACK_PASS`, `app_owned_folder_count=5`. Existing approved OAuth `drive.file` bootstrap created/read back app-owned root and four children. No market Cache data was written by those runs.
+- Prior wording implying **GitHub OAuth had never been verified** was too broad. The still-open gate is **the new PR23 workflow's independent owner-reviewed manual execution** and its **direct market-provider API entitlements**, plus secure source storage/write authority. The earlier runs do **not** prove long-term OAuth refresh continuity, licensed vendor access, independent source-first-known, source retention rights or an actual Cache publisher.
+
+**Real connected-provider market source observations, separately kept PRIVATE** (not GitHub-app-owned and not raw content in GitHub):
+- 13 Nov intraday: source-native SSI intraday ticks and VCBS minute-last-price series captured for FPT/DCM/HPG. Six canonical private source snapshots hold **1,291 entries** (SSI 643 ticks; VCBS 648 minute-price points). One extra earlier HPG capture was byte-for-byte equivalent in native ticks, explicitly excluded and marked as an ignored redundant audit capture, not double counted.
+- Only **643 minute clock labels** occur in both provider reports. Of these, **621 displayed last prices agreed** and **22 differed** (FPT 17, DCM 3, HPG 2). Different publisher sampling, event-time convention and source scopes mean equal minute labels do **not** independently prove identical exchange events.
+- VCBS DCM native minute series contains two repeated labels with identical prices. **Retain original rows**; future normalization must set a deterministic duplicate policy and fail on divergent same-key values.
+- SSI tick `volume` is NOT proven to be comparable with VCBS cumulative session `totalVolume`. VCBS minute-last-price series does NOT provide per-minute OHLCV and cannot be silently promoted into native M5/M15/M30/H1 bars. SSI latest vs range MCP timestamp date formats also differ; parse only with an explicit validated source format.
+- At the observed time of capture, **SSI/VCBS/DNSE daily series still ended 12 Nov**. New 13 Nov intraday evidence must remain separate and **PROVISIONAL / not D1-final**, even where a displayed `ohlc_provisional` flag has become false. No issuer-signed closed-bar evidence was gathered.
+
+Private staging and QA receipt references are stored in the owner's Google Drive Handoff §175, **not public GitHub**. The registered 6-snapshot manifest + QA were fully read back and access checked `shared=false`. Connected Google Drive verified that MST app-owned `CHUNKS` and `MANIFESTS` remain EMPTY (0/0). No OAuth app-owned input, cache publication, GitHub vendor credentials, scheduler, trading, IAM change or production merge occurred.
+
+**Priority refined:** Treat Drive OAuth as historically *proven for bootstrap*, not a never-tested unknown. P0 owner actions should now focus on approved GitHub PR23 deployment/manual mode, licensed standalone SSI/DNSE market-data-only keys and retention rights, real source GET, post-session revision/finality and independent signed CAS/highwater. Do NOT transfer private MCP tokens or source Docs to public GitHub or equate connected ChatGPT vendor MCP credentials with GitHub vendor credentials.
