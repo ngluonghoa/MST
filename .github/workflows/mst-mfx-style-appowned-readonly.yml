@@ -1,4 +1,4 @@
-name: MST MFX-style app-owned Drive and DNSE gated Cloud source - MANUAL DRAFT
+name: MST MFX-style app-owned Drive and SSI/DNSE gated source - MANUAL DRAFT
 
 # No schedule, PR, push, stock orders or repository writes.
 # Source-stage upload requires independent per-run owner and rights gates.
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "drive-probe, dnse-d1-readonly, or gated unpublished source staging"
+        description: "OAuth Drive probe, SSI/DNSE read-only or explicitly gated DNSE quarantine"
         required: true
         type: choice
         default: drive-probe
@@ -30,7 +30,7 @@ on:
           - M30
           - H1
       symbol:
-        description: "FPT/DCM/HPG symbol for owner-gated D1 read-only source"
+        description: "FPT/DCM/HPG symbol for owner-gated market-data probe"
         required: false
         default: FPT
         type: choice
@@ -39,19 +39,19 @@ on:
           - DCM
           - HPG
       from_unix:
-        description: "DNSE D1 starting UNIX timestamp (if source access independently approved)"
+        description: "DNSE source starting UNIX timestamp (requires source entitlement)"
         required: false
         type: string
       to_unix:
-        description: "DNSE D1 ending UNIX timestamp"
+        description: "DNSE source ending UNIX timestamp"
         required: false
         type: string
       from_date:
-        description: "SSI D1 from, YYYY-MM-DD (max 95 days; market-data-only)"
+        description: "SSI start date, YYYY-MM-DD (bounded by native TF)"
         required: false
         type: string
       to_date:
-        description: "SSI D1 to, YYYY-MM-DD"
+        description: "SSI end date, YYYY-MM-DD"
         required: false
         type: string
 
@@ -64,7 +64,7 @@ concurrency:
 
 jobs:
   exact-app-owned-readonly:
-    name: Manual app-owned folder check, optional DNSE read or unpublished source staging
+    name: Manual app-owned folder proof, SSI/DNSE native read or gated quarantine
     if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && vars.MST_MFX_APP_OWNED_READONLY_ACCEPTED == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
@@ -77,7 +77,7 @@ jobs:
           python-version: '3.12'
       - name: Install pinned read-only OAuth and HTTPS dependencies
         run: python -m pip install --disable-pip-version-check google-auth==2.43.0 requests==2.32.5
-      - name: Validate app-owned Drive folders and optional official DNSE D1 source
+      - name: Validate app-owned Drive and selected official provider source
         env:
           MST_MFX_SOURCE_MODE: ${{ inputs.mode }}
           MST_SOURCE_TF: ${{ inputs.native_tf }}
@@ -88,8 +88,8 @@ jobs:
           MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
           MST_DNSE_READONLY_OWNER_ACCEPTED: ${{ vars.MST_DNSE_READONLY_OWNER_ACCEPTED }}
           MST_DNSE_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_SOURCE_RIGHTS_CONFIRMED }}
-          MST_DNSE_API_KEY: ${{ secrets.MST_DNSE_API_KEY }}
-          MST_DNSE_API_SECRET: ${{ secrets.MST_DNSE_API_SECRET }}
+          MST_DNSE_API_KEY: ${{ startsWith(inputs.mode, 'dnse-') && secrets.MST_DNSE_API_KEY || '' }}
+          MST_DNSE_API_SECRET: ${{ startsWith(inputs.mode, 'dnse-') && secrets.MST_DNSE_API_SECRET || '' }}
           MST_DNSE_SYMBOL: ${{ inputs.symbol }}
           MST_DNSE_FROM_UNIX: ${{ inputs.from_unix }}
           MST_DNSE_TO_UNIX: ${{ inputs.to_unix }}
@@ -97,8 +97,8 @@ jobs:
           MST_DNSE_STORAGE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_STORAGE_RIGHTS_CONFIRMED }}
           MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
           MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}
-          MST_SSI_API_KEY: ${{ secrets.MST_SSI_API_KEY }}
-          MST_SSI_API_SECRET: ${{ secrets.MST_SSI_API_SECRET }}
+          MST_SSI_API_KEY: ${{ startsWith(inputs.mode, 'ssi-') && secrets.MST_SSI_API_KEY || '' }}
+          MST_SSI_API_SECRET: ${{ startsWith(inputs.mode, 'ssi-') && secrets.MST_SSI_API_SECRET || '' }}
           MST_SSI_SYMBOL: ${{ inputs.symbol }}
           MST_SSI_FROM_DATE: ${{ inputs.from_date }}
           MST_SSI_TO_DATE: ${{ inputs.to_date }}
