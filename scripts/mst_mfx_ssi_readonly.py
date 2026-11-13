@@ -18,9 +18,11 @@ MAX_RESPONSE_BYTES = 1_000_000
 MAX_PAGES = 5
 PAGE_SIZE = 100
 MAX_ROWS = MAX_PAGES * PAGE_SIZE
-# Single manual probe only. Larger history must be chunked and independently
-# reconciled; never return a truncated 500-row source as complete history.
-MAX_CALENDAR_SPAN_BY_TF = {"M5": 5, "M15": 10, "M30": 20, "H1": 35, "D1": 95}
+# Import one shared conservative request span contract for SSI and DNSE.
+# This is not source-coverage or closed-session certification.
+from scripts.mst_mfx_native_timeframes import (
+    MAX_SINGLE_PROBE_CALENDAR_DAYS as MAX_CALENDAR_SPAN_BY_TF,
+)
 SYMBOL_RE = re.compile(r"[A-Z]{3}\Z")
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 
