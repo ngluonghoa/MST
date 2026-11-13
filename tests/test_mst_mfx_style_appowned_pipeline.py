@@ -350,6 +350,8 @@ class DnseNativeTimeframeTests(unittest.TestCase):
         with self.assertRaisesRegex(m.CloudGateDenied,"D1_MODE_CANNOT_PROMOTE"):
             m.guard(env)
         env["MST_MFX_SOURCE_MODE"]=m.MODE_DNSE_NATIVE
+        # A native M5 test window is deliberately shorter than D1's 95 days.
+        env["MST_DNSE_TO_UNIX"]="1794200000"
         self.assertEqual(m.guard(env)[0],m.MODE_DNSE_NATIVE)
         env["MST_SOURCE_TF"]="H4"
         with self.assertRaises(m.CloudGateDenied):
