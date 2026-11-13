@@ -19,6 +19,7 @@ on:
           - ssi-d1-readonly
           - dnse-native-readonly
           - ssi-native-readonly
+          - ssi-native-quarantine-stage
       native_tf:
         description: "Native source time frame for native-readonly/native-quarantine modes (no H4)"
         required: true
@@ -103,6 +104,7 @@ jobs:
           MST_DNSE_STORAGE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_STORAGE_RIGHTS_CONFIRMED }}
           MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
           MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}
+          MST_SSI_STORAGE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_STORAGE_RIGHTS_CONFIRMED }}
           MST_SSI_API_KEY: ${{ startsWith(inputs.mode, 'ssi-') && secrets.MST_SSI_API_KEY || '' }}
           MST_SSI_API_SECRET: ${{ startsWith(inputs.mode, 'ssi-') && secrets.MST_SSI_API_SECRET || '' }}
           MST_SSI_SYMBOL: ${{ inputs.symbol }}
