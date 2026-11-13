@@ -33,7 +33,8 @@ class SsiSourceDenied(ValueError):
 
 def guard_ssi(env: Mapping[str, str]) -> tuple[str, date, date]:
     mode = env.get("MST_MFX_SOURCE_MODE")
-    if mode not in ("ssi-d1-readonly", "ssi-native-readonly"):
+    if mode not in ("ssi-d1-readonly", "ssi-native-readonly",
+                    "ssi-native-quarantine-stage"):
         raise SsiSourceDenied("MST_SSI_EXACT_READONLY_MODE_REQUIRED")
     from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
     timeframe = env.get("MST_SOURCE_TF", "D1")
@@ -139,7 +140,7 @@ def _native_source_row(
     return label
 
 
-def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
+def _fetch_ssi_native_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Real REST auth + paged OHLC; only aggregate non-sensitive result returned.
 
     Does NOT return access/refresh tokens, native rows, dates, or price values.
@@ -168,6 +169,7 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         raise SsiSourceDenied("MST_SSI_TOKEN_TRANSPORT_FAILED_CLOSED") from None
 
     seen: set[str] = set()
+    captured: list[dict[str, Any]] = []
     expected_pages: int | None = None
     expected_items: int | None = None
     expected_items_field: bool | None = None
@@ -254,6 +256,12 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
             if label in seen:
                 raise SsiSourceDenied("MST_SSI_DUPLICATE_SOURCE_BAR_TIMESTAMP")
             seen.add(label)
+            # Capture only the audited market OHLCV fields, not arbitrary
+            # additional vendor fields or tokens. Preserve source numeric units.
+            captured.append({
+                "symbol": symbol, "tradingDate": label,
+                **{k: row[k] for k in ("open", "high", "low", "close", "volume")},
+            })
         if expected_items is not None and len(seen) > expected_items:
             raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_EXCEEDED")
         if expected_pages is not None:
@@ -280,7 +288,7 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         raise SsiSourceDenied("MST_SSI_EMPTY_OR_EXCESSIVE_SOURCE_SCOPE")
     if expected_items is not None and len(seen) != expected_items:
         raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MISMATCH")
-    return {
+    report = {
         "provider":"SSI_FASTCONNECT_V3_MARKET_DATA",
         **source_tf_metadata("SSI",tf),
         "native_source_rows_observed":len(seen),
@@ -296,6 +304,13 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         "signal_eligible":False,
         "trading_or_broker_calls":0,
     }
+    return report, captured
+
+
+def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
+    """Compatibility read-only entrypoint: no source rows in stdout/receipt."""
+    report, _ = _fetch_ssi_native_once(session, env)
+    return report
 
 
 def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
