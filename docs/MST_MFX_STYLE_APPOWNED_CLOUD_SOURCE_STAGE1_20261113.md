@@ -104,3 +104,25 @@ Primary contracts:
 
 **Stage 1 still NO-GO for production:** real owner-authorized cloud OAuth and marketdata-only vendor runs, usage/retention entitlement, stable all-TF backfill and source finality, VCBS independently licensed provider adapter, signed independent CAS/highwater, actual private Cache publisher and 1:1 E2E Signal Engine parity.
 
+
+
+## §174 — SSI V3 authoritative pagination integrity and provider-secret isolation
+
+Checked the live-published SSI FastConnect V3 **Quick Start** and **GET /api/v3/data/ohlc** response contract. Some SSI response versions include `itemsCount` (total result rows), `pageCount`, `pageNumber`, `pageIndex` and `pageSize`; these are independent guards. The old MST reader accepted a short page and concluded success without ensuring that `itemsCount` rows had been seen. That was a false-completion risk for Cache source ingress.
+
+**Fixed in existing** `scripts/mst_mfx_ssi_readonly.py`:
+
+- Enforce returned `pageSize` equals requested bounded size (100). Require at least one of `pageIndex` or `pageNumber`; if both appear, both must equal the requested one-based page. Do not treat missing or inconsistent index metadata as trusted.
+- If `itemsCount` is supplied, require a positive integer no more than the 500-row single-probe cap, constant across all retrieved pages. The final unique candle count **must exactly equal** the declared count; fail closed on mid-read count mutation, missing rows, duplicate timestamp, premature zero-row continuation or count exceeding the bound.
+- If a short page is returned **without** `pageCount` but the declared `itemsCount` has not been reached, continue reading instead of incorrectly concluding completeness. Stop/fail if source page structure or remaining count is not satisfied.
+- If `itemsCount` is absent (the minimal API reference example omits it), the reader can still return a **read-only observation** with strict page index/page size checks. It now explicitly reports `source_items_count_verified=false` and `complete_historical_source_coverage_proven=false`. Do not promote such a result into a publisher.
+- A matching count proves only that this server response was traversed consistently. It does **not** prove trading-session continuity, immutable source versions, official close, license or all historical coverage.
+
+**Reduced GitHub credential exposure:** Existing manual workflow `.github/workflows/mst-mfx-style-appowned-readonly.yml` now injects the separate SSI market-data API key/secret into the action step **only for `ssi-*` modes**, and DNSE key/secret **only for `dnse-*` modes**. The `drive-probe` mode therefore receives neither vendor credential in its step environment. Existing OAuth `drive.file` trio remains mandatory to verify app-owned folders; no new secrets, IAM or permissions were created.
+
+Updated existing SSI tests to model source count drift, insufficient final page, count beyond request bound, page-size drift, conflicting index aliases, short-page continuation, and lack of source-completeness proof. Historical synthetic fixtures were corrected after CI caught an invented empty continuation with no page envelope. **Only a GitHub CI success on the exact final PR head is sufficient to mark code QA PASS.**
+
+Vendor contracts: https://developers.ssi.com.vn/en/docs/getting-started/first-api-call ; https://developers.ssi.com.vn/en/docs/api-reference/data-ohlc ; https://developers.ssi.com.vn/en/docs/api-reference/auth-token. The Quick Start and API reference illustrate differing `from/to` date spellings; the current code follows the detailed endpoint reference and awaits an actual licensed GitHub API read to prove negotiated server behavior.
+
+**Still NO-GO:** GitHub OAuth manual real Drive read, independent SSI/DNSE vendor credentials and retention rights, source-first-known and venue closed bar, VCBS standalone API, partitioned source-versioned history/backfill, independent signed persistent CAS/highwater, protected Signal Engine parity and any schedule/trading. No ChatGPT MCP secret/permission is reused or serialized to GitHub.
+
