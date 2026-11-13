@@ -18,6 +18,9 @@ MAX_RESPONSE_BYTES = 1_000_000
 MAX_PAGES = 5
 PAGE_SIZE = 100
 MAX_ROWS = MAX_PAGES * PAGE_SIZE
+# Single manual probe only. Larger history must be chunked and independently
+# reconciled; never return a truncated 500-row source as complete history.
+MAX_CALENDAR_SPAN_BY_TF = {"M5": 5, "M15": 10, "M30": 20, "H1": 35, "D1": 95}
 SYMBOL_RE = re.compile(r"[A-Z]{3}\Z")
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 
@@ -55,8 +58,8 @@ def guard_ssi(env: Mapping[str, str]) -> tuple[str, date, date]:
         a, b = date.fromisoformat(first), date.fromisoformat(last)
     except ValueError:
         raise SsiSourceDenied("MST_SSI_INVALID_ISO_DATE") from None
-    if b < a or b-a > timedelta(days=95):
-        raise SsiSourceDenied("MST_SSI_MAX_95_DAY_WINDOW_REQUIRED")
+    if b < a or b-a > timedelta(days=MAX_CALENDAR_SPAN_BY_TF[timeframe]):
+        raise SsiSourceDenied("MST_SSI_TF_BOUNDED_WINDOW_REQUIRED")
     return symbol, a, b
 
 
@@ -117,6 +120,7 @@ def _native_source_row(
                 raise ValueError("not a native intraday timestamp")
             native_clock = datetime.strptime(label.replace("/", "-"), "%Y-%m-%d %H:%M:%S")
             d = native_clock.date()
+            label = native_clock.strftime("%Y-%m-%d %H:%M:%S")
     except ValueError:
         raise SsiSourceDenied("MST_SSI_NATIVE_TF_TRADING_TIMESTAMP_INVALID") from None
     if not first <= d <= last:
@@ -165,10 +169,18 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
     expected_pages: int | None = None
     pages = 0
     for page in range(1, MAX_PAGES+1):
+        # SSI FastConnect V3 requires YYYY/MM/DD for 1d, but
+        # YYYY/MM/DD HH:mm:ss for intraday OHLCV. The time-of-day
+        # bounds include the entire requested last calendar day.
+        first_param = first.strftime("%Y/%m/%d")
+        last_param = last.strftime("%Y/%m/%d")
+        if tf != "D1":
+            first_param += " 00:00:00"
+            last_param += " 23:59:59"
         params = {
             "symbol":symbol,
-            "from":first.strftime("%Y/%m/%d"),
-            "to":last.strftime("%Y/%m/%d"),
+            "from":first_param,
+            "to":last_param,
             "timeFrame":provider_resolution("SSI", tf),
             "pageIndex":page,
             "pageSize":PAGE_SIZE,
@@ -207,7 +219,7 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         for row in rows:
             label = _native_source_row(row, symbol=symbol, first=first, last=last, timeframe=tf)
             if label in seen:
-                raise SsiSourceDenied("MST_SSI_DUPLICATE_SOURCE_D1_DAY")
+                raise SsiSourceDenied("MST_SSI_DUPLICATE_SOURCE_BAR_TIMESTAMP")
             seen.add(label)
         if expected_pages is not None:
             if not rows and page < expected_pages:
