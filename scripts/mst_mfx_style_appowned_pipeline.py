@@ -429,14 +429,20 @@ def stage_unpublished_dnse_source(
         raise
     except Exception:
         raise CloudGateDenied("MST_MFX_SOURCE_CHUNKS_FOLDER_LOOKUP_FAILED") from None
-    # Optional previous source is read/verified before this attempt can write.
+    # D1 must not silently skip an existing predecessor when the manual
+    # input is blank. Auto-discover by default; an empty complete census
+    # represents a legitimate first capture. Intraday capture remains separate.
     prior_link = None
-    if env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID"):
+    prior_env = env
+    if tf == "D1" and not env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID"):
+        prior_env = dict(env)
+        prior_env["MST_DNSE_PREVIOUS_SOURCE_FILE_ID"] = "auto"
+    if prior_env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID"):
         from scripts.mst_dnse_d1_prior_delta_ingress import (
             plan_prior_dnse_d1_from_private_drive,
         )
         prior_link = plan_prior_dnse_d1_from_private_drive(
-            session, env, parent, payload,
+            session, prior_env, parent, payload,
         )
     archive={
         "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"

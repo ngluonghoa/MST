@@ -294,7 +294,7 @@ class UnpublishedSourceStage(unittest.TestCase):
         self.assertFalse(r["signals_and_trading_eligible"])
         self.assertEqual(d.post_calls,1)
         self.assertEqual(d.media_reads,2)
-        self.assertEqual(d.name_lookup_count,2)
+        self.assertEqual(d.name_lookup_count,3)  # default D1 full census + before/after
         saved=json.loads(d.media)
         self.assertEqual(saved["raw_native"]["v"],[200,250])
         self.assertFalse(saved["eligible_for_signals"])
@@ -509,6 +509,25 @@ class AutoDnseD1PriorDiscovery(unittest.TestCase):
         env.update(updates)
         return m.stage_unpublished_dnse_source(d,env,self.payload())
 
+
+    def test_blank_d1_input_auto_links_existing_labeled_prior(self):
+        d=self.Drive(self.prior())
+        env=stage_owner_env()  # empty predecessor now becomes auto by default
+        result=m.stage_unpublished_dnse_source(d,env,self.payload())
+        self.assertTrue(result["source_delta_linked_to_prior_private_d1"])
+        self.assertEqual(result["source_delta_revised_rows"],1)
+        self.assertEqual(d.enumerations,1)
+        self.assertEqual(d.old_media_reads,2)
+        self.assertEqual(d.post_calls,1)
+
+    def test_blank_d1_input_denies_legacy_before_new_upload(self):
+        d=self.Drive(self.prior())
+        del d.old_info["appProperties"]["source_symbol"]
+        with self.assertRaisesRegex(m.CloudGateDenied,"LEGACY_OR_UNLABELED"):
+            m.stage_unpublished_dnse_source(d,stage_owner_env(),self.payload())
+        self.assertEqual(d.enumerations,1)
+        self.assertEqual(d.post_calls,0)
+
     def test_auto_reads_verified_predecessor_then_stages_delta(self):
         d=self.Drive(self.prior())
         receipt=self.run_auto(d)
@@ -666,7 +685,7 @@ class NativeQuarantineStage(unittest.TestCase):
                     d.file_info["name"],"MST_UNPUBLISHED_DNSE_NATIVE_"
                     +tf+"_43270010001_1.json")
                 self.assertEqual(d.media_reads,2)
-                self.assertEqual(d.name_lookup_count,2)
+                self.assertEqual(d.name_lookup_count,3 if tf=="D1" else 2)
                 self.assertEqual(d.post_calls,1)
                 with self.assertRaisesRegex(
                         m.CloudGateDenied,"PREEXISTING_ATTEMPT"):

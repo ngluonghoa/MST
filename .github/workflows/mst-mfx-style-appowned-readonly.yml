@@ -48,7 +48,7 @@ on:
         required: false
         type: string
       previous_dnse_d1_file_id:
-        description: "DNSE D1 prior: auto (private discovery), exact prior chunk ID, or blank (first capture)"
+        description: "DNSE D1 prior: blank/auto both discover private predecessor; explicit chunk ID overrides"
         required: false
         type: string
       from_date:
