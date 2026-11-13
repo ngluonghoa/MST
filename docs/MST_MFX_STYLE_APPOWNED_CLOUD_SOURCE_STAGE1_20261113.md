@@ -50,3 +50,34 @@ Official references:
 
 **NO-GO remains:** real SSI vendor entitlement/API secret, actual GitHub OAuth vendor run, source-use/storage rights, native 5m/15m/30m/H1/H4/D1 and official closed-bar semantics, independent monotonic CAS/fencing, Cache release and Signal Engine/UI. SSI D1 read-only is a Cloud ingress capability under owner gate, not a Cache producer.
 
+
+
+## §172 — Native multi-timeframe provider contracts (read-only only)
+
+Official provider API references independently support these **native source requests** (no invented H4 endpoint):
+
+| MST TF | SSI GET /api/v3/data/ohlc timeFrame | DNSE GET /price/ohlc resolution | Exposure |
+|---|---|---|---|
+| M5 | \`5m\` | \`5\` | Manual native source read only |
+| M15 | \`15m\` | \`15\` | Manual native source read only |
+| M30 | \`30m\` | \`30\` | Manual native source read only |
+| H1 | \`1h\` | \`1H\` | Manual native source read only |
+| D1 | \`1d\` | \`1D\` | Manual native source read only |
+| H4 | **NOT a native API capability** | **NOT a native API capability** | Deny as native; design separately using venue-calendar/session-verified closed H1/M30 inputs |
+
+- Added \`scripts/mst_mfx_native_timeframes.py\` as a single provider-specific native-resolution contract and H4 denial boundary.
+- Existing manual-only GitHub workflow now exposes \`native_tf\` choice and separate \`dnse-native-readonly\` / \`ssi-native-readonly\` options; **no new schedule, credentials or permissions**.
+- The original \`dnse-d1-readonly\`, \`ssi-d1-readonly\` and \`dnse-d1-quarantine-stage\` modes are **explicitly D1-locked** and fail closed if the timeframe input differs. The app-owned Drive \`CHUNKS\` source quarantine path is still D1-only and unpublished.
+- SSI intraday native timestamp labels must include day plus HH:MM:SS; multiple distinct bars on a single trading day are not collapsed into one D1 row. Bounded pagination, duplicate source bar keys and OHLCV constraints remain enforced.
+- DNSE native observations retain Unix timestamps and explicit \`nextTime=0\` requirement: an incomplete/paginated response must fail closed rather than being treated as a completed batch.
+- Source validity is **NOT venue close/finality**. None of these read-only modes independently prove native session/calendar anchoring, issuer first-known, complete historical coverage, post-close revision reconciliation, source storage entitlement, or numerical price adjustment. Output receipts set \`source_closed_bar_attestation_proven=false\`, \`H4_venue_session_aggregation_proven=false\`, \`trade_signal_eligible=false\`.
+- Before adding any H4-derived Cache, define a published source-session calendar (Vietnam stock market, trading breaks/holidays), aggregation alignment, no half-built windows, live/closed-bar distinctions, multi-provider price basis and parity to Swing Trading 1.8. **Do not equate an arbitrary four-hour clock window with a verified H4 trading candle**.
+
+Documentation confirmed:
+- https://developers.ssi.com.vn/en/docs/api-reference/data-ohlc
+- https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/
+- https://developers.dnse.com.vn/docs/guide/intro/authentication/
+
+The DNSE HMAC signature signs the fixed URL PATH, not its query string (official SDK and authentication specification). The SSI Market Data token is no-OTP, but an owner-issued market-data-only credential and API license/use-rights approval remain a separate prerequisite to any actual GitHub-hosted call.
+
+**Status:** native API TF read-only integration code and regression tests are prepared in Draft PR23. No owner-authorized real SSI or DNSE Cloud read, H4 aggregation, real Drive source upload, published Cache head, independent CAS/highwater, scheduled job or trade has been conducted.
