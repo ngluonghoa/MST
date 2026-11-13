@@ -33,6 +33,7 @@ WORKFLOW = (
 )
 MODE_DRIVE = "drive-probe"
 MODE_DNSE = "dnse-d1-readonly"
+MODE_DNSE_NATIVE = "dnse-native-readonly"
 MODE_STAGE = "dnse-d1-quarantine-stage"
 MODE_SSI = "ssi-d1-readonly"
 DRIVE_ROOT = "MST_OAUTH_CACHE_V1"
@@ -66,7 +67,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
     if any(env.get(k) != v for k, v in required.items()):
         raise CloudGateDenied("MST_MFX_MANUAL_MAIN_OWNER_GATE_REQUIRED")
     mode = env.get("MST_MFX_SOURCE_MODE", MODE_DRIVE)
-    if mode not in (MODE_DRIVE, MODE_DNSE, MODE_STAGE, MODE_SSI):
+    if mode not in (MODE_DRIVE, MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE, MODE_SSI):
         raise CloudGateDenied("MST_MFX_UNKNOWN_READONLY_MODE")
     if (env.get("MST_OAUTH_BOOTSTRAP_ACCEPTED") == "true"
             or env.get("MST_GDRIVE_SERVICE_ACCOUNT_JSON")):
@@ -75,7 +76,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
             "MST_GDRIVE_OAUTH_REFRESH_TOKEN")
     if any(type(env.get(k)) is not str or not env[k].strip() for k in keys):
         raise CloudGateDenied("MST_MFX_COMPLETE_EXISTING_OAUTH_TRIO_REQUIRED")
-    if mode in (MODE_DNSE, MODE_STAGE):
+    if mode in (MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE):
         if (env.get("MST_DNSE_READONLY_OWNER_ACCEPTED") != "true"
                 or env.get("MST_DNSE_SOURCE_RIGHTS_CONFIRMED") != "true"):
             raise CloudGateDenied("MST_MFX_DNSE_SOURCE_AND_RIGHTS_GATES_REQUIRED")
@@ -90,6 +91,14 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
         a, b = int(start), int(end)
         if a <= 0 or b <= a or b - a > 95 * 86400:
             raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
+        from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+        tf = env.get("MST_SOURCE_TF", "D1")
+        try:
+            provider_resolution("DNSE", tf)
+        except NativeTfDenied:
+            raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
+        if mode in (MODE_DNSE, MODE_STAGE) and tf != "D1":
+            raise CloudGateDenied("MST_MFX_DNSE_D1_MODE_CANNOT_PROMOTE_OTHER_TF")
     if mode == MODE_SSI:
         from scripts.mst_mfx_ssi_readonly import guard_ssi
         guard_ssi(env)
@@ -168,6 +177,7 @@ def inspect_app_owned_drive(session: Any) -> dict[str, Any]:
 def build_dnse_request(
     symbol: str, from_unix: int, to_unix: int,
     api_key: str, api_secret: str, *, date_header: str, nonce: str,
+    timeframe: str = "D1",
 ) -> tuple[str, dict[str, str]]:
     """Construct DNSE official-SDK-aligned market-data-only GET.
 
@@ -179,7 +189,12 @@ def build_dnse_request(
             or from_unix <= 0 or to_unix <= from_unix
             or to_unix-from_unix > 95*86400):
         raise CloudGateDenied("MST_MFX_INVALID_DNSE_REQUEST")
-    q = urlencode({"symbol":symbol,"type":"STOCK","resolution":"1D",
+    from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+    try:
+        resolution = provider_resolution("DNSE", timeframe)
+    except NativeTfDenied:
+        raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
+    q = urlencode({"symbol":symbol,"type":"STOCK","resolution":resolution,
                    "from":from_unix,"to":to_unix})
     target = DNSE_PATH + "?" + q
     signing = f"(request-target): get {DNSE_PATH}\ndate: {date_header}\nnonce: {nonce}"
@@ -243,6 +258,7 @@ def _fetch_dnse_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any
         env["MST_DNSE_SYMBOL"], start, end,
         env["MST_DNSE_API_KEY"], env["MST_DNSE_API_SECRET"],
         date_header=dt, nonce=uuid4().hex,
+        timeframe=env.get("MST_SOURCE_TF", "D1"),
     )
     try:
         response = session.get(url, headers=headers, timeout=25,
@@ -257,6 +273,8 @@ def _fetch_dnse_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any
     except Exception:
         raise CloudGateDenied("MST_MFX_DNSE_PRIVATE_REQUEST_FAILURE") from None
     summary = validate_dnse_native(payload, start, end)
+    from scripts.mst_mfx_native_timeframes import source_tf_metadata
+    summary.update(source_tf_metadata("DNSE", env.get("MST_SOURCE_TF", "D1")))
     return summary, payload
 
 
@@ -446,7 +464,7 @@ def main() -> None:
         "automatic_scheduling_enabled_by_this_workflow": False,
         "trade_orders": 0,
     }
-    if mode in (MODE_DNSE,MODE_STAGE):
+    if mode in (MODE_DNSE,MODE_DNSE_NATIVE,MODE_STAGE):
         import requests
         observation, payload = _fetch_dnse_once(requests.Session(),os.environ)
         receipt["provider"] = {"name":"DNSE_OFFICIAL_OPENAPI","read_only_observation":observation}
