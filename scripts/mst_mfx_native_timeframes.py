@@ -15,6 +15,12 @@ SOURCE_NATIVE_TFS: Final = {
     "H1": ("1h", "1H", 3600),
     "D1": ("1d", "1D", 86400),
 }
+# One manually bounded provider query; these are conservative caps, not a
+# promise of complete history or a trading-session calendar. Larger backfills
+# must be paged/chunked with explicit cross-window coverage and recovery.
+MAX_SINGLE_PROBE_CALENDAR_DAYS: Final = {
+    "M5": 5, "M15": 10, "M30": 20, "H1": 35, "D1": 95,
+}
 UNSUPPORTED_NATIVE_TFS: Final = ("H4",)
 SOURCE_CLOCK_TZ = "Asia/Ho_Chi_Minh"
 
