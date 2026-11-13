@@ -313,6 +313,156 @@ class UnpublishedSourceStage(unittest.TestCase):
 
 
 
+
+class PriorDnseD1IncrementalStage(unittest.TestCase):
+    """Exercise private predecessor proof + delta in actual stage via fakes."""
+    PRIOR_ID = "FAKE_PRIOR_DNSE_1234567890"
+
+    class Drive(FakeQuarantineDrive):
+        def __init__(self, prior_archive):
+            super().__init__()
+            self.old_body = json.dumps(prior_archive,sort_keys=True,
+                                       separators=(",",":"),allow_nan=False).encode()
+            import hashlib
+            self.old_info={
+                "id":PriorDnseD1IncrementalStage.PRIOR_ID,
+                "name":"MST_UNPUBLISHED_DNSE_D1_43269999999_1.json",
+                "mimeType":"application/json",
+                "parents":["FAKE_APP_CHUNKS_1234567890"],
+                "trashed":False,"shared":False,
+                "ownedByMe":True,"isAppAuthorized":True,
+                "size":str(len(self.old_body)),
+                "version":"4",
+                "md5Checksum":hashlib.md5(self.old_body).hexdigest(),
+                "appProperties":{
+                    "mst_unpublished":"true",
+                    "source_sha256":hashlib.sha256(self.old_body).hexdigest()},
+            }
+            self.old_media_reads=0
+            self.old_tamper=False
+
+        def get(self,url,*,params,timeout,**kwargs):
+            if url==m.DRIVE_URL+PriorDnseD1IncrementalStage.PRIOR_ID:
+                if params.get("alt")=="media":
+                    self.old_media_reads+=1
+                    response=FakeResponse({})
+                    response.content=(b"BROKEN" if self.old_tamper else self.old_body)
+                    return response
+                return FakeResponse(self.old_info)
+            if url=="https://www.googleapis.com/drive/v3/files":
+                query=params.get("q","")
+                if self.old_info["name"] in query:
+                    return FakeResponse({"files":[{k:self.old_info[k] for k in
+                        ("id","name","mimeType","parents","trashed")}]})
+            return super().get(url,params=params,timeout=timeout,**kwargs)
+
+    def prior(self):
+        return {
+            "schema":"mst.cloud.dnse_unpublished_source_candidate.v0.1",
+            "project":"MST","source":"DNSE_OFFICIAL_OPENAPI",
+            "symbol":"FPT","resolution":"1D","source_native_tf":"D1",
+            "from_unix":1793999999,"to_unix":1794200000,
+            "issuer_first_known_verified":False,
+            "official_venue_closed_verified":False,
+            "independent_publish_cas_verified":False,
+            "eligible_for_signals":False,
+            "raw_native":{
+                "t":[1794000000,1794086400],
+                "o":[100,101],"h":[102,103],"l":[99,100],
+                "c":[101,102],"v":[200,250],"nextTime":0},
+        }
+
+    def new_payload(self):
+        return {"t":[1794086400,1794172800],
+                "o":[101,104],"h":[103,106],"l":[100,103],
+                "c":[102,105],"v":[255,300],"nextTime":0}
+
+    def run_stage(self, drive, **updates):
+        env=stage_owner_env(MST_DNSE_PREVIOUS_SOURCE_FILE_ID=self.PRIOR_ID,
+                            **updates)
+        return m.stage_unpublished_dnse_source(drive,env,self.new_payload())
+
+    def test_prior_reads_twice_and_delta_retains_source_revisions(self):
+        d=self.Drive(self.prior())
+        result=self.run_stage(d)
+        self.assertTrue(result["unpublished_private_source_document_stored"])
+        self.assertTrue(result["source_delta_linked_to_prior_private_d1"])
+        self.assertEqual(result["source_delta_added_rows"],1)
+        self.assertEqual(result["source_delta_revised_rows"],1)
+        self.assertEqual(result["source_delta_window_exited_not_deleted"],1)
+        self.assertEqual(d.old_media_reads,2)
+        self.assertEqual(d.media_reads,2)
+        self.assertEqual(d.post_calls,1)
+        archive=json.loads(d.media)
+        link=archive["prior_source_incremental_delta"]
+        delta=link["delta"]
+        self.assertEqual(delta["added"][0]["source_row"]["volume"],300)
+        self.assertEqual(delta["revised"][0]["before"]["volume"],250)
+        self.assertEqual(delta["revised"][0]["after"]["volume"],255)
+        self.assertFalse(link["eligible_for_signals"])
+        self.assertFalse(archive["eligible_for_signals"])
+        self.assertFalse(result["signals_and_trading_eligible"])
+
+    def test_without_previous_optional_id_keeps_original_behavior(self):
+        d=self.Drive(self.prior())
+        env=stage_owner_env()
+        result=m.stage_unpublished_dnse_source(d,env,DnseNative().payload())
+        self.assertTrue(result["unpublished_private_source_document_stored"])
+        self.assertFalse(result["source_delta_linked_to_prior_private_d1"])
+        self.assertNotIn("prior_source_incremental_delta",json.loads(d.media))
+        self.assertEqual(d.old_media_reads,0)
+
+    def test_wrong_identity_and_tampered_prior_fail_before_new_upload(self):
+        wrong=self.prior()
+        wrong["symbol"]="HPG"
+        d=self.Drive(wrong)
+        with self.assertRaisesRegex(m.CloudGateDenied,"IDENTITY_MISMATCH"):
+            self.run_stage(d)
+        self.assertEqual(d.post_calls,0)
+        d=self.Drive(self.prior())
+        d.old_tamper=True
+        with self.assertRaises(m.CloudGateDenied):
+            self.run_stage(d)
+        self.assertEqual(d.post_calls,0)
+
+    def test_prior_shared_or_wrong_parent_denied_before_upload(self):
+        for key,value in (("shared",True),("ownedByMe",False),
+                          ("parents",["BAD_PARENT_12345"]),
+                          ("version","bad")):
+            d=self.Drive(self.prior())
+            d.old_info[key]=value
+            with self.subTest(key=key),self.assertRaises(m.CloudGateDenied):
+                self.run_stage(d)
+            self.assertEqual(d.post_calls,0)
+
+    def test_prior_no_overlap_or_incomplete_page_fail_closed(self):
+        prior=self.prior()
+        prior["raw_native"]["t"]=[1794000000,1794000100]
+        d=self.Drive(prior)
+        with self.assertRaisesRegex(m.CloudGateDenied,"NO_OVERLAP"):
+            self.run_stage(d)
+        self.assertEqual(d.post_calls,0)
+        prior=self.prior()
+        prior["raw_native"]["nextTime"]=1794200000
+        d=self.Drive(prior)
+        with self.assertRaisesRegex(m.CloudGateDenied,"DELTA_INVALID"):
+            self.run_stage(d)
+        self.assertEqual(d.post_calls,0)
+
+    def test_prior_id_cannot_be_used_by_readonly_or_non_d1_modes(self):
+        d=self.Drive(self.prior())
+        for changes in (
+            {"MST_MFX_SOURCE_MODE":m.MODE_DNSE},
+            {"MST_SOURCE_TF":"M5"},
+            {"MST_DNSE_PREVIOUS_SOURCE_FILE_ID":"../evil"},
+            {"GITHUB_RUN_ATTEMPT":"2"},
+        ):
+            env=stage_owner_env(MST_DNSE_PREVIOUS_SOURCE_FILE_ID=self.PRIOR_ID)
+            env.update(changes)
+            with self.subTest(changes=changes),self.assertRaises(m.CloudGateDenied):
+                m.stage_unpublished_dnse_source(d,env,self.new_payload())
+            self.assertEqual(d.post_calls,0)
+
 class NativeQuarantineStage(unittest.TestCase):
     def native_env(self, tf="M5", **updates):
         env=stage_owner_env(

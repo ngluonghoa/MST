@@ -47,6 +47,10 @@ on:
         description: "DNSE source ending UNIX timestamp"
         required: false
         type: string
+      previous_dnse_d1_file_id:
+        description: "Optional exact prior UNPUBLISHED private DNSE D1 chunk id for append-only delta; empty for first capture"
+        required: false
+        type: string
       from_date:
         description: "SSI start date, YYYY-MM-DD (bounded by native TF)"
         required: false
@@ -93,6 +97,7 @@ jobs:
           MST_DNSE_API_SECRET: ${{ startsWith(inputs.mode, 'dnse-') && secrets.MST_DNSE_API_SECRET || '' }}
           MST_DNSE_SYMBOL: ${{ inputs.symbol }}
           MST_DNSE_FROM_UNIX: ${{ inputs.from_unix }}
+          MST_DNSE_PREVIOUS_SOURCE_FILE_ID: ${{ inputs.previous_dnse_d1_file_id }}
           MST_DNSE_TO_UNIX: ${{ inputs.to_unix }}
           MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED: ${{ vars.MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED }}
           MST_DNSE_STORAGE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_STORAGE_RIGHTS_CONFIRMED }}

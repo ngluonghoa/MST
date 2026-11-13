@@ -116,6 +116,13 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
     if mode in (MODE_SSI, MODE_SSI_NATIVE):
         from scripts.mst_mfx_ssi_readonly import guard_ssi
         guard_ssi(env)
+    prior_id = env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID", "")
+    if prior_id:
+        if (mode not in (MODE_STAGE, MODE_STAGE_NATIVE)
+                or env.get("MST_SOURCE_TF", "D1") != "D1"
+                or type(prior_id) is not str
+                or not DRIVE_ID_RE.fullmatch(prior_id)):
+            raise CloudGateDenied("MST_MFX_PREVIOUS_D1_STAGE_ONLY")
     if mode in (MODE_STAGE, MODE_STAGE_NATIVE):
         if (env.get("MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED") != "true"
                 or env.get("MST_DNSE_STORAGE_RIGHTS_CONFIRMED") != "true"):
@@ -422,6 +429,15 @@ def stage_unpublished_dnse_source(
         raise
     except Exception:
         raise CloudGateDenied("MST_MFX_SOURCE_CHUNKS_FOLDER_LOOKUP_FAILED") from None
+    # Optional previous source is read/verified before this attempt can write.
+    prior_link = None
+    if env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID"):
+        from scripts.mst_dnse_d1_prior_delta_ingress import (
+            plan_prior_dnse_d1_from_private_drive,
+        )
+        prior_link = plan_prior_dnse_d1_from_private_drive(
+            session, env, parent, payload,
+        )
     archive={
         "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"
                   if mode == MODE_STAGE
@@ -440,6 +456,8 @@ def stage_unpublished_dnse_source(
         "eligible_for_signals":False,
         "raw_native":payload,
     }
+    if prior_link is not None:
+        archive["prior_source_incremental_delta"] = prior_link
     body=json.dumps(archive,sort_keys=True,separators=(",",":"),allow_nan=False).encode()
     if not 0<len(body)<=1_500_000:
         raise CloudGateDenied("MST_MFX_SOURCE_CHUNK_SIZE_DENIED")
@@ -502,6 +520,11 @@ def stage_unpublished_dnse_source(
         "unpublished_private_source_document_stored":True,
         "source_rows_observed":validated["observed_native_rows"],
         "source_native_tf":tf,
+        "source_delta_linked_to_prior_private_d1":prior_link is not None,
+        "source_delta_added_rows":len(prior_link["delta"]["added"]) if prior_link else 0,
+        "source_delta_revised_rows":len(prior_link["delta"]["revised"]) if prior_link else 0,
+        "source_delta_window_exited_not_deleted":(
+            len(prior_link["delta"]["window_exited_not_deleted"]) if prior_link else 0),
         "stored_object_count":1,
         "readback_sha256_verified":True,
         "not_a_cache_publish_commit":True,
