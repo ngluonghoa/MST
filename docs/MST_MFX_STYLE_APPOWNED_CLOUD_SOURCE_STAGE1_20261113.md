@@ -81,3 +81,26 @@ Documentation confirmed:
 The DNSE HMAC signature signs the fixed URL PATH, not its query string (official SDK and authentication specification). The SSI Market Data token is no-OTP, but an owner-issued market-data-only credential and API license/use-rights approval remain a separate prerequisite to any actual GitHub-hosted call.
 
 **Status:** native API TF read-only integration code and regression tests are prepared in Draft PR23. No owner-authorized real SSI or DNSE Cloud read, H4 aggregation, real Drive source upload, published Cache head, independent CAS/highwater, scheduled job or trade has been conducted.
+
+
+## §173 — SSI intraday request wire-format correction; bounded provider-native probes
+
+Verified SSI's published GET `/api/v3/data/ohlc` contract requires:
+- D1 `from/to`: `YYYY/MM/DD`.
+- M5/M15/M30/H1 `from/to`: `YYYY/MM/DD HH:mm:ss`. The earlier adapter incorrectly sent date-only values for intraday and could have been rejected or ambiguously interpreted.
+- In PR23 `scripts/mst_mfx_ssi_readonly.py`, intraday requests now explicitly use `00:00:00` on the first calendar date and `23:59:59` on the last date; D1 retains the date-only format. Source-native intraday strings `YYYY-MM-DD HH:mm:ss` and `YYYY/MM/DD HH:mm:ss` are canonicalized to the same bar key before duplicate detection. This change **does not** claim timestamp timezone, venue session, first-known or provider-native close is independently certified.
+
+Conservative single-manual-probe request windows are now centralized in `scripts/mst_mfx_native_timeframes.py`, used by **both SSI and DNSE**:
+- M5: maximum 5 calendar days; M15: 10; M30: 20; H1: 35; D1: 95.
+- SSI limits use inclusive requested calendar dates (difference in dates). DNSE limits use Unix-timestamp elapsed seconds. Each read is separately limited by the existing SSI 5 pages × 100 rows or DNSE 2,048 bar-count bound, and any continuation/incomplete response is rejected. These small windows are conservative **anti-truncation probes**, NOT a general historical Cache-ingestion algorithm, completeness proof or promise that a vendor always returns a complete candle series. Longer history requires bounded partitioned backfill with overlap reconciliation, monotone source versions, source calendar and restart-safe checkpointing, separately reviewed.
+- Historical REST response with `nextTime=0` proves only vendor pagination exhaustion, not that the latest returned bar is closed. DNSE's separate real-time `ohlc_closed.{resolution}.{encoding}` WebSocket channel documents events emitted upon closing a candle, distinct from the mutable `ohlc` channel; these events could inform a future first-known/closure receipt design but have NOT been connected or verified as official exchange finality. Do not set `source_closed_bar_attestation_proven=true` from REST alone.
+- Earlier development intermediate GitHub CI runs failed because synthetic native M5 fixtures requested more than the new limit, and D1-only rejection was masked by time-window checks. Fixed the tests to use bounded M5 requests and made explicit D1-only/mode denial take precedence. Latest exact-head CI is the acceptance criterion, not those intermediate failed runs.
+- No vendor credentials or app OAuth scopes were changed; nothing was merged to main, no private source market data was uploaded, no Cache head was published, and no scheduler or trade was enabled.
+
+Primary contracts:
+- https://developers.ssi.com.vn/en/docs/api-reference/data-ohlc
+- https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/
+- https://developers.dnse.com.vn/docs/guide/market-data/connect/
+
+**Stage 1 still NO-GO for production:** real owner-authorized cloud OAuth and marketdata-only vendor runs, usage/retention entitlement, stable all-TF backfill and source finality, VCBS independently licensed provider adapter, signed independent CAS/highwater, actual private Cache publisher and 1:1 E2E Signal Engine parity.
+
