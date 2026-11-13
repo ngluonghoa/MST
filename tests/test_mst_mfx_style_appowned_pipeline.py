@@ -234,7 +234,7 @@ class FakeQuarantineDrive(FakeDrive):
                 files=[]
                 if self.file_info:
                     files=[{k:self.file_info[k] for k in
-                            ("id","name","mimeType","parents","trashed")}]
+                            ("id","name","mimeType","parents","trashed","appProperties")}]
                 return FakeResponse({"files":files})
         if url==m.DRIVE_URL+self.FILE_ID:
             if params.get("alt")=="media":
@@ -300,7 +300,8 @@ class UnpublishedSourceStage(unittest.TestCase):
         self.assertFalse(saved["eligible_for_signals"])
         self.assertFalse(saved["independent_publish_cas_verified"])
         # Same run cannot silently upload another source on retry.
-        with self.assertRaisesRegex(m.CloudGateDenied,"PREEXISTING_ATTEMPT"):
+        with self.assertRaisesRegex(m.CloudGateDenied,
+                                    "PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE"):
             m.stage_unpublished_dnse_source(d,stage_owner_env(),payload)
         self.assertEqual(d.post_calls,1)
 
@@ -688,7 +689,7 @@ class NativeQuarantineStage(unittest.TestCase):
                 self.assertEqual(d.name_lookup_count,3 if tf=="D1" else 2)
                 self.assertEqual(d.post_calls,1)
                 with self.assertRaisesRegex(
-                        m.CloudGateDenied,"PREEXISTING_ATTEMPT"):
+                        m.CloudGateDenied,"PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE"):
                     m.stage_unpublished_dnse_source(
                         d,env,self.native_payload(second=period))
                 self.assertEqual(d.post_calls,1)
