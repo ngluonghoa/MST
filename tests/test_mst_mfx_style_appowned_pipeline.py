@@ -360,5 +360,37 @@ class DnseNativeTimeframeTests(unittest.TestCase):
             m.guard(stage_owner_env(MST_SOURCE_TF="M5"))
 
 
+
+class DnseRealApiProbeWindowTests(unittest.TestCase):
+    def test_tf_span_guards_prevent_truncated_native_ohlcv_probe(self):
+        from scripts.mst_mfx_native_timeframes import MAX_SINGLE_PROBE_CALENDAR_DAYS
+        for tf, days in MAX_SINGLE_PROBE_CALENDAR_DAYS.items():
+            with self.subTest(timeframe=tf), self.assertRaisesRegex(
+                    m.CloudGateDenied,"BOUNDED_EPOCH_WINDOW_REQUIRED"):
+                m.build_dnse_request(
+                    "FPT",1794000000,1794000000+(days+1)*86400,
+                    "FAKE_KEY","FAKE_SECRET",
+                    date_header="Fri, 13 Nov 2026 00:00:00 +0000",
+                    nonce="a"*32,timeframe=tf)
+        self.assertEqual(MAX_SINGLE_PROBE_CALENDAR_DAYS["D1"],95)
+        self.assertLess(MAX_SINGLE_PROBE_CALENDAR_DAYS["M5"],95)
+
+    def test_owner_guard_denies_long_m5_window_before_token_or_drive(self):
+        env=owner_env(
+            MST_MFX_SOURCE_MODE=m.MODE_DNSE_NATIVE,
+            MST_SOURCE_TF="M5",
+            MST_DNSE_READONLY_OWNER_ACCEPTED="true",
+            MST_DNSE_SOURCE_RIGHTS_CONFIRMED="true",
+            MST_DNSE_API_KEY="FAKE_KEY",MST_DNSE_API_SECRET="FAKE_SECRET",
+            MST_DNSE_SYMBOL="FPT",
+            MST_DNSE_FROM_UNIX="1794000000",
+            MST_DNSE_TO_UNIX=str(1794000000+6*86400),
+        )
+        with self.assertRaisesRegex(m.CloudGateDenied,"BOUNDED_EPOCH_WINDOW_REQUIRED"):
+            m.guard(env)
+        env["MST_DNSE_TO_UNIX"]=str(1794000000+2*86400)
+        self.assertEqual(m.guard(env)[0],m.MODE_DNSE_NATIVE)
+
+
 if __name__=="__main__":
     unittest.main()
