@@ -301,7 +301,7 @@ class UnpublishedSourceStage(unittest.TestCase):
         self.assertFalse(saved["independent_publish_cas_verified"])
         # Same run cannot silently upload another source on retry.
         with self.assertRaisesRegex(m.CloudGateDenied,
-                                    "PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE"):
+                                    "PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE|INTRA_SELF_OR_FUTURE_RUN"):
             m.stage_unpublished_dnse_source(d,stage_owner_env(),payload)
         self.assertEqual(d.post_calls,1)
 
@@ -686,7 +686,7 @@ class NativeQuarantineStage(unittest.TestCase):
                     d.file_info["name"],"MST_UNPUBLISHED_DNSE_NATIVE_"
                     +tf+"_43270010001_1.json")
                 self.assertEqual(d.media_reads,2)
-                self.assertEqual(d.name_lookup_count,3 if tf=="D1" else 2)
+                self.assertEqual(d.name_lookup_count,3)  # full TF census + name before/after
                 self.assertEqual(d.post_calls,1)
                 with self.assertRaisesRegex(
                         m.CloudGateDenied,"PREEXISTING_ATTEMPT|AUTO_D1_FUTURE_OR_SELF_SOURCE"):
