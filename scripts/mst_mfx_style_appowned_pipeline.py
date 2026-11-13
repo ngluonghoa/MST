@@ -220,8 +220,15 @@ def build_dnse_request(
     }
 
 
-def validate_dnse_native(payload: Any, from_unix: int, to_unix: int) -> dict[str, Any]:
-    """Check six native arrays without logging values or claiming closed candles."""
+def validate_dnse_native(
+    payload: Any, from_unix: int, to_unix: int, *, timeframe: str = "D1",
+) -> dict[str, Any]:
+    """Validate native OHLCV arrays without falsely relabeling M5/H1 as D1."""
+    from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+    try:
+        provider_resolution("DNSE", timeframe)
+    except NativeTfDenied:
+        raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
     if type(payload) is not dict:
         raise CloudGateDenied("MST_MFX_DNSE_NATIVE_OBJECT_REQUIRED")
     names = ("t","o","h","l","c","v")
@@ -246,8 +253,8 @@ def validate_dnse_native(payload: Any, from_unix: int, to_unix: int) -> dict[str
         v = payload["v"][i]
         if h < max(o,c,l) or l > min(o,c) or type(v) is not int or v < 0:
             raise CloudGateDenied("MST_MFX_DNSE_NATIVE_OHLCV_INVALID")
-    return {
-        "observed_native_d1_rows": count,
+    result = {
+        "observed_native_rows": count,
         "native_ohlcv_shape_verified": True,
         "native_source_close_issuer_attested": False,
         "independent_source_first_known_verified": False,
@@ -255,6 +262,10 @@ def validate_dnse_native(payload: Any, from_unix: int, to_unix: int) -> dict[str
         "market_data_written_to_drive": False,
         "trade_signal_eligible": False,
     }
+    # Preserve legacy D1-only reporting but never misclassify minute bars.
+    if timeframe == "D1":
+        result["observed_native_d1_rows"] = count
+    return result
 
 
 def _fetch_dnse_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any],dict[str, Any]]:
@@ -278,7 +289,9 @@ def _fetch_dnse_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any
         raise
     except Exception:
         raise CloudGateDenied("MST_MFX_DNSE_PRIVATE_REQUEST_FAILURE") from None
-    summary = validate_dnse_native(payload, start, end)
+    summary = validate_dnse_native(
+        payload, start, end, timeframe=env.get("MST_SOURCE_TF", "D1"),
+    )
     from scripts.mst_mfx_native_timeframes import source_tf_metadata
     summary.update(source_tf_metadata("DNSE", env.get("MST_SOURCE_TF", "D1")))
     return summary, payload

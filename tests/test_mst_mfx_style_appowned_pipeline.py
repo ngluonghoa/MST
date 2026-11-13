@@ -313,6 +313,24 @@ class UnpublishedSourceStage(unittest.TestCase):
 
 
 class DnseNativeTimeframeTests(unittest.TestCase):
+    def test_native_intraday_count_is_never_labeled_daily(self):
+        payload = DnseNative().payload()
+        for tf in ("M5", "M15", "M30", "H1"):
+            with self.subTest(tf=tf):
+                summary = m.validate_dnse_native(
+                    payload, 1794000000, 1794500000, timeframe=tf
+                )
+                self.assertEqual(summary["observed_native_rows"], 2)
+                self.assertNotIn("observed_native_d1_rows", summary)
+                self.assertFalse(summary["trade_signal_eligible"])
+        daily = m.validate_dnse_native(
+            payload, 1794000000, 1794500000, timeframe="D1"
+        )
+        self.assertEqual(daily["observed_native_d1_rows"], 2)
+        self.assertEqual(daily["observed_native_rows"], 2)
+        with self.assertRaisesRegex(m.CloudGateDenied, "NATIVE_TF_UNSUPPORTED"):
+            m.validate_dnse_native(payload, 1794000000, 1794500000, timeframe="H4")
+
     def test_native_mapping_all_supported_and_unproven_h4_denied(self):
         from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
         expected={"M5":"5","M15":"15","M30":"30","H1":"1H","D1":"1D"}

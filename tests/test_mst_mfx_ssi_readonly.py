@@ -272,6 +272,28 @@ class SsiRealApiWireContractTests(unittest.TestCase):
 
 
 class SsiOfficialPaginationCompletenessTests(unittest.TestCase):
+    def test_optional_pagination_fields_cannot_drift_between_pages(self):
+        for field in ("itemsCount", "pageCount"):
+            for direction in ("removed_on_second", "appears_on_second"):
+                api = FakeSsiApi()
+                for p in api.pages.values():
+                    p["itemsCount"] = 3
+                if direction == "removed_on_second":
+                    api.pages[2].pop(field)
+                else:
+                    api.pages[1].pop(field)
+                with self.subTest(field=field, direction=direction), self.assertRaisesRegex(
+                    m.SsiSourceDenied, "PAGINATION_FIELD_PRESENCE_DRIFT"
+                ):
+                    m.read_ssi_d1_once(api, settings())
+
+    def test_present_but_null_pagination_field_is_invalid(self):
+        for field in ("itemsCount", "pageCount"):
+            api = FakeSsiApi()
+            api.pages[1][field] = None
+            with self.subTest(field=field), self.assertRaises(m.SsiSourceDenied):
+                m.read_ssi_d1_once(api, settings())
+
     def test_items_count_exact_multi_page_match_verified(self):
         api=FakeSsiApi()
         for page in api.pages.values():

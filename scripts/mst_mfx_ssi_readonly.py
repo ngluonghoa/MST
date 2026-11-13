@@ -170,6 +170,8 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
     seen: set[str] = set()
     expected_pages: int | None = None
     expected_items: int | None = None
+    expected_items_field: bool | None = None
+    expected_page_count_field: bool | None = None
     pages = 0
     for page in range(1, MAX_PAGES+1):
         # SSI FastConnect V3 requires YYYY/MM/DD for 1d, but
@@ -215,7 +217,19 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         ]
         if (not indices or any(type(i) is not int or i != page for i in indices)):
             raise SsiSourceDenied("MST_SSI_SOURCE_PAGE_NUMBER_DRIFT")
+        # A server-declared total/page count must not disappear or appear
+        # halfway through a multi-page source read.
+        has_items = "itemsCount" in data
+        has_page_count = "pageCount" in data
+        if expected_items_field is None:
+            expected_items_field = has_items
+            expected_page_count_field = has_page_count
+        elif (has_items != expected_items_field
+              or has_page_count != expected_page_count_field):
+            raise SsiSourceDenied("MST_SSI_PAGINATION_FIELD_PRESENCE_DRIFT")
         announced_items = data.get("itemsCount")
+        if has_items and announced_items is None:
+            raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_NULL")
         if announced_items is not None:
             if (type(announced_items) is not int or
                     not 1 <= announced_items <= MAX_ROWS):
@@ -225,6 +239,8 @@ def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
             elif expected_items != announced_items:
                 raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MUTATED")
         announced = data.get("pageCount")
+        if has_page_count and announced is None:
+            raise SsiSourceDenied("MST_SSI_SOURCE_PAGE_COUNT_NULL")
         if announced is not None:
             if type(announced) is not int or not 1 <= announced <= MAX_PAGES:
                 raise SsiSourceDenied("MST_SSI_TOO_MANY_OR_INVALID_PAGES")
