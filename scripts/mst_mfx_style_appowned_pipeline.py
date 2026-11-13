@@ -45,6 +45,10 @@ DNSE_ORIGIN = "https://openapi.dnse.com.vn"
 DNSE_PATH = "/price/ohlc"
 DNSE_VERSION = "2026-07-23"
 MAX_DNSE_ROWS = 2048
+# DNSE documents UNIX seconds and signed 64-bit OHLCV volume. Reject ms
+# timestamps or unbounded JSON integers before building an HTTP request.
+MAX_DNSE_UNIX_SECONDS = 253402300799  # 9999-12-31 23:59:59 UTC
+MAX_DNSE_VOLUME = (1 << 63) - 1
 MIME_FOLDER = "application/vnd.google-apps.folder"
 SYMBOL_RE = re.compile(r"[A-Z]{3}\Z")
 DRIVE_ID_RE = re.compile(r"[A-Za-z0-9_-]{8,160}\Z")
@@ -88,8 +92,12 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
             raise CloudGateDenied("MST_MFX_DNSE_MARKETDATA_CREDENTIALS_REQUIRED")
         if not SYMBOL_RE.fullmatch(env.get("MST_DNSE_SYMBOL", "")):
             raise CloudGateDenied("MST_MFX_BOUND_STOCK_SYMBOL_REQUIRED")
-        start, end = env.get("MST_DNSE_FROM_UNIX", ""), env.get("MST_DNSE_TO_UNIX", "")
-        if not start.isdecimal() or not end.isdecimal():
+        start, end = env.get("MST_DNSE_FROM_UNIX"), env.get("MST_DNSE_TO_UNIX")
+        # isdecimal() also admits non-ASCII numeral characters and arbitrarily
+        # long strings. GitHub's manual dispatch must accept canonical seconds.
+        if (type(start) is not str or type(end) is not str
+                or not re.fullmatch(r"[1-9][0-9]{0,11}", start)
+                or not re.fullmatch(r"[1-9][0-9]{0,11}", end)):
             raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
         a, b = int(start), int(end)
         from scripts.mst_mfx_native_timeframes import (
@@ -102,7 +110,8 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
             raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
         if mode in (MODE_DNSE, MODE_STAGE) and tf != "D1":
             raise CloudGateDenied("MST_MFX_DNSE_D1_MODE_CANNOT_PROMOTE_OTHER_TF")
-        if a <= 0 or b <= a or b - a > MAX_SINGLE_PROBE_CALENDAR_DAYS[tf]*86400:
+        if (a <= 0 or b <= a or b > MAX_DNSE_UNIX_SECONDS
+                or b-a > MAX_SINGLE_PROBE_CALENDAR_DAYS[tf]*86400):
             raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
     if mode in (MODE_SSI, MODE_SSI_NATIVE):
         from scripts.mst_mfx_ssi_readonly import guard_ssi
@@ -189,9 +198,14 @@ def build_dnse_request(
     DNSE official SDK signs the fixed REST path, not its URL query string.
     No trading token or OTP. Requires separately authorized source rights.
     """
-    if (not SYMBOL_RE.fullmatch(symbol) or not api_key or not api_secret
-            or not re.fullmatch(r"[0-9a-f]{32}", nonce)
-            or from_unix <= 0 or to_unix <= from_unix):
+    if (type(symbol) is not str or not SYMBOL_RE.fullmatch(symbol)
+            or type(api_key) is not str or not api_key.strip()
+            or type(api_secret) is not str or not api_secret.strip()
+            or type(nonce) is not str or not re.fullmatch(r"[0-9a-f]{32}", nonce)
+            or type(date_header) is not str or not 10 <= len(date_header) <= 80
+            or any(ord(ch) < 32 or ord(ch) > 126 for ch in date_header)
+            or type(from_unix) is not int or type(to_unix) is not int
+            or not 0 < from_unix < to_unix <= MAX_DNSE_UNIX_SECONDS):
         raise CloudGateDenied("MST_MFX_INVALID_DNSE_REQUEST")
     from scripts.mst_mfx_native_timeframes import (
         provider_resolution, NativeTfDenied, MAX_SINGLE_PROBE_CALENDAR_DAYS,
@@ -248,12 +262,19 @@ def validate_dnse_native(
             raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TIMESTAMP_MISMATCH")
         last = t
         nums = [payload[k][i] for k in ("o","h","l","c")]
-        if any(type(v) not in (int,float) or not math.isfinite(v) or v <= 0
-               for v in nums):
-            raise CloudGateDenied("MST_MFX_DNSE_NATIVE_PRICE_INVALID")
+        for price in nums:
+            if type(price) not in (int,float) or price <= 0:
+                raise CloudGateDenied("MST_MFX_DNSE_NATIVE_PRICE_INVALID")
+            try:
+                finite = math.isfinite(price)
+            except (OverflowError, ValueError, TypeError):
+                finite = False
+            if not finite:
+                raise CloudGateDenied("MST_MFX_DNSE_NATIVE_PRICE_INVALID")
         o,h,l,c = nums
         v = payload["v"][i]
-        if h < max(o,c,l) or l > min(o,c) or type(v) is not int or v < 0:
+        if (h < max(o,c,l) or l > min(o,c)
+                or type(v) is not int or not 0 <= v <= MAX_DNSE_VOLUME):
             raise CloudGateDenied("MST_MFX_DNSE_NATIVE_OHLCV_INVALID")
     result = {
         "observed_native_rows": count,
@@ -271,6 +292,11 @@ def validate_dnse_native(
 
 
 def _fetch_dnse_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any],dict[str, Any]]:
+    # Defense in depth: a direct import of this helper may NEVER bypass the
+    # exact manual-main owner gate or the DNSE data-use entitlement checks.
+    mode, _ = guard(env)
+    if mode not in (MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE, MODE_STAGE_NATIVE):
+        raise CloudGateDenied("MST_MFX_DNSE_EXACT_SOURCE_MODE_REQUIRED")
     start, end = int(env["MST_DNSE_FROM_UNIX"]), int(env["MST_DNSE_TO_UNIX"])
     dt = format_datetime(datetime.now(timezone.utc), usegmt=False)
     url, headers = build_dnse_request(
@@ -284,7 +310,8 @@ def _fetch_dnse_once(session: Any, env: Mapping[str,str]) -> tuple[dict[str, Any
                                allow_redirects=False)
         if response.status_code != 200:
             raise CloudGateDenied("MST_MFX_DNSE_MARKETDATA_HTTP_DENIED")
-        if len(response.content) > 1_500_000:
+        if (type(response.content) is not bytes
+                or not 0 < len(response.content) <= 1_500_000):
             raise CloudGateDenied("MST_MFX_DNSE_BOUNDED_RESPONSE_REQUIRED")
         payload = response.json()
     except CloudGateDenied:

@@ -471,6 +471,138 @@ class DnseNativeTimeframeTests(unittest.TestCase):
 
 
 
+
+class DnseSourceTransportRightsAndWireSafety(unittest.TestCase):
+    """End-to-end source helper exercised only against fabricated HTTP."""
+
+    class Session:
+        def __init__(self, payload, status=200, raw_override=None):
+            self.payload=payload
+            self.status=status
+            self.raw_override=raw_override
+            self.calls=[]
+        def get(self,url,*,headers,timeout,allow_redirects):
+            self.calls.append((url,headers,timeout,allow_redirects))
+            r=FakeResponse(self.payload,self.status)
+            if self.raw_override is not None:
+                r.content=self.raw_override
+            return r
+
+    @staticmethod
+    def valid_env(**updates):
+        env=stage_owner_env(
+            MST_MFX_SOURCE_MODE=m.MODE_DNSE_NATIVE,
+            MST_SOURCE_TF="M5",
+            MST_DNSE_FROM_UNIX="1794000000",
+            MST_DNSE_TO_UNIX="1794005000",
+        )
+        env.update(updates)
+        return env
+
+    @staticmethod
+    def valid_payload():
+        return {"t":[1794000000,1794000300],
+                "o":[100.0,101.0],"h":[102.0,103.0],
+                "l":[99.0,100.0],"c":[101.0,102.0],
+                "v":[200,250],"nextTime":0}
+
+    def test_direct_helper_rejects_unentitled_or_nonmain_before_http(self):
+        invalid=[
+            {"MST_DNSE_SOURCE_RIGHTS_CONFIRMED":"false"},
+            {"MST_DNSE_READONLY_OWNER_ACCEPTED":"false"},
+            {"MST_MFX_APP_OWNED_READONLY_ACCEPTED":"false"},
+            {"GITHUB_REF":"refs/heads/feature"},
+            {"GITHUB_EVENT_NAME":"schedule"},
+            {"MST_MFX_SOURCE_MODE":m.MODE_DRIVE},
+        ]
+        for changes in invalid:
+            session=self.Session(self.valid_payload())
+            with self.subTest(changes=changes), self.assertRaises(
+                    m.CloudGateDenied):
+                m._fetch_dnse_once(session,self.valid_env(**changes))
+            self.assertFalse(session.calls)
+
+    def test_direct_helper_enforces_native_source_and_no_raw_in_receipt(self):
+        session=self.Session(self.valid_payload())
+        summary, payload=m._fetch_dnse_once(session,self.valid_env())
+        self.assertEqual(summary["source_native_tf"],"M5")
+        self.assertEqual(summary["provider_resolution"],"5")
+        self.assertEqual(summary["observed_native_rows"],2)
+        self.assertNotIn("observed_native_d1_rows",summary)
+        self.assertFalse(summary["trade_signal_eligible"])
+        self.assertFalse(summary["market_data_written_to_drive"])
+        self.assertEqual(payload,self.valid_payload())
+        self.assertEqual(len(session.calls),1)
+        url,headers,timeout,redirects=session.calls[0]
+        self.assertIn("resolution=5",url)
+        self.assertIn("symbol=FPT",url)
+        self.assertEqual((timeout,redirects),(25,False))
+        self.assertNotIn("FAKE_MARKETDATA_SECRET",url+str(summary))
+        session2=self.Session(self.valid_payload())
+        observed=m.read_dnse_once(session2,self.valid_env())
+        self.assertEqual(observed["observed_native_rows"],2)
+        self.assertNotIn("raw_native",observed)
+
+    def test_no_http_for_unicode_giant_or_millisecond_epoch(self):
+        for value in ("١٧٩٤٠٠٠٠٠٠","1794000000000","9"*5000,
+                      "0001794000000","not-an-epoch"):
+            session=self.Session(self.valid_payload())
+            with self.subTest(value=value[:20]),self.assertRaisesRegex(
+                    m.CloudGateDenied,"BOUNDED_EPOCH_WINDOW_REQUIRED"):
+                m._fetch_dnse_once(
+                    session,self.valid_env(MST_DNSE_FROM_UNIX=value))
+            self.assertFalse(session.calls)
+
+    def test_request_builder_rejects_wrong_epoch_type_and_header_injection(self):
+        cases=[
+            {"from_unix":1794000000000},
+            {"from_unix":True},
+            {"to_unix":253402300800},
+            {"date_header":"Fri, 13 Nov 2026\\r\\nX-Bad: trick"},
+            {"nonce":None},
+        ]
+        for changes in cases:
+            kwargs={"symbol":"FPT","from_unix":1794000000,
+                    "to_unix":1794005000,"api_key":"FAKE_KEY",
+                    "api_secret":"FAKE_SECRET",
+                    "date_header":"Fri, 13 Nov 2026 00:00:00 +0000",
+                    "nonce":"a"*32,"timeframe":"M5"}
+            kwargs.update(changes)
+            with self.subTest(changes=changes),self.assertRaises(
+                    m.CloudGateDenied):
+                m.build_dnse_request(**kwargs)
+
+    def test_vendor_http_status_and_response_body_fail_closed(self):
+        for status,raw in ((429,None),(302,None),(200,b""),
+                           (200,b"x"*1_500_001),(200,"not-bytes")):
+            session=self.Session(self.valid_payload(),status,raw)
+            with self.subTest(status=status,length=len(raw) if raw is not None else 0),self.assertRaises(
+                    m.CloudGateDenied):
+                m._fetch_dnse_once(session,self.valid_env())
+            self.assertEqual(len(session.calls),1)
+
+    def test_vendor_declared_nexttime_unread_pages_never_pass(self):
+        payload=self.valid_payload()
+        payload["nextTime"]=1794000300
+        session=self.Session(payload)
+        with self.assertRaisesRegex(
+                m.CloudGateDenied,"INCOMPLETE_PAGE_NO_ACCEPTANCE"):
+            m._fetch_dnse_once(session,self.valid_env())
+        self.assertEqual(len(session.calls),1)
+
+    def test_very_large_price_and_volume_fail_closed_not_overflow(self):
+        for field,value,expected in (
+            ("o",10**500,"NATIVE_PRICE_INVALID"),
+            ("h",float("inf"),"NATIVE_PRICE_INVALID"),
+            ("v",2**63,"NATIVE_OHLCV_INVALID"),
+        ):
+            payload=self.valid_payload()
+            payload[field][0]=value
+            with self.subTest(field=field),self.assertRaisesRegex(
+                    m.CloudGateDenied,expected):
+                m.validate_dnse_native(
+                    payload,1794000000,1794005000,timeframe="M5")
+
 class DnseRealApiProbeWindowTests(unittest.TestCase):
     def test_tf_span_guards_prevent_truncated_native_ohlcv_probe(self):
         from scripts.mst_mfx_native_timeframes import MAX_SINGLE_PROBE_CALENDAR_DAYS
