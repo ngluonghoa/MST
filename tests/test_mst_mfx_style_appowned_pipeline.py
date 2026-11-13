@@ -559,6 +559,7 @@ class DnseSourceTransportRightsAndWireSafety(unittest.TestCase):
             {"from_unix":True},
             {"to_unix":253402300800},
             {"date_header":"Fri, 13 Nov 2026\\r\\nX-Bad: trick"},
+            {"date_header":"Fri, 13 Nov 2026\r\nX-Bad: trick"},
             {"nonce":None},
         ]
         for changes in cases:

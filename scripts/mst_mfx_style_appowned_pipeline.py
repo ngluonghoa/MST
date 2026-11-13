@@ -204,6 +204,7 @@ def build_dnse_request(
             or type(nonce) is not str or not re.fullmatch(r"[0-9a-f]{32}", nonce)
             or type(date_header) is not str or not 10 <= len(date_header) <= 80
             or any(ord(ch) < 32 or ord(ch) > 126 for ch in date_header)
+            or chr(92) in date_header
             or type(from_unix) is not int or type(to_unix) is not int
             or not 0 < from_unix < to_unix <= MAX_DNSE_UNIX_SECONDS):
         raise CloudGateDenied("MST_MFX_INVALID_DNSE_REQUEST")
