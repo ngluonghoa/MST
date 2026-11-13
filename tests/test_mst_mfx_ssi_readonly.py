@@ -322,6 +322,8 @@ class SsiOfficialPaginationCompletenessTests(unittest.TestCase):
         for page in api.pages.values():
             page.pop("pageCount")
             page["itemsCount"]=4
+        # A real empty third page still carries a valid V3 page envelope.
+        api.pages[3]={"pageIndex":3,"pageSize":100,"itemsCount":4,"data":[]}
         with self.assertRaisesRegex(m.SsiSourceDenied,"ITEMS_COUNT_MISMATCH"):
             m.read_ssi_d1_once(api,settings())
 
