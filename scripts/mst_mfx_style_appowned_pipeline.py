@@ -38,6 +38,7 @@ MODE_STAGE = "dnse-d1-quarantine-stage"
 MODE_STAGE_NATIVE = "dnse-native-quarantine-stage"
 MODE_SSI = "ssi-d1-readonly"
 MODE_SSI_NATIVE = "ssi-native-readonly"
+MODE_SSI_STAGE = "ssi-native-quarantine-stage"
 DRIVE_ROOT = "MST_OAUTH_CACHE_V1"
 DRIVE_CHILDREN = ("STAGING_ONLY", "CHUNKS", "MANIFESTS", "AUDIT")
 DRIVE_URL = "https://www.googleapis.com/drive/v3/files/"
@@ -74,7 +75,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
         raise CloudGateDenied("MST_MFX_MANUAL_MAIN_OWNER_GATE_REQUIRED")
     mode = env.get("MST_MFX_SOURCE_MODE", MODE_DRIVE)
     if mode not in (MODE_DRIVE, MODE_DNSE, MODE_DNSE_NATIVE, MODE_STAGE,
-                    MODE_STAGE_NATIVE, MODE_SSI, MODE_SSI_NATIVE):
+                    MODE_STAGE_NATIVE, MODE_SSI, MODE_SSI_NATIVE, MODE_SSI_STAGE):
         raise CloudGateDenied("MST_MFX_UNKNOWN_READONLY_MODE")
     if (env.get("MST_OAUTH_BOOTSTRAP_ACCEPTED") == "true"
             or env.get("MST_GDRIVE_SERVICE_ACCOUNT_JSON")):
@@ -113,7 +114,7 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
         if (a <= 0 or b <= a or b > MAX_DNSE_UNIX_SECONDS
                 or b-a > MAX_SINGLE_PROBE_CALENDAR_DAYS[tf]*86400):
             raise CloudGateDenied("MST_MFX_BOUNDED_EPOCH_WINDOW_REQUIRED")
-    if mode in (MODE_SSI, MODE_SSI_NATIVE):
+    if mode in (MODE_SSI, MODE_SSI_NATIVE, MODE_SSI_STAGE):
         from scripts.mst_mfx_ssi_readonly import guard_ssi
         guard_ssi(env)
     prior_id = env.get("MST_DNSE_PREVIOUS_SOURCE_FILE_ID", "")
@@ -123,9 +124,11 @@ def guard(env: Mapping[str, str]) -> tuple[str, OAuthSecrets]:
                 or type(prior_id) is not str
                 or (prior_id != "auto" and not DRIVE_ID_RE.fullmatch(prior_id))):
             raise CloudGateDenied("MST_MFX_PREVIOUS_D1_STAGE_ONLY")
-    if mode in (MODE_STAGE, MODE_STAGE_NATIVE):
+    if mode in (MODE_STAGE, MODE_STAGE_NATIVE, MODE_SSI_STAGE):
+        storage_rights_key = ("MST_SSI_STORAGE_RIGHTS_CONFIRMED" if mode == MODE_SSI_STAGE
+                              else "MST_DNSE_STORAGE_RIGHTS_CONFIRMED")
         if (env.get("MST_MFX_SOURCE_QUARANTINE_WRITE_ACCEPTED") != "true"
-                or env.get("MST_DNSE_STORAGE_RIGHTS_CONFIRMED") != "true"):
+                or env.get(storage_rights_key) != "true"):
             raise CloudGateDenied("MST_MFX_DISTINCT_PRIVATE_STAGE_AND_LICENSE_GATES")
         run, attempt = env.get("GITHUB_RUN_ID",""), env.get("GITHUB_RUN_ATTEMPT","")
         if (not re.fullmatch(r"[1-9][0-9]{5,19}",run)
@@ -342,7 +345,7 @@ def read_dnse_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
 
 def _exact_named_quarantine(session: Any, parent: str, name: str) -> list[str]:
     if not DRIVE_ID_RE.fullmatch(parent) or not re.fullmatch(
-            r"MST_UNPUBLISHED_DNSE_(?:D1|NATIVE_(?:M5|M15|M30|H1|D1))_[1-9][0-9]{5,19}_1\.json",name):
+            r"MST_UNPUBLISHED_(?:DNSE_(?:D1|NATIVE_(?:M5|M15|M30|H1|D1))|SSI_NATIVE_(?:M5|M15|M30|H1|D1))_[1-9][0-9]{5,19}_1\.json",name):
         raise CloudGateDenied("MST_MFX_SOURCE_QUARANTINE_SCOPE_INVALID")
     try:
         r=session.get("https://www.googleapis.com/drive/v3/files",params={
@@ -559,7 +562,7 @@ def main() -> None:
         "status": "MST_MFX_STYLE_APP_OWNED_READONLY_PREFLIGHT",
         "drive": observed,
         "provider": None,
-        "read_only": mode not in (MODE_STAGE, MODE_STAGE_NATIVE),
+        "read_only": mode not in (MODE_STAGE, MODE_STAGE_NATIVE, MODE_SSI_STAGE),
         "cloud_cache_publisher_ready": False,
         "independent_atomic_cas_ready": False,
         "automatic_scheduling_enabled_by_this_workflow": False,
@@ -573,10 +576,17 @@ def main() -> None:
             receipt["unpublished_source_staging"] = stage_unpublished_dnse_source(
                 session,os.environ,payload)
             receipt["status"] = "MST_MFX_STYLE_UNPUBLISHED_SOURCE_ONLY"
-    elif mode in (MODE_SSI, MODE_SSI_NATIVE):
+    elif mode in (MODE_SSI, MODE_SSI_NATIVE, MODE_SSI_STAGE):
         import requests
-        from scripts.mst_mfx_ssi_readonly import read_ssi_native_once
-        receipt["provider"] = read_ssi_native_once(requests.Session(),os.environ)
+        from scripts.mst_mfx_ssi_readonly import _fetch_ssi_native_once
+        summary, source_rows = _fetch_ssi_native_once(requests.Session(), os.environ)
+        receipt["provider"] = summary
+        if mode == MODE_SSI_STAGE:
+            from scripts.mst_ssi_native_stage import stage_ssi_native_source
+            receipt["unpublished_source_staging"] = stage_ssi_native_source(
+                session, os.environ, source_rows,
+            )
+            receipt["status"] = "MST_MFX_STYLE_UNPUBLISHED_SSI_SOURCE_ONLY"
 
     print(json.dumps(receipt, sort_keys=True))
 
