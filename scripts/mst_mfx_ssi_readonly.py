@@ -7,7 +7,7 @@ No OTP, refresh-token persistence, trading client or broker/order endpoint.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import re
 from typing import Any, Mapping
@@ -27,8 +27,17 @@ class SsiSourceDenied(ValueError):
 
 
 def guard_ssi(env: Mapping[str, str]) -> tuple[str, date, date]:
-    if env.get("MST_MFX_SOURCE_MODE") != "ssi-d1-readonly":
+    mode = env.get("MST_MFX_SOURCE_MODE")
+    if mode not in ("ssi-d1-readonly", "ssi-native-readonly"):
         raise SsiSourceDenied("MST_SSI_EXACT_READONLY_MODE_REQUIRED")
+    from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+    timeframe = env.get("MST_SOURCE_TF", "D1")
+    try:
+        provider_resolution("SSI", timeframe)
+    except NativeTfDenied:
+        raise SsiSourceDenied("MST_SSI_NATIVE_TF_UNSUPPORTED") from None
+    if mode == "ssi-d1-readonly" and timeframe != "D1":
+        raise SsiSourceDenied("MST_SSI_D1_MODE_CANNOT_PROMOTE_OTHER_TF")
     if (env.get("MST_SSI_READONLY_OWNER_ACCEPTED") != "true"
             or env.get("MST_SSI_SOURCE_RIGHTS_CONFIRMED") != "true"):
         raise SsiSourceDenied("MST_SSI_MARKETDATA_AND_RIGHTS_GATES_REQUIRED")
@@ -89,16 +98,27 @@ def _volume(raw: Any) -> int:
     return int(value)
 
 
-def _native_daily_row(row: Any, *, symbol: str, first: date, last: date) -> str:
+def _native_source_row(
+    row: Any, *, symbol: str, first: date, last: date, timeframe: str,
+) -> str:
     if type(row) is not dict or row.get("symbol") != symbol:
         raise SsiSourceDenied("MST_SSI_SOURCE_SYMBOL_MISMATCH")
     label = row.get("tradingDate")
-    if type(label) is not str or not ISO_DATE.fullmatch(label):
-        raise SsiSourceDenied("MST_SSI_NATIVE_D1_ISO_LABEL_REQUIRED")
+    if type(label) is not str:
+        raise SsiSourceDenied("MST_SSI_NATIVE_TRADING_LABEL_REQUIRED")
     try:
-        d = date.fromisoformat(label)
+        if timeframe == "D1":
+            if not ISO_DATE.fullmatch(label):
+                raise ValueError("not ISO D1")
+            d = date.fromisoformat(label)
+        else:
+            # Keep the native minute/second label; do not collapse to a D1 key.
+            if not re.fullmatch(r"\\d{4}[-/]\\d{2}[-/]\\d{2} \\d{2}:\\d{2}:\\d{2}", label):
+                raise ValueError("not a native intraday timestamp")
+            native_clock = datetime.strptime(label.replace("/", "-"), "%Y-%m-%d %H:%M:%S")
+            d = native_clock.date()
     except ValueError:
-        raise SsiSourceDenied("MST_SSI_INVALID_D1_DAY") from None
+        raise SsiSourceDenied("MST_SSI_NATIVE_TF_TRADING_TIMESTAMP_INVALID") from None
     if not first <= d <= last:
         raise SsiSourceDenied("MST_SSI_OUTSIDE_REQUESTED_WINDOW")
     try:
@@ -113,13 +133,15 @@ def _native_daily_row(row: Any, *, symbol: str, first: date, last: date) -> str:
     return label
 
 
-def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
+def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
     """Real REST auth + paged OHLC; only aggregate non-sensitive result returned.
 
     Does NOT return access/refresh tokens, native rows, dates, or price values.
     No logging of HTTP errors, request headers, response text or credentials.
     """
     symbol, first, last = guard_ssi(env)
+    tf = env.get("MST_SOURCE_TF", "D1")
+    from scripts.mst_mfx_native_timeframes import source_tf_metadata, provider_resolution
     try:
         reply = session.post(
             AUTH_URL,
@@ -147,7 +169,7 @@ def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
             "symbol":symbol,
             "from":first.strftime("%Y/%m/%d"),
             "to":last.strftime("%Y/%m/%d"),
-            "timeFrame":"1d",
+            "timeFrame":provider_resolution("SSI", tf),
             "pageIndex":page,
             "pageSize":PAGE_SIZE,
         }
@@ -183,7 +205,7 @@ def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
                 raise SsiSourceDenied("MST_SSI_PAGING_METADATA_MUTATED")
         pages += 1
         for row in rows:
-            label = _native_daily_row(row, symbol=symbol, first=first, last=last)
+            label = _native_source_row(row, symbol=symbol, first=first, last=last, timeframe=tf)
             if label in seen:
                 raise SsiSourceDenied("MST_SSI_DUPLICATE_SOURCE_D1_DAY")
             seen.add(label)
@@ -199,7 +221,8 @@ def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
     if not seen or len(seen) > MAX_ROWS:
         raise SsiSourceDenied("MST_SSI_EMPTY_OR_EXCESSIVE_SOURCE_SCOPE")
     return {
-        "provider":"SSI_FASTCONNECT_V3_MARKET_DATA_D1",
+        "provider":"SSI_FASTCONNECT_V3_MARKET_DATA",
+        **source_tf_metadata("SSI",tf),
         "native_source_rows_observed":len(seen),
         "source_pages_verified":pages,
         "market_data_token_used_without_otp":True,
@@ -211,3 +234,10 @@ def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
         "signal_eligible":False,
         "trading_or_broker_calls":0,
     }
+
+
+def read_ssi_d1_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
+    """Legacy D1-only caller. Prevent accidental use as an intraday shortcut."""
+    if env.get("MST_SOURCE_TF", "D1") != "D1":
+        raise SsiSourceDenied("MST_SSI_D1_ONLY_CALLER")
+    return read_ssi_native_once(session, env)
