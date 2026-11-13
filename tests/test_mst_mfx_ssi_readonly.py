@@ -270,5 +270,74 @@ class SsiRealApiWireContractTests(unittest.TestCase):
         self.assertEqual(m.MAX_CALENDAR_SPAN_BY_TF["D1"],95)
 
 
+
+class SsiOfficialPaginationCompletenessTests(unittest.TestCase):
+    def test_items_count_exact_multi_page_match_verified(self):
+        api=FakeSsiApi()
+        for page in api.pages.values():
+            page["itemsCount"]=3
+        report=m.read_ssi_d1_once(api,settings())
+        self.assertTrue(report["source_items_count_verified"])
+        self.assertEqual(report["native_source_rows_observed"],3)
+        self.assertFalse(report["complete_historical_source_coverage_proven"])
+
+    def test_items_count_short_final_page_is_not_silently_complete(self):
+        api=FakeSsiApi()
+        for page in api.pages.values():
+            page["itemsCount"]=4
+        with self.assertRaisesRegex(m.SsiSourceDenied,"ITEMS_COUNT_MISMATCH"):
+            m.read_ssi_d1_once(api,settings())
+
+    def test_items_count_mutation_between_pages_is_quarantined(self):
+        api=FakeSsiApi()
+        api.pages[1]["itemsCount"]=3
+        api.pages[2]["itemsCount"]=4
+        with self.assertRaisesRegex(m.SsiSourceDenied,"ITEMS_COUNT_MUTATED"):
+            m.read_ssi_d1_once(api,settings())
+
+    def test_page_size_ignored_by_server_is_quarantined(self):
+        api=FakeSsiApi()
+        api.pages[1]["pageSize"]=2
+        with self.assertRaisesRegex(m.SsiSourceDenied,"PAGE_SIZE_DRIFT"):
+            m.read_ssi_d1_once(api,settings())
+
+    def test_page_index_and_page_number_both_must_agree(self):
+        api=FakeSsiApi()
+        api.pages[1]["pageNumber"]=2
+        with self.assertRaisesRegex(m.SsiSourceDenied,"PAGE_NUMBER_DRIFT"):
+            m.read_ssi_d1_once(api,settings())
+
+    def test_declared_items_prevent_short_page_false_completion(self):
+        api=FakeSsiApi()
+        for page in api.pages.values():
+            page.pop("pageCount")
+            page["itemsCount"]=3
+        report=m.read_ssi_d1_once(api,settings())
+        self.assertEqual(report["source_pages_verified"],2)
+        self.assertEqual(report["native_source_rows_observed"],3)
+        self.assertTrue(report["source_items_count_verified"])
+
+    def test_declared_items_not_satisfied_by_empty_page(self):
+        api=FakeSsiApi()
+        for page in api.pages.values():
+            page.pop("pageCount")
+            page["itemsCount"]=4
+        with self.assertRaisesRegex(m.SsiSourceDenied,"ITEMS_COUNT_MISMATCH"):
+            m.read_ssi_d1_once(api,settings())
+
+    def test_declared_items_beyond_bounded_probe_is_rejected(self):
+        api=FakeSsiApi()
+        api.pages[1]["itemsCount"]=501
+        with self.assertRaisesRegex(m.SsiSourceDenied,"ITEMS_COUNT_UNBOUNDED"):
+            m.read_ssi_d1_once(api,settings())
+
+    def test_legacy_no_item_count_is_observation_not_certified_total(self):
+        api=FakeSsiApi()
+        report=m.read_ssi_d1_once(api,settings())
+        self.assertFalse(report["source_items_count_verified"])
+        self.assertFalse(report["complete_historical_source_coverage_proven"])
+
+
+
 if __name__=="__main__":
     unittest.main()
