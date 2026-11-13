@@ -172,5 +172,54 @@ class NativeSourceTests(unittest.TestCase):
             m.read_ssi_d1_once(api,settings())
 
 
+
+class SsiNativeTimeframeTests(unittest.TestCase):
+    def test_five_tf_contract_and_h4_no_native(self):
+        from scripts.mst_mfx_native_timeframes import provider_resolution, NativeTfDenied
+        expected={"M5":"5m","M15":"15m","M30":"30m","H1":"1h","D1":"1d"}
+        for tf,resolution in expected.items():
+            self.assertEqual(provider_resolution("SSI",tf),resolution)
+        with self.assertRaisesRegex(NativeTfDenied, "NATIVE_H4"):
+            provider_resolution("SSI","H4")
+
+    def test_intraday_m5_multiple_distinct_bars_same_day(self):
+        api=FakeSsiApi()
+        api.pages[1]["data"]=[
+            row("2026-11-12 09:00:00"),
+            row("2026-11-12 09:05:00"),
+        ]
+        api.pages[2]["data"]=[row("2026-11-11 14:45:00")]
+        env=settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF="M5")
+        report=m.read_ssi_native_once(api,env)
+        self.assertEqual(report["native_source_rows_observed"],3)
+        self.assertEqual(report["provider_resolution"],"5m")
+        self.assertEqual(report["source_native_tf"],"M5")
+        self.assertFalse(report["source_closed_bar_attestation_proven"])
+        self.assertFalse(report["trade_signal_eligible"])
+        self.assertTrue(all(x[2]["timeFrame"]=="5m" for x in api.calls[1:]))
+
+    def test_intraday_date_only_rejected_not_fake_d1(self):
+        api=FakeSsiApi()
+        env=settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF="M5")
+        with self.assertRaisesRegex(m.SsiSourceDenied,"NATIVE_TF_TRADING_TIMESTAMP_INVALID"):
+            m.read_ssi_native_once(api,env)
+
+    def test_daily_mode_does_not_coerce_m5_and_h4_stays_no_go(self):
+        for env in (
+            settings(MST_SOURCE_TF="M5"),
+            settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF="H4"),
+        ):
+            with self.assertRaises(m.SsiSourceDenied):
+                m.guard_ssi(env)
+
+    def test_two_intraday_rows_same_timestamp_rejected(self):
+        api=FakeSsiApi()
+        api.pages[1]["data"]=[row("2026-11-12 09:00:00"),row("2026-11-12 09:00:00")]
+        api.pages[2]["data"]=[row("2026-11-11 14:45:00")]
+        env=settings(MST_MFX_SOURCE_MODE="ssi-native-readonly",MST_SOURCE_TF="M5")
+        with self.assertRaisesRegex(m.SsiSourceDenied,"DUPLICATE"):
+            m.read_ssi_native_once(api,env)
+
+
 if __name__=="__main__":
     unittest.main()
