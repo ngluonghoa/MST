@@ -437,7 +437,10 @@ class PriorDnseD1IncrementalStage(unittest.TestCase):
 
     def test_prior_no_overlap_or_incomplete_page_fail_closed(self):
         prior=self.prior()
-        prior["raw_native"]["t"]=[1794000000,1794000100]
+        # A one-session historical window is valid but does not overlap
+        # the next source window; do not accidentally create duplicate D1.
+        for field in ("t","o","h","l","c","v"):
+            prior["raw_native"][field]=prior["raw_native"][field][:1]
         d=self.Drive(prior)
         with self.assertRaisesRegex(m.CloudGateDenied,"NO_OVERLAP"):
             self.run_stage(d)
