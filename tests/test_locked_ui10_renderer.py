@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
+from html import unescape
 from html.parser import HTMLParser
 from hashlib import sha256
 from pathlib import Path
@@ -136,10 +137,11 @@ class Ui10IncompleteHtmlTests(unittest.TestCase):
         doc,_=scan()
         for legend in GOLDEN["locked_legend"]:
             self.assertEqual(doc.count(legend),2)
+        visible=unescape(doc)
         for step in GOLDEN["pipeline_names"]:
-            self.assertIn(step,doc)
+            self.assertIn(step,visible)
         for topic in GOLDEN["audit_names"]:
-            self.assertIn(topic,doc)
+            self.assertIn(topic,visible)
 
     def test_determinism_across_repeated_identical_fictional_source(self):
         a,_=scan("DNSE")
