@@ -12,7 +12,7 @@ import re
 
 def verified_unchanged_receipt(
     prior_link: Mapping[str, Any] | None, *,
-    provider: str, tf: str, observed_rows: int,
+    provider: str, symbol: str, tf: str, observed_rows: int,
 ) -> dict[str, Any] | None:
     """Skip identical native OHLCV; rolling window exits do NOT delete history.
 
@@ -61,8 +61,8 @@ def verified_unchanged_receipt(
             or proof.get("schema") != delta_schema
             or proof.get("provider") != delta_provider
             or proof.get(tf_field) != tf
-            or type(proof.get("symbol")) is not str
-            or not re.fullmatch(r"[A-Z]{3}",proof["symbol"])):
+            or type(symbol) is not str or not re.fullmatch(r"[A-Z]{3}",symbol)
+            or proof.get("symbol") != symbol):
         raise ValueError("MST_CACHE_REUSE_CROSS_PROVIDER_OR_TF_DRIFT")
     added=proof.get("added")
     revised=proof.get("revised")
