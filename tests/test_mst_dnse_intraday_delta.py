@@ -156,6 +156,17 @@ class Drive:
                 self._brief(item) for item in (self.old_info, self.current_info)
                 if item and item["name"] == name
             ]})
+        if url in (m.DRIVE_URL + self.root, m.DRIVE_URL + self.chunks):
+            ident = url[len(m.DRIVE_URL):]
+            return Response({
+                "id": ident,
+                "name": m.DRIVE_ROOT if ident == self.root else "CHUNKS",
+                "mimeType": m.MIME_FOLDER,
+                "parents": ["FAKE_MYDRIVE_ROOT" if ident == self.root
+                            else self.root],
+                "trashed": False,
+                "shared": False, "ownedByMe": True, "isAppAuthorized": True,
+            })
         if url == m.DRIVE_URL + self.prior_id and self.old_info:
             if params.get("alt") == "media":
                 self.old_reads += 1
