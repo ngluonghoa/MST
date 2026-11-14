@@ -290,19 +290,9 @@ def stage_ssi_native_source(
     """Single private app-owned write with two readbacks; no publisher."""
     symbol,tf,first,last=_guard(env)
     rows=_normal_rows(source_rows,symbol=symbol,tf=tf,first=first,last=last)
-    try:
-        root=cloud._list_exact_child(session,cloud.DRIVE_ROOT,None)
-        chunks=cloud._list_exact_child(session,"CHUNKS",root["id"]) if root else None
-        if not chunks:
-            raise cloud.CloudGateDenied("MST_SSI_STAGE_CHUNKS_NOT_FOUND")
-        parent=chunks["id"]
-        # Metadata/private folder identity checked by Cloud preflight caller.
-        if not cloud.DRIVE_ID_RE.fullmatch(parent):
-            raise cloud.CloudGateDenied("MST_SSI_STAGE_CHUNKS_SCOPE_INVALID")
-    except cloud.CloudGateDenied:
-        raise
-    except Exception:
-        raise cloud.CloudGateDenied("MST_SSI_STAGE_CHUNKS_LOOKUP_FAILED") from None
+    # Imported helpers cannot rely on main() having performed private Drive
+    # preflight. Verify exact app-owned root/CHUNKS before any source write.
+    parent=cloud.require_private_chunks_scope(session)
     prior_id=discover_ssi_prior(session,env,parent)
     prior=_verified_prior(session,env,parent,prior_id,rows) if prior_id else None
     # A fully verified old candidate already retains all previously seen bars.
@@ -344,6 +334,9 @@ def stage_ssi_native_source(
     name=f"MST_UNPUBLISHED_SSI_NATIVE_{tf}_{env['GITHUB_RUN_ID']}_1.json"
     if cloud._exact_named_quarantine(session,parent,name):
         raise cloud.CloudGateDenied("MST_SSI_STAGE_DUPLICATE_ATTEMPT_MANUAL_REVIEW")
+    # Repeat after potentially long vendor-prior reads; no atomic ACL lease.
+    if cloud.require_private_chunks_scope(session)!=parent:
+        raise cloud.CloudGateDenied("MST_SSI_STAGE_CHUNKS_SCOPE_DRIFT_BEFORE_UPLOAD")
     metadata={
         "name":name,"mimeType":"application/json","parents":[parent],
         "description":"MST SSI UNPUBLISHED SOURCE QUARANTINE; not Cache/Signals",
