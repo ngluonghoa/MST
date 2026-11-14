@@ -1,0 +1,69 @@
+{
+  "ui_version": "UI-1.0",
+  "section_heading_order": [
+    "A · Dữ liệu & trạng thái xác minh",
+    "B · Bối cảnh thị trường",
+    "C · Cơ hội SHORT",
+    "D · Cơ hội SWING",
+    "E · Vùng bán & bảo vệ vị thế",
+    "F · Kiểm tra vùng B/S",
+    "G · Kiểm toán tín hiệu",
+    "H · Cache & lịch sử",
+    "I · Kết luận"
+  ],
+  "locked_legend": [
+    "Đáy lớn sau xu hướng giảm kéo dài",
+    "Đáy nhịp điều chỉnh trong xu hướng tăng",
+    "Đáy vùng tích lũy đi ngang",
+    "Đáy cao đầu tiên sau đảo chiều tăng",
+    "Retest sau Breakout",
+    "Vùng nén giá trong xu hướng tăng",
+    "Đáy hồi kỹ thuật trong xu hướng giảm",
+    "Momentum Breakout, phá nền giá/kháng cự mạnh",
+    "Đỉnh lớn sau xu hướng tăng kéo dài",
+    "Đỉnh nhịp hồi trong xu hướng giảm",
+    "Đỉnh nhịp tăng trong xu hướng tăng",
+    "Đỉnh vùng đi ngang hoặc phân phối",
+    "Đỉnh thấp đầu tiên sau đảo chiều giảm",
+    "Bull Trap, Breakout thất bại",
+    "Retest sau Breakdown",
+    "Blow-off Top, đỉnh tăng nóng/hưng phấn cực độ"
+  ],
+  "pipeline_names": [
+    "DATA MANAGER",
+    "DATA VALIDATOR",
+    "ANALYSIS ENGINE",
+    "EXIT PROTECTION",
+    "ZONE DETECTION",
+    "SIGNAL ENGINE",
+    "AUDIT & DECISION",
+    "REPORT & HISTORY"
+  ],
+  "audit_names": [
+    "Data Quality",
+    "Multi-Timeframe",
+    "Market & RS",
+    "Setup / Zone Evidence",
+    "Trigger / Candle Close",
+    "Volume / Momentum / Volatility",
+    "Risk & Executability",
+    "Reproducibility / Evidence"
+  ],
+  "required_negative": [
+    "INCOMPLETE_REPORT",
+    "NO_TRADE",
+    "0/8 COMPLETE",
+    "0/16 VERIFIED",
+    "Không có vị thế được cung cấp",
+    "SHORT: BLOCKED",
+    "SWING: BLOCKED"
+  ],
+  "forbidden_promotions": [
+    "FULL_ANALYSIS · APPROVED",
+    "8/8 VERIFIED",
+    "MUA XÁC NHẬN",
+    "BÁN XÁC NHẬN",
+    "trade-authorized"
+  ],
+  "render_scope": "Static HTML diagnostic semantics only; not a browser screenshot/pixel golden or deployed site."
+}
