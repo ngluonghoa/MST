@@ -1,0 +1,49 @@
+name: MST Cache V2.1 Fictional JSON Staging - MANUAL ONLY
+
+# Separate user approval required before protected-main promotion.
+# No automatic time schedule, push, pull_request or pull_request_target.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'probe = metadata read-only; synthetic-write = single explicitly approved fictional JSON upload + two Drive reads'
+        required: true
+        type: choice
+        default: probe
+        options:
+          - probe
+          - synthetic-write
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-cache-v21-fictional-staging-manual
+  cancel-in-progress: false
+
+jobs:
+  fake-json-staging-only:
+    name: Main-only Drive read-only probe or separately gated fictional JSON
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout protected main with no persisted GitHub credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 full SHA
+        with:
+          persist-credentials: false
+      - name: Prepare Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6 full SHA
+        with:
+          python-version: '3.12'
+      - name: Install minimal pinned runtime
+        run: python -m pip install --disable-pip-version-check google-auth==2.43.0 requests==2.32.5
+      - name: Owner-gated fictional STAGING_ONLY integrity probe
+        env:
+          MST_STAGING_MODE: ${{ inputs.mode }}
+          MST_CACHE_V21_STAGING_WRITE_ACCEPTED: ${{ vars.MST_CACHE_V21_STAGING_WRITE_ACCEPTED }}
+          MST_OAUTH_BOOTSTRAP_ACCEPTED: ${{ vars.MST_OAUTH_BOOTSTRAP_ACCEPTED }}
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: python -m scripts.mst_cache_v21_staging_fictional_manual
