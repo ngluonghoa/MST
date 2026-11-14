@@ -51,6 +51,7 @@ class StrictCrossProviderD1(unittest.TestCase):
         self.assertEqual(result["numerical_close_difference_days"], 0)
         self.assertEqual(result["numerical_volume_difference_days"], 0)
         self.assertTrue(result["atr_references_numerically_equal"])
+        self.assertTrue(result["rvol_all_three_available"])
         self.assertTrue(result["rvol_references_numerically_equal"])
         self.assertEqual(set(result["aligned_seed21_atr14_reference"].values()),
                          {"15"})
@@ -148,7 +149,8 @@ class StrictCrossProviderD1(unittest.TestCase):
         receipt = audit_common_tail(tuple(result), as_of_utc=NOW)
         self.assertEqual(receipt["aligned_prior20_rvol_reference"],
                          {"SSI": None, "DNSE": None, "VCBS": None})
-        self.assertTrue(receipt["rvol_references_numerically_equal"])
+        self.assertFalse(receipt["rvol_all_three_available"])
+        self.assertFalse(receipt["rvol_references_numerically_equal"])
         self.assertFalse(receipt["calendar_completeness_attested"])
         self.assertFalse(receipt["source_licence_attested"])
 
