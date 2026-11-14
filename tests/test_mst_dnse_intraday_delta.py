@@ -313,6 +313,28 @@ class NativeIntradayContinuity(unittest.TestCase):
                 m.stage_unpublished_dnse_source(d,env(**updates),self.newer())
             self.assertEqual(d.post_calls,0)
 
+    def test_verified_intraday_noop_reuses_prior_when_only_window_exits(self):
+        for only_exits in (False,True):
+            with self.subTest(only_exits=only_exits):
+                prior=old_archive("M5")
+                d=Drive(old=prior)
+                src=prior["raw_native"]
+                take=1 if only_exits else 0
+                same={k:(v[take:] if k!="nextTime" else v)
+                      for k,v in src.items()}
+                receipt=self.stage(d,tf="M5",payload=same)
+                self.assertTrue(receipt["source_noop_reused_verified_prior"])
+                self.assertTrue(receipt["previous_candidate_kept_unmodified"])
+                self.assertEqual(receipt["source_delta_window_exited_not_deleted"],
+                                 int(only_exits))
+                self.assertEqual(receipt["source_delta_added_rows"],0)
+                self.assertEqual(receipt["source_delta_revised_rows"],0)
+                self.assertEqual(receipt["stored_object_count"],0)
+                self.assertEqual(d.old_reads,2)
+                self.assertEqual(d.current_reads,0)
+                self.assertEqual(d.post_calls,0)
+                self.assertFalse(receipt["signals_and_trading_eligible"])
+
     def test_native_delta_is_deterministic_and_price_revisions_preserved(self):
         prior={
             "from_unix":1793999900,"to_unix":1794001000,
