@@ -477,7 +477,7 @@ def stage_unpublished_dnse_source(
             if _exact_named_quarantine(session,parent,reuse_name):
                 raise CloudGateDenied("MST_MFX_SOURCE_PREEXISTING_ATTEMPT_NEEDS_MANUAL_REVIEW")
             return no_change
-    archive=
+    archive={
         "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"
                   if mode == MODE_STAGE
                   else "mst.cloud.dnse_native_unpublished_candidate.v0.1"),
