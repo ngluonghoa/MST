@@ -453,6 +453,37 @@ class PriorDnseD1IncrementalStage(unittest.TestCase):
             self.run_stage(d)
         self.assertEqual(d.post_calls,0)
 
+    def test_verified_d1_noop_keeps_prior_and_does_not_upload_duplicate(self):
+        prior=self.prior()
+        for only_exits in (False,True):
+            with self.subTest(only_exits=only_exits):
+                d=self.Drive(prior)
+                src=prior["raw_native"]
+                new={
+                    k:(v[1:] if only_exits else v[:])
+                    for k,v in src.items() if k!="nextTime"
+                }
+                new["nextTime"]=0
+                receipt=m.stage_unpublished_dnse_source(
+                    d,
+                    stage_owner_env(MST_DNSE_PREVIOUS_SOURCE_FILE_ID=self.PRIOR_ID),
+                    new,
+                )
+                self.assertTrue(receipt["source_noop_reused_verified_prior"])
+                self.assertFalse(receipt["unpublished_private_source_document_stored"])
+                self.assertTrue(receipt["previous_candidate_kept_unmodified"])
+                self.assertEqual(receipt["source_delta_added_rows"],0)
+                self.assertEqual(receipt["source_delta_revised_rows"],0)
+                self.assertEqual(
+                    receipt["source_delta_window_exited_not_deleted"],
+                    int(only_exits),
+                )
+                self.assertEqual(receipt["stored_object_count"],0)
+                self.assertEqual(d.post_calls,0)
+                self.assertEqual(d.old_media_reads,2)
+                self.assertEqual(d.media_reads,0)
+                self.assertFalse(receipt["signals_and_trading_eligible"])
+
     def test_prior_id_cannot_be_used_by_readonly_or_non_d1_modes(self):
         d=self.Drive(self.prior())
         for changes in (
