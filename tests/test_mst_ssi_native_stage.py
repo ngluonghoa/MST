@@ -229,6 +229,27 @@ class SsiSourceStaging(unittest.TestCase):
                 self.assertFalse(delta["eligible_for_signals"])
                 self.assertEqual(len(delta["plan_sha256"]),64)
 
+    def test_verified_all_native_tfs_noop_reuses_prior_and_never_reuploads(self):
+        for tf in ("M5","M15","M30","H1","D1"):
+            for only_exits in (False,True):
+                with self.subTest(tf=tf,only_exits=only_exits):
+                    d=Drive(archive(tf))
+                    original=source_rows(tf,old=True)
+                    new=original[1:] if only_exits else original
+                    receipt=stage.stage_ssi_native_source(d,env(tf),new)
+                    self.assertTrue(receipt["source_noop_reused_verified_prior"])
+                    self.assertFalse(receipt["unpublished_private_source_document_stored"])
+                    self.assertTrue(receipt["previous_candidate_kept_unmodified"])
+                    self.assertEqual(receipt["source_delta_window_exited_not_deleted"],
+                                     int(only_exits))
+                    self.assertEqual(receipt["source_delta_added_rows"],0)
+                    self.assertEqual(receipt["source_delta_revised_rows"],0)
+                    self.assertEqual(receipt["stored_object_count"],0)
+                    self.assertEqual(d.prior_media_count,2)
+                    self.assertEqual(d.new_media_count,0)
+                    self.assertEqual(d.post_count,0)
+                    self.assertFalse(receipt["signals_and_trading_eligible"])
+
     def test_rights_manual_main_storage_separate_and_reruns_denied(self):
         for update in (
             {"MST_SSI_SOURCE_RIGHTS_CONFIRMED":"false"},
