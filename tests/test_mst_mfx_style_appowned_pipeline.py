@@ -484,6 +484,27 @@ class PriorDnseD1IncrementalStage(unittest.TestCase):
                 self.assertEqual(d.media_reads,0)
                 self.assertFalse(receipt["signals_and_trading_eligible"])
 
+    def test_explicit_prior_noop_cannot_hide_existing_same_run_upload(self):
+        prior=self.prior()
+        d=self.Drive(prior)
+        d.file_info={
+            "id":"FAKE_EXISTING_CURRENT_1234567890",
+            "name":"MST_UNPUBLISHED_DNSE_D1_43270010001_1.json",
+            "mimeType":"application/json",
+            "parents":["FAKE_APP_CHUNKS_1234567890"],
+            "trashed":False,
+            "appProperties":{},
+        }
+        current={k:(v[:] if k!="nextTime" else v)
+                 for k,v in prior["raw_native"].items()}
+        with self.assertRaisesRegex(
+                m.CloudGateDenied,"PREEXISTING_ATTEMPT_NEEDS_MANUAL_REVIEW"):
+            m.stage_unpublished_dnse_source(d,
+                stage_owner_env(MST_DNSE_PREVIOUS_SOURCE_FILE_ID=self.PRIOR_ID),
+                current)
+        self.assertEqual(d.old_media_reads,2)
+        self.assertEqual(d.post_calls,0)
+
     def test_prior_id_cannot_be_used_by_readonly_or_non_d1_modes(self):
         d=self.Drive(self.prior())
         for changes in (
