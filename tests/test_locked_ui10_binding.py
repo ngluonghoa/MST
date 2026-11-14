@@ -174,6 +174,42 @@ class LockedUi10BindingTests(unittest.TestCase):
             with self.subTest(key=key),self.assertRaises(LockedUi10Denied):
                 LockedUi10DiagnosticViewModel(doc,digest)
 
+    def test_rehashed_nested_false_production_claims_are_rejected(self):
+        original=build().data
+        mutations=(
+            ("zone-confirmed",lambda d:d["zone_rows"][0].update(
+                status="DETECTED",confirmed=True,eligible_for_signal=True)),
+            ("zone-dropped",lambda d:d["zone_rows"].pop()),
+            ("step-forged",lambda d:d["pipeline_steps"][7].update(
+                status="COMPLETE",method="REUSED_VALIDATED")),
+            ("stage-dropped",lambda d:d["pipeline_steps"].pop()),
+            ("audit-pass",lambda d:d["audit_topics"][0].update(
+                status="PASS",hard_fail=False)),
+            ("audit-dropped",lambda d:d["audit_topics"].pop()),
+            ("fake-entry",lambda d:d["strategies"]["SHORT"].update(
+                state="CONFIRMED",decision="BUY",confirmed=True,entry="10000")),
+            ("branch-dropped",lambda d:d["strategies"].pop("SWING")),
+            ("renumber-section",lambda d:d["section_ids"].reverse()),
+            ("published-section",lambda d:d["sections"]["I"].update(
+                status="FULL_ANALYSIS",decision="BUY")),
+            ("stage8-published",lambda d:d.update(
+                step08_atomic_commit_verified=True)),
+            ("data-authority",lambda d:d.update(issuer_close_attested=True)),
+            ("position-faked",lambda d:d.update(
+                position_context_status="FLAT_VERIFIED")),
+            ("cache-metrics-faked",lambda d:d.update(
+                cache_metrics_measured=True,cache_hit_rate=1)),
+        )
+        for name,fn in mutations:
+            with self.subTest(case=name):
+                model=deepcopy(original)
+                fn(model)
+                fake_digest=sha256(json.dumps(model,sort_keys=True,
+                    separators=(",",":"),ensure_ascii=False,
+                    allow_nan=False).encode("utf-8")).hexdigest()
+                with self.assertRaises(LockedUi10Denied):
+                    LockedUi10DiagnosticViewModel(model,fake_digest)
+
     def test_bad_run_identity_and_unattested_exchange_blocked(self):
         short,swing=views()
         for run in ("","../secrets","has spaces","x"*100,12):
