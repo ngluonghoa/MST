@@ -321,7 +321,7 @@ def stage_ssi_native_source(
             if cloud._exact_named_quarantine(session,parent,candidate_name):
                 raise cloud.CloudGateDenied("MST_SSI_STAGE_DUPLICATE_ATTEMPT_MANUAL_REVIEW")
             return no_change
-    archive=
+    archive={
         "schema":"mst.cloud.ssi_native_unpublished_candidate.v0.1",
         "project":"MST","source":"SSI_FASTCONNECT_V3_MARKET_DATA",
         "symbol":symbol,"source_native_tf":tf,
