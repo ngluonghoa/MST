@@ -124,7 +124,8 @@ class PrivateD1MathReferenceTests(unittest.TestCase):
         for provider in ("SSI","DNSE","VCBS"):
             s=snap(provider=provider)
             bars=list(s.bars)
-            bars[-1]=replace(bars[-1],provider="OTHER")
+            bars[-1]=replace(bars[-1],provider=(
+                "VCBS" if provider!="VCBS" else "SSI"))
             with self.subTest(provider=provider),self.assertRaisesRegex(
                     PrivateSourceDenied,"SERIES_CONTEXT_INVALID"):
                 compute_private_d1_math(replace(s,bars=tuple(bars)),as_of_utc=NOW)
