@@ -83,7 +83,7 @@ def audit_common_tail(
     require_utc(as_of_utc)
     if (type(sources) is not tuple or len(sources) != 3
             or tuple(sorted(s.provider for s in sources
-                            if type(s) is PrivateD1Reference)) != PROVIDERS
+                            if type(s) is PrivateD1Reference)) != tuple(sorted(PROVIDERS))
             or len({s.symbol for s in sources
                     if type(s) is PrivateD1Reference}) != 1):
         raise PrivateSourceDenied(DENIAL)
