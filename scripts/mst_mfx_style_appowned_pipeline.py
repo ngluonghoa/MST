@@ -198,6 +198,59 @@ def inspect_app_owned_drive(session: Any) -> dict[str, Any]:
         raise CloudGateDenied("MST_MFX_APP_OWNED_FOLDER_PROBE_FAILED") from None
 
 
+
+def require_private_chunks_scope(session: Any) -> str:
+    """Independently verify exact private app-owned root+CHUNKS for stage calls.
+
+    A stage helper may be imported directly, bypassing main()'s five-folder
+    read-only preflight. Never trust the folder ID returned by a Drive list
+    without verifying private ownership/ACL and exact parent metadata.
+    No create, upload, print, network source GET or hidden authorization.
+    """
+    try:
+        root = _list_exact_child(session, DRIVE_ROOT, None)
+        if type(root) is not dict or type(root.get("id")) is not str:
+            raise CloudGateDenied("MST_MFX_PRIVATE_CHUNKS_ROOT_MISSING")
+        root_id = root["id"]
+        chunks = _list_exact_child(session, "CHUNKS", root_id)
+        if type(chunks) is not dict or type(chunks.get("id")) is not str:
+            raise CloudGateDenied("MST_MFX_PRIVATE_CHUNKS_CHILD_MISSING")
+        chunk_id = chunks["id"]
+        if root_id == chunk_id:
+            raise CloudGateDenied("MST_MFX_PRIVATE_CHUNKS_ID_COLLISION")
+
+        for listed, expected_name, expected_parent in (
+            (root, DRIVE_ROOT, None),
+            (chunks, "CHUNKS", root_id),
+        ):
+            fid = listed["id"]
+            if type(fid) is not str or not DRIVE_ID_RE.fullmatch(fid):
+                raise CloudGateDenied("MST_MFX_PRIVATE_CHUNKS_ID_INVALID")
+            info = _metadata(session, fid)
+            parents = info.get("parents")
+            if (info.get("id") != fid
+                    or info.get("name") != expected_name
+                    or info.get("mimeType") != MIME_FOLDER
+                    or info.get("trashed") is not False
+                    or info.get("shared") is not False
+                    or info.get("ownedByMe") is not True
+                    or info.get("isAppAuthorized") is not True
+                    or type(parents) is not list or len(parents) != 1
+                    or type(parents[0]) is not str or not parents[0]
+                    or (expected_parent is not None and parents != [expected_parent])
+                    or listed.get("id") != fid
+                    or listed.get("name") != expected_name
+                    or listed.get("mimeType") != MIME_FOLDER
+                    or listed.get("trashed") is not False
+                    or listed.get("parents") != parents):
+                raise CloudGateDenied("MST_MFX_PRIVATE_CHUNKS_SCOPE_NOT_VERIFIED")
+        return chunk_id
+    except CloudGateDenied:
+        raise
+    except Exception:
+        raise CloudGateDenied("MST_MFX_PRIVATE_CHUNKS_SCOPE_READ_FAILURE") from None
+
+
 def build_dnse_request(
     symbol: str, from_unix: int, to_unix: int,
     api_key: str, api_secret: str, *, date_header: str, nonce: str,
@@ -422,16 +475,8 @@ def stage_unpublished_dnse_source(
     validated=validate_dnse_native(payload,start,end,timeframe=tf)
     from scripts.mst_mfx_native_timeframes import provider_resolution
     native_resolution = provider_resolution("DNSE", tf)
-    try:
-        root=_list_exact_child(session,DRIVE_ROOT,None)
-        chunks=_list_exact_child(session,"CHUNKS",root["id"]) if root else None
-        if not chunks:
-            raise CloudGateDenied("MST_MFX_SOURCE_CHUNKS_FOLDER_NOT_FOUND")
-        parent=chunks["id"]
-    except CloudGateDenied:
-        raise
-    except Exception:
-        raise CloudGateDenied("MST_MFX_SOURCE_CHUNKS_FOLDER_LOOKUP_FAILED") from None
+    # Independent preflight for direct stage() imports: never rely on main().
+    parent=require_private_chunks_scope(session)
     # D1 must not silently skip an existing predecessor when the manual
     # input is blank. Auto-discover by default; an empty complete census
     # represents a legitimate first capture. Intraday capture remains separate.
@@ -508,6 +553,10 @@ def stage_unpublished_dnse_source(
     name="MST_UNPUBLISHED_DNSE_"+namespace+"_"+env["GITHUB_RUN_ID"]+"_1.json"
     if _exact_named_quarantine(session,parent,name):
         raise CloudGateDenied("MST_MFX_SOURCE_PREEXISTING_ATTEMPT_NEEDS_MANUAL_REVIEW")
+    # Recheck the private destination after predecessor discovery/readbacks.
+    # This minimizes TOCTOU exposure; Drive ACLs are not a signed CAS.
+    if require_private_chunks_scope(session)!=parent:
+        raise CloudGateDenied("MST_MFX_SOURCE_CHUNKS_SCOPE_DRIFT_BEFORE_UPLOAD")
     # Google Drive multipart/related metadata+bytes, never a native Google Doc.
     boundary="mst"+uuid4().hex
     metadata={
