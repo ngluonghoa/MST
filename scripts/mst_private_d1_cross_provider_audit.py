@@ -140,8 +140,12 @@ def audit_common_tail(
         "atr_references_numerically_equal": (
             len({computed[p][0] for p in PROVIDERS}) == 1
         ),
+        "rvol_all_three_available": all(
+            computed[p][1] is not None for p in PROVIDERS
+        ),
         "rvol_references_numerically_equal": (
-            len({computed[p][1] for p in PROVIDERS}) == 1
+            all(computed[p][1] is not None for p in PROVIDERS)
+            and len({computed[p][1] for p in PROVIDERS}) == 1
         ),
         "source_licence_attested": False,
         "official_venue_close_attested": False,
