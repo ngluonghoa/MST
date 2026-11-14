@@ -455,6 +455,20 @@ def stage_unpublished_dnse_source(
         prior_link = read_previous_native_delta(
             session, env, parent, payload,
         )
+    # Only after a verified private predecessor and the complete source delta
+    # may an unchanged vendor window be reused. Source window exits are not
+    # deletion instructions. No upload, new chunk or published Cache head.
+    if prior_link is not None:
+        from scripts.mst_cache_noop_reuse import verified_unchanged_receipt
+        try:
+            no_change = verified_unchanged_receipt(
+                prior_link, provider="DNSE", tf=tf,
+                observed_rows=validated["observed_native_rows"],
+            )
+        except ValueError:
+            raise CloudGateDenied("MST_MFX_VERIFIED_REUSE_PROOF_INVALID") from None
+        if no_change is not None:
+            return no_change
     archive={
         "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"
                   if mode == MODE_STAGE
