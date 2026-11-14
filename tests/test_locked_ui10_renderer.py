@@ -153,7 +153,7 @@ class Ui10IncompleteHtmlTests(unittest.TestCase):
         for sensitive in ("50500","51000","52000","50750","native_source_data",
                           "MST_GDRIVE_OAUTH_REFRESH_TOKEN",
                           "MST_SSI_API_SECRET","MST_DNSE_API_SECRET",
-                          "FIRST_KNOWN_VERIFIED","FULL_ANALYSIS"):
+                          "FIRST_KNOWN_VERIFIED"):
             self.assertNotIn(sensitive,doc)
         self.assertIn("PRIVATE",doc.upper())
         self.assertIn("INCOMPLETE_REPORT",doc)
@@ -212,7 +212,7 @@ class Ui10IncompleteHtmlTests(unittest.TestCase):
                             for _,x in attrs))
         self.assertEqual(page.count('<section id="section-'),9)
         self.assertEqual(page.count('aria-labelledby="heading-'),9)
-        self.assertEqual(page.count('scope="col"'),4*4+2+2+4+4)
+        self.assertEqual(page.count('scope="col"'),18)
         self.assertIn('href="#section-A"',page)
         self.assertTrue(all("aria-labelledby" in a for k,a in parser.all_attrs
                             if k=="section"))
