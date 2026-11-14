@@ -268,6 +268,52 @@ class FakeQuarantineDrive(FakeDrive):
         return FakeResponse({"id":self.FILE_ID},201)
 
 
+class PrivateChunksStageScope(unittest.TestCase):
+    """Stage may be imported directly, not only called after main preflight."""
+
+    def test_direct_dnse_stage_never_uploads_into_public_or_foreign_folder(self):
+        cases=(
+            ("root","shared",True),
+            ("root","ownedByMe",False),
+            ("chunks","shared",True),
+            ("chunks","ownedByMe",False),
+            ("chunks","isAppAuthorized",False),
+            ("chunks","parents",["FOREIGN_PARENT_123"]),
+            ("chunks","trashed",True),
+            ("chunks","mimeType","application/json"),
+        )
+        for target,field,value in cases:
+            with self.subTest(target=target,field=field):
+                d=FakeQuarantineDrive()
+                fid=d.root if target=="root" else next(
+                    i for i,x in d.files.items() if x["name"]=="CHUNKS")
+                d.overrides[fid]={field:value}
+                with self.assertRaisesRegex(
+                    m.CloudGateDenied,"MST_MFX_PRIVATE_CHUNKS_SCOPE_NOT_VERIFIED"):
+                    m.stage_unpublished_dnse_source(
+                        d,stage_owner_env(),DnseNative().payload())
+                self.assertEqual(d.post_calls,0)
+
+    def test_dnse_rechecks_private_scope_before_final_upload(self):
+        d=FakeQuarantineDrive()
+        chunk=next(i for i,x in d.files.items() if x["name"]=="CHUNKS")
+        original=d.get
+        seen=0
+        def flip(url,*,params,timeout,**kw):
+            nonlocal seen
+            if url==m.DRIVE_URL+chunk and params.get("alt")!="media":
+                seen+=1
+                if seen==2:
+                    d.overrides[chunk]={"shared":True}
+            return original(url,params=params,timeout=timeout,**kw)
+        d.get=flip
+        with self.assertRaisesRegex(
+            m.CloudGateDenied,"MST_MFX_PRIVATE_CHUNKS_SCOPE_NOT_VERIFIED"):
+            m.stage_unpublished_dnse_source(
+                d,stage_owner_env(),DnseNative().payload())
+        self.assertEqual(d.post_calls,0)
+
+
 class UnpublishedSourceStage(unittest.TestCase):
     def test_stage_requires_independent_owner_storage_license_gate(self):
         payload=DnseNative().payload()
