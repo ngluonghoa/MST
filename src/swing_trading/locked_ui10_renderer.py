@@ -243,7 +243,15 @@ def render_ui10_incomplete_html(model: LockedUi10DiagnosticViewModel) -> str:
         '<p class="muted">Không phải FULL_ANALYSIS, không phải báo cáo LIVE '
         'đã xuất bản. Dữ liệu này chỉ phục vụ QA Cloud.</p>'
     )
-    body="".join(_section(k,sections[k]) for k in SECTION_IDS)
+    # Desktop places SHORT/SWING side-by-side; narrow screens stack them,
+    # while DOM/screen-reader reading order stays exactly A-I.
+    body=(
+        _section("A",sections["A"]) + _section("B",sections["B"])
+        + '<div class="grid">'
+        + _section("C",sections["C"]) + _section("D",sections["D"])
+        + "</div>"
+        + "".join(_section(k,sections[k]) for k in "EFGHI")
+    )
     return (
         '<!doctype html><html lang="vi"><head>'
         '<meta charset="utf-8"><meta name="viewport" '
