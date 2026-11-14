@@ -131,7 +131,7 @@ class StrictCrossProviderD1(unittest.TestCase):
         short = fixture("VCBS", 20)
         unsorted = replace(c, bars=tuple(reversed(c.bars)))
         rows = list(c.bars)
-        rows[-1] = replace(rows[-1], high_vnd=Decimal(-1))
+        rows[-1] = replace(rows[-1], low_vnd=Decimal(0))
         invalid = replace(c, bars=tuple(rows))
         for x in (short, unsorted, invalid):
             with self.subTest(kind=str(x.source_rows_observed)):
