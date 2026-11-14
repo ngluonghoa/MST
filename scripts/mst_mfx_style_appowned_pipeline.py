@@ -462,7 +462,7 @@ def stage_unpublished_dnse_source(
         from scripts.mst_cache_noop_reuse import verified_unchanged_receipt
         try:
             no_change = verified_unchanged_receipt(
-                prior_link, provider="DNSE", tf=tf,
+                prior_link, provider="DNSE", symbol=env["MST_DNSE_SYMBOL"], tf=tf,
                 observed_rows=validated["observed_native_rows"],
             )
         except ValueError:
