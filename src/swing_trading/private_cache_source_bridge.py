@@ -98,7 +98,7 @@ class PrivateD1Diagnostic:
 
     def __post_init__(self) -> None:
         require_utc(self.as_of_utc)
-        if self.strategy not in Strategy:
+        if not isinstance(self.strategy, Strategy):
             raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_BAD_STRATEGY")
 
 
@@ -249,7 +249,8 @@ def inspect_private_d1_snapshot(
             or document.get("not_appowned_github_cache_publisher") is not True
             or document.get("issuer_closed_bar_attested") is not False
             or document.get("signal_eligible") is not False
-            or document.get("trade_orders")!=0):
+            or type(document.get("trade_orders")) is not int
+            or document["trade_orders"]!=0):
         raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_SOURCE_AUTHORITY_INVALID")
     try:
         snapshot_day=date.fromisoformat(document["snapshot_day"])
