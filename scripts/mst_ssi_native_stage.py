@@ -305,6 +305,19 @@ def stage_ssi_native_source(
         raise cloud.CloudGateDenied("MST_SSI_STAGE_CHUNKS_LOOKUP_FAILED") from None
     prior_id=discover_ssi_prior(session,env,parent)
     prior=_verified_prior(session,env,parent,prior_id,rows) if prior_id else None
+    # A fully verified old candidate already retains all previously seen bars.
+    # If only the provider's rolling window changes, do not reupload identical
+    # source OHLCV or delete window-exited bars. This is not a published head.
+    if prior is not None:
+        from scripts.mst_cache_noop_reuse import verified_unchanged_receipt
+        try:
+            no_change=verified_unchanged_receipt(
+                prior,provider="SSI",tf=tf,observed_rows=len(rows),
+            )
+        except ValueError:
+            raise cloud.CloudGateDenied("MST_SSI_STAGE_REUSE_PROOF_INVALID") from None
+        if no_change is not None:
+            return no_change
     archive={
         "schema":"mst.cloud.ssi_native_unpublished_candidate.v0.1",
         "project":"MST","source":"SSI_FASTCONNECT_V3_MARKET_DATA",
