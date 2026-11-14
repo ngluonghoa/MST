@@ -123,8 +123,11 @@ class LockedUi10BindingTests(unittest.TestCase):
             build_private_d1_ui10_diagnostic(a,b,
                 run_id="test187",exchange="HOSE")
         a,_=views("SSI")
-        _,b=views("SSI")
-        b=replace(b,source=replace(b.source,source_rows_observed=1))
+        partial=source("SSI")
+        partial["native_source_data"]=partial["native_source_data"][:1]
+        partial["source_rows_observed"]=1
+        b=diagnose_private_d1_without_signals(
+            partial,strategy=Strategy.SWING,as_of_utc=NOW)
         with self.assertRaisesRegex(LockedUi10Denied,"CROSS_SOURCE"):
             build_private_d1_ui10_diagnostic(a,b,
                 run_id="test187",exchange="HOSE")
