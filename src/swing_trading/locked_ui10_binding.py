@@ -76,8 +76,79 @@ class LockedUi10DiagnosticViewModel:
                 or self.data.get("schema") != SCHEMA
                 or self.data.get("ui_version") != UI_VERSION
                 or self.data.get("publication_state") != "INCOMPLETE_REPORT"
-                or self.data.get("action_eligible") is not False):
+                or self.data.get("action_eligible") is not False
+                or self.data.get("report_published") is not False
+                or self.data.get("step08_atomic_commit_verified") is not False
+                or self.data.get("rendered_ui") is not False
+                or self.data.get("ui_design_locked") is not True
+                or self.data.get("new_ui_design_approved") is not False
+                or self.data.get("issuer_close_attested") is not False
+                or self.data.get("issuer_first_known_attested") is not False
+                or self.data.get("source_origin") != "PRIVATE_CONNECTED_MCP_REFERENCE_ONLY"
+                or self.data.get("data_quality") != "UNVERIFIED"
+                or self.data.get("trading_or_broker_calls") != 0
+                or self.data.get("zone_evaluated_count") != 16
+                or self.data.get("zone_verified_count") != 0
+                or self.data.get("pipeline_verified_count") != 0
+                or self.data.get("audit_verified_count") != 0
+                or self.data.get("cache_metrics_measured") is not False
+                or self.data.get("cache_hit_rate") is not None
+                or self.data.get("position_context_status") != "NOT_PROVIDED"
+                or self.data.get("step04_result") is not None):
             raise LockedUi10Denied("MST_LOCKED_UI10_VIEWMODEL_AUTHORITY_INVALID")
+        if (self.data.get("section_ids")!=list(SECTION_IDS)
+                or type(self.data.get("sections")) is not dict
+                or tuple(self.data["sections"])!=SECTION_IDS
+                or self.data["sections"].get("I",{}).get("status")!="INCOMPLETE_REPORT"
+                or self.data["sections"].get("I",{}).get("decision")!="NO_TRADE"):
+            raise LockedUi10Denied("MST_LOCKED_UI10_SECTION_ORDER_DRIFT")
+        zone_rows=self.data.get("zone_rows")
+        if (type(zone_rows) is not list or len(zone_rows)!=16
+                or [(x.get("zone_id"),x.get("locked_legend"))
+                    for x in zone_rows if type(x) is dict]!=list(ZONE_LEGEND)
+                or any(type(x) is not dict
+                       or x.get("status")!="UNVERIFIED"
+                       or x.get("eligible_for_signal") is not False
+                       or x.get("confirmed") is not False
+                       or x.get("evidence")!=[]
+                       for x in zone_rows)):
+            raise LockedUi10Denied("MST_LOCKED_UI10_16_ZONE_DRIFT")
+        steps=self.data.get("pipeline_steps")
+        if (type(steps) is not list or len(steps)!=8
+                or [(x.get("step_id"),x.get("step_name"))
+                    for x in steps if type(x) is dict]
+                   !=list(enumerate(PIPELINE_STEPS,1))
+                or any(type(x) is not dict
+                       or x.get("status") not in ("BLOCKED","NOT_STARTED")
+                       or x.get("method") is not None
+                       or x.get("evidence")!=[]
+                       or x.get("completed_at_utc") is not None for x in steps)):
+            raise LockedUi10Denied("MST_LOCKED_UI10_STEPS_INVALID")
+        audit=self.data.get("audit_topics")
+        if (type(audit) is not list or len(audit)!=8
+                or [(x.get("audit_id"),x.get("topic"))
+                    for x in audit if type(x) is dict]
+                   !=list(enumerate(AUDIT_TOPICS,1))
+                or any(type(x) is not dict
+                       or x.get("status")!="WARN"
+                       or x.get("hard_fail") is not True
+                       or x.get("evidence")!=[] for x in audit)):
+            raise LockedUi10Denied("MST_LOCKED_UI10_AUDIT_INVALID")
+        branches=self.data.get("strategies")
+        if (type(branches) is not dict
+                or set(branches)!={"SHORT","SWING"}
+                or any(type(b) is not dict
+                       or b.get("decision")!="NO_TRADE"
+                       or b.get("state")!="BLOCKED"
+                       or b.get("confirmed") is not False
+                       or b.get("entry") is not None
+                       or b.get("stop_loss") is not None
+                       or b.get("take_profit_1") is not None
+                       or b.get("take_profit_2") is not None
+                       or b.get("risk_reward") is not None
+                       or b.get("primary_zone") is not None
+                       for b in branches.values())):
+            raise LockedUi10Denied("MST_LOCKED_UI10_STRATEGY_TRADING_BLOCK")
         try:
             canonical=json.dumps(self.data,sort_keys=True,
                                  separators=(",",":"),ensure_ascii=False,
