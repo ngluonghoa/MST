@@ -468,8 +468,16 @@ def stage_unpublished_dnse_source(
         except ValueError:
             raise CloudGateDenied("MST_MFX_VERIFIED_REUSE_PROOF_INVALID") from None
         if no_change is not None:
+            # Explicit predecessor IDs must never bypass the current attempt
+            # name census, especially after an unknown upload ACK. A second
+            # run with the same identity is not silently treated as a no-op.
+            reuse_namespace = "D1" if mode == MODE_STAGE else "NATIVE_"+tf
+            reuse_name=("MST_UNPUBLISHED_DNSE_"+reuse_namespace+"_"
+                        +env["GITHUB_RUN_ID"]+"_1.json")
+            if _exact_named_quarantine(session,parent,reuse_name):
+                raise CloudGateDenied("MST_MFX_SOURCE_PREEXISTING_ATTEMPT_NEEDS_MANUAL_REVIEW")
             return no_change
-    archive={
+    archive=
         "schema":("mst.cloud.dnse_unpublished_source_candidate.v0.1"
                   if mode == MODE_STAGE
                   else "mst.cloud.dnse_native_unpublished_candidate.v0.1"),
