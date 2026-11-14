@@ -36,7 +36,8 @@ these require separate consumer, migration and rollback evidence.
 | fixture_scan | cache_and_persistence | 88 | 8 | 44 | 0 | KEEP | none |
 | incremental_cache | cache_and_persistence | 441 | 23 | 83 | 9 | IMPROVE | HIGH_BRANCH_SCORE |
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| locked_ui10_binding | domain_and_reference | 321 | 69 | 131 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| locked_ui10_binding | domain_and_reference | 321 | 69 | 131 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| locked_ui10_renderer | domain_and_reference | 268 | 14 | 147 | 0 | IMPROVE | FUNCTION_90_PLUS |
 | market_data | domain_and_reference | 161 | 23 | 29 | 18 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
