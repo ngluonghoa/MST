@@ -126,6 +126,7 @@ class Drive:
         self.mutate_old_version=False
         self.mutate_old_media=False
         self.calls=[]
+        self.folder_overrides={}
 
     def _info(self, fid, name, body, props):
         return {"id":fid,"name":name,"mimeType":"application/json",
@@ -161,6 +162,16 @@ class Drive:
                 {k:x[k] for k in ("id","name","mimeType","parents","trashed")}
                 for x in (self.old_info,self.new_info) if x and x["name"]==name
             ]})
+        if url in (cloud.DRIVE_URL+self.ROOT, cloud.DRIVE_URL+self.CHUNKS):
+            ident=url[len(cloud.DRIVE_URL):]
+            name=cloud.DRIVE_ROOT if ident==self.ROOT else "CHUNKS"
+            item={
+                "id":ident, "name":name, "mimeType":cloud.MIME_FOLDER,
+                "parents":["FAKE_DRIVE_ROOT" if ident==self.ROOT else self.ROOT],
+                "trashed":False,"shared":False,
+                "ownedByMe":True,"isAppAuthorized":True,
+            }
+            return Response(dict(item,**self.folder_overrides.get(ident,{})))
         if url==cloud.DRIVE_URL+self.OLD and self.old_info:
             if params.get("alt")=="media":
                 self.prior_media_count+=1
@@ -191,6 +202,46 @@ class Drive:
 class SsiSourceStaging(unittest.TestCase):
     def stage(self, drive, tf="M5", **changes):
         return stage.stage_ssi_native_source(drive,env(tf,**changes),source_rows(tf))
+
+    def test_direct_stage_denies_public_unowned_or_foreign_chunks_before_upload(self):
+        # Call the stage helper directly; do not invoke main() preflight.
+        for ident, field, value in (
+            (Drive.ROOT,"shared",True),
+            (Drive.ROOT,"ownedByMe",False),
+            (Drive.CHUNKS,"shared",True),
+            (Drive.CHUNKS,"ownedByMe",False),
+            (Drive.CHUNKS,"isAppAuthorized",False),
+            (Drive.CHUNKS,"parents",["FAKE_FOREIGN_ROOT"]),
+            (Drive.CHUNKS,"mimeType","application/json"),
+            (Drive.CHUNKS,"trashed",True),
+        ):
+            with self.subTest(identity=ident,field=field):
+                d=Drive()
+                d.folder_overrides[ident]={field:value}
+                with self.assertRaisesRegex(
+                    cloud.CloudGateDenied,"MST_MFX_PRIVATE_CHUNKS_SCOPE_NOT_VERIFIED"
+                ):
+                    self.stage(d)
+                self.assertEqual(d.post_count,0)
+                self.assertEqual(d.prior_media_count,0)
+
+    def test_ssi_rechecks_private_chunks_scope_immediately_before_upload(self):
+        d=Drive()
+        old_get=d.get
+        seen=0
+        def flip(url,*,params,timeout,**kw):
+            nonlocal seen
+            if url==cloud.DRIVE_URL+d.CHUNKS and "alt" not in params:
+                seen+=1
+                if seen==2:
+                    d.folder_overrides[d.CHUNKS]={"shared":True}
+            return old_get(url,params=params,timeout=timeout,**kw)
+        d.get=flip
+        with self.assertRaisesRegex(
+            cloud.CloudGateDenied,"MST_MFX_PRIVATE_CHUNKS_SCOPE_NOT_VERIFIED"
+        ):
+            self.stage(d)
+        self.assertEqual(d.post_count,0)
 
     def test_native_modes_first_capture_on_five_distinct_tfs(self):
         for tf in ("M5","M15","M30","H1","D1"):
