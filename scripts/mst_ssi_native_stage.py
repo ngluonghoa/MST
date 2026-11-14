@@ -312,7 +312,7 @@ def stage_ssi_native_source(
         from scripts.mst_cache_noop_reuse import verified_unchanged_receipt
         try:
             no_change=verified_unchanged_receipt(
-                prior,provider="SSI",tf=tf,observed_rows=len(rows),
+                prior,provider="SSI",symbol=symbol,tf=tf,observed_rows=len(rows),
             )
         except ValueError:
             raise cloud.CloudGateDenied("MST_SSI_STAGE_REUSE_PROOF_INVALID") from None
