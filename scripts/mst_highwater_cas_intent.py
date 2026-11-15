@@ -158,17 +158,23 @@ def prepare_highwater_conditional_write(
 
 def verify_pre_submit_snapshot(
     prepared_intent: Any, *, observed_external_anchor: Any,
+    expected_prepared_intent_sha256: str,
 ) -> dict[str, Any]:
     """Fail closed when the reread differs, but NEVER call this atomic CAS.
 
-    A malicious store could show the same stale anchor to two writers. Even
-    identical snapshots don't authorize unconditional write. Atomic compare
-    MUST be performed by an independent storage service.
+    The caller binds this reread to its EXACT originally prepared intent
+    digest. A malicious store could still show the same stale anchor to two
+    writers. Identical snapshots don't authorize unconditional write: a
+    separately controlled storage CAS primitive must perform atomic compare.
     """
     if (type(prepared_intent) is not dict
             or set(prepared_intent) != INTENT_FIELDS):
         raise CasIntentDenied("MST_CAS_PREPARED_INTENT_INVALID")
     unsigned={k:v for k,v in prepared_intent.items() if k!="intent_sha256"}
+    if (type(expected_prepared_intent_sha256) is not str
+            or SHA.fullmatch(expected_prepared_intent_sha256) is None
+            or expected_prepared_intent_sha256 != prepared_intent["intent_sha256"]):
+        raise CasIntentDenied("MST_CAS_PREPARED_INTENT_REPLACED")
     if (type(prepared_intent["intent_sha256"]) is not str
             or SHA.fullmatch(prepared_intent["intent_sha256"]) is None
             or prepared_intent["intent_sha256"] != _digest(unsigned)
