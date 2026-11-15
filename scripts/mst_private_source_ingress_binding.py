@@ -56,8 +56,8 @@ def _window(provider: str, env: Mapping[str, str]) -> dict[str, Any]:
             return {"from_unix": int(a), "to_unix": int(b)}
         a, b = env["MST_SSI_FROM_DATE"], env["MST_SSI_TO_DATE"]
         if (type(a) is not str or type(b) is not str
-                or re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", a) is None
-                or re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", b) is None
+                or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", a) is None
+                or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", b) is None
                 or date.fromisoformat(a) > date.fromisoformat(b)):
             raise ValueError("invalid date window")
         return {"from_date": a, "to_date": b}
