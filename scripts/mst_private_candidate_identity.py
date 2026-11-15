@@ -129,7 +129,9 @@ def verify_new_candidate_identity(
                 or SHA.fullmatch(link["prior_source_sha256"]) is None
                 or type(link.get("delta")) is not dict
                 or link.get("eligible_for_signals") is not False
-                or link["delta"].get("eligible_for_signals") is not False):
+                or (link["delta"].get("eligible_for_signals")
+                    if "eligible_for_signals" in link["delta"]
+                    else link["delta"].get("signal_eligible")) is not False):
             raise CandidateIdentityDenied("MST_SOURCE_CANDIDATE_PRIOR_LINK_INVALID")
 
     try:
