@@ -239,7 +239,7 @@ class CasIntentTests(unittest.TestCase):
             ("tip_checkpoint_sha256","INVALID"),
             ("series_id",["FAKE"]),
         ):
-            with self.subTest(field=fld if False else field):
+            with self.subTest(field=field):
                 changed=dict(a,**{field:value})
                 with self.assertRaises(CasIntentDenied):
                     prepare(ckpts,n,changed)
