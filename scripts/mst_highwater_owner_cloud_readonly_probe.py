@@ -149,7 +149,7 @@ def probe_private_highwater_access(
     report = {
         "schema": "mst.cloud.owner_private_highwater_actual_read_probe.v0.1",
         "probe_mode": mode,
-        "real_http_performed_by_this_function": False,
+        "injected_get_transport_independently_authenticated": False,
         "private_repo_response_matches_request": True,
         "exact_series_ref_observed": False,
         "effective_rules_observed": False,
@@ -178,7 +178,8 @@ def probe_private_highwater_access(
         _denied("MST_203_EXACT_GIT_REF_NOT_VERIFIED")
     report["exact_series_ref_observed"] = True
 
-    rules_path = root + "/rules/branches/" + quote(branch, safe="")
+    rules_path = (root + "/rules/branches/" + quote(branch, safe="")
+                  + "?per_page=100&page=1")
     effective = read_json(rules_path)
     if (type(effective) is not list or len(effective) >= 100
             or any(type(item) is not dict
