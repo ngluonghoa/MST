@@ -46,7 +46,8 @@ def _denied(code: str) -> None:
 
 def _validate(target: Any, series: Any, mode: Any) -> tuple[str, str, str]:
     if (type(target) is not str or REPO.fullmatch(target) is None
-            or target.lower() == "ngluonghoa/mst"):
+            or target.lower() == "ngluonghoa/mst"
+            or ".." in target):
         _denied("MST_203_PRIVATE_CUSTODY_REPOSITORY_INVALID")
     if type(mode) is not str or mode not in ("repo-only", "inspect-ref"):
         _denied("MST_203_PROBE_MODE_INVALID")
