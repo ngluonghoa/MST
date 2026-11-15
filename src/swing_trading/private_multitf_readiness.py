@@ -22,7 +22,7 @@ from .replay import require_utc
 TF_ORDER = (Timeframe.M5, Timeframe.M15, Timeframe.M30,
             Timeframe.H1, Timeframe.H4, Timeframe.D1)
 TF_NAMES = tuple(x.value for x in TF_ORDER)
-ID = re.compile(r"[A-Za-z0-9:_./-]{3,120}\Z")
+ID = re.compile(r"STOCK:(HOSE|HNX|UPCOM):[A-Z0-9]{3,15}:[A-Za-z0-9_-]{3,80}\Z")
 EXCHANGE = re.compile(r"(HOSE|HNX|UPCOM)\Z")
 MAX_BARS_PER_TF = 512
 
@@ -63,6 +63,9 @@ class PrivateMultiTfReadiness:
                            "MISSING", "CANDIDATE_ONLY_UNVERIFIED")
                        or type(r.get("observed_candles")) is not int
                        or not 0 <= r["observed_candles"] <= MAX_BARS_PER_TF
+                       or type(r.get("local_necessary_checks_count")) is not int
+                       or not 0 <= r["local_necessary_checks_count"] <= r["observed_candles"]
+                       or (r["status"] == "MISSING") != (r["observed_candles"] == 0)
                        for r in rows)):
             raise PrivateMultiTfDenied("MST_SIX_TF_STRUCTURE_INVALID")
         if (self.summary.get("h4_native_provider_supported") is not False
@@ -94,6 +97,7 @@ def inspect_six_tf_candidate_coverage(
     require_utc(as_of_utc)
     if (type(instrument_id) is not str
             or ID.fullmatch(instrument_id) is None
+            or instrument_id.split(":")[1] != exchange
             or type(exchange) is not str
             or EXCHANGE.fullmatch(exchange) is None
             or type(candles_by_tf) is not dict
