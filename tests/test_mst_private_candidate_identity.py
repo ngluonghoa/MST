@@ -92,7 +92,7 @@ class StrictCandidateIdentity(unittest.TestCase):
                     info["appProperties"][field]=value
                     with self.assertRaisesRegex(
                         cloud.CloudGateDenied,
-                        "MST_MFX_STAGED_(CANDIDATE_IDENTITY|SOURCE_METADATA_INTEGRITY)_INVALID",
+                        "MST_MFX_STAGED_(CANDIDATE_IDENTITY_INVALID|SOURCE_METADATA_INTEGRITY_FAILURE)",
                     ):
                         cloud._quarantine_metadata(
                             d,info["id"],info["parents"][0],info["name"],body,
