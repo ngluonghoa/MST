@@ -172,6 +172,28 @@ class StrictCandidateIdentity(unittest.TestCase):
                             d,info["id"],info["parents"][0],info["name"],body,
                         )
 
+    def test_half_downgraded_new_candidate_digest_refuses_legacy_fallback(self):
+        for kind in ("DNSE", "SSI"):
+            with self.subTest(provider=kind):
+                d=self.dnse() if kind=="DNSE" else self.ssi()
+                def corrupt(data,info):
+                    data.pop("native_canonical_sha256")
+                    # Deliberately retain the new-generation Drive property.
+                data,info,body=reseal_native(
+                    d,provider=kind,mutate=corrupt,
+                )
+                self.assertIn(
+                    "native_canonical_sha256",info["appProperties"],
+                )
+                with self.assertRaisesRegex(
+                    cloud.CloudGateDenied,
+                    "MST_MFX_STAGED_CANDIDATE_IDENTITY_INVALID",
+                ):
+                    cloud._quarantine_metadata(
+                        d,info["id"],info["parents"][0],
+                        info["name"],body,
+                    )
+
     def test_historical_legacy_source_without_new_digest_remains_nonactionable(self):
         d=self.dnse()
         source=json.loads(d.media)
