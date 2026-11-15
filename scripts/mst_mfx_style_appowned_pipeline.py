@@ -488,6 +488,15 @@ def _quarantine_metadata(session: Any, file_id: str, parent: str,
             raise CloudGateDenied(
                 "MST_MFX_STAGED_NATIVE_FINGERPRINT_INVALID"
             ) from None
+        # Extra §193 in-process HTTP GET -> stage provenance receipt is
+        # optional only for historical pre-§193 private candidates.
+        try:
+            from scripts.mst_private_source_ingress_binding import (
+                verify_archived_source_binding,
+            )
+            verify_archived_source_binding(archive, info["appProperties"])
+        except ValueError:
+            raise CloudGateDenied("MST_MFX_STAGED_SOURCE_BINDING_INVALID") from None
         return info["version"]
     except CloudGateDenied:
         raise
@@ -497,6 +506,7 @@ def _quarantine_metadata(session: Any, file_id: str, parent: str,
 
 def stage_unpublished_dnse_source(
     session: Any, env: Mapping[str,str], payload: dict[str,Any],
+    *, ingress_binding: dict[str,Any] | None = None,
 ) -> dict[str,Any]:
     """Owner-gated quarantined source bytes only, never a published Cache head.
 
@@ -511,6 +521,21 @@ def stage_unpublished_dnse_source(
     validated=validate_dnse_native(payload,start,end,timeframe=tf)
     from scripts.mst_native_source_fingerprint import native_canonical_sha256
     native_sha=native_canonical_sha256("DNSE",env["MST_DNSE_SYMBOL"],tf,payload)
+    # The actual GitHub Actions path MUST supply the in-process GET receipt;
+    # direct synthetic unit-stage callers remain explicitly UNATTESTED.
+    if env.get("GITHUB_ACTIONS") == "true" and ingress_binding is None:
+        raise CloudGateDenied("MST_MFX_SOURCE_GITHUB_INGRESS_BINDING_REQUIRED")
+    ingress_sha = None
+    if ingress_binding is not None:
+        try:
+            from scripts.mst_private_source_ingress_binding import (
+                verify_source_binding,
+            )
+            ingress_sha = verify_source_binding(
+                "DNSE", env, payload, ingress_binding
+            )
+        except ValueError:
+            raise CloudGateDenied("MST_MFX_SOURCE_GITHUB_INGRESS_BINDING_INVALID") from None
     from scripts.mst_mfx_native_timeframes import provider_resolution
     native_resolution = provider_resolution("DNSE", tf)
     # Independent preflight for direct stage() imports: never rely on main().
@@ -581,6 +606,8 @@ def stage_unpublished_dnse_source(
     }
     if prior_link is not None:
         archive["prior_source_incremental_delta"] = prior_link
+    if ingress_sha is not None:
+        archive["source_ingress_binding"] = ingress_binding
     body=json.dumps(archive,sort_keys=True,separators=(",",":"),allow_nan=False).encode()
     if not 0<len(body)<=1_500_000:
         raise CloudGateDenied("MST_MFX_SOURCE_CHUNK_SIZE_DENIED")
@@ -611,6 +638,8 @@ def stage_unpublished_dnse_source(
                       else "dnse_native_candidate_v1"),
         },
     }
+    if ingress_sha is not None:
+        metadata["appProperties"]["source_ingress_binding_sha256"] = ingress_sha
     prefix=("--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
             +json.dumps(metadata,separators=(",",":"))
             +"\r\n--"+boundary+"\r\nContent-Type: application/json\r\n\r\n").encode()
@@ -684,8 +713,10 @@ def main() -> None:
         observation, payload = _fetch_dnse_once(requests.Session(),os.environ)
         receipt["provider"] = {"name":"DNSE_OFFICIAL_OPENAPI","read_only_observation":observation}
         if mode in (MODE_STAGE, MODE_STAGE_NATIVE):
+            from scripts.mst_private_source_ingress_binding import make_source_binding
+            ingress = make_source_binding("DNSE", os.environ, payload)
             receipt["unpublished_source_staging"] = stage_unpublished_dnse_source(
-                session,os.environ,payload)
+                session,os.environ,payload,ingress_binding=ingress)
             receipt["status"] = "MST_MFX_STYLE_UNPUBLISHED_SOURCE_ONLY"
     elif mode in (MODE_SSI, MODE_SSI_NATIVE, MODE_SSI_STAGE):
         import requests
@@ -694,8 +725,10 @@ def main() -> None:
         receipt["provider"] = summary
         if mode == MODE_SSI_STAGE:
             from scripts.mst_ssi_native_stage import stage_ssi_native_source
+            from scripts.mst_private_source_ingress_binding import make_source_binding
+            ingress = make_source_binding("SSI", os.environ, source_rows)
             receipt["unpublished_source_staging"] = stage_ssi_native_source(
-                session, os.environ, source_rows,
+                session, os.environ, source_rows, ingress_binding=ingress,
             )
             receipt["status"] = "MST_MFX_STYLE_UNPUBLISHED_SSI_SOURCE_ONLY"
 
