@@ -108,7 +108,7 @@ class CasIntentTests(unittest.TestCase):
         self.assertTrue(intent["external_atomic_cas_required"])
         self.assertFalse(intent["published"])
         self.assertFalse(intent["signals_eligible"])
-        summary=verify_pre_submit_snapshot(intent,observed_external_anchor=a)
+        summary=verify_pre_submit_snapshot(intent,observed_external_anchor=a,\n            expected_prepared_intent_sha256=intent["intent_sha256"])
         self.assertTrue(summary["expected_tip_match"])
         self.assertFalse(summary["external_store_atomic_cas_executed"])
         self.assertFalse(summary["owner_trust_anchor_verified"])
@@ -122,8 +122,8 @@ class CasIntentTests(unittest.TestCase):
         store=FakeAuthoritativeAtomicStore(initial)
         # BOTH stale writers can pass an early reread. An early read is
         # not a substitute for a real single-step authoritative CAS.
-        verify_pre_submit_snapshot(i1,observed_external_anchor=store.read())
-        verify_pre_submit_snapshot(i2,observed_external_anchor=store.read())
+        verify_pre_submit_snapshot(i1,observed_external_anchor=store.read(),\n            expected_prepared_intent_sha256=i1["intent_sha256"])
+        verify_pre_submit_snapshot(i2,observed_external_anchor=store.read(),\n            expected_prepared_intent_sha256=i2["intent_sha256"])
         self.assertTrue(store.atomic_compare_and_swap(i1))
         self.assertFalse(store.atomic_compare_and_swap(i2))
         self.assertEqual(store.commits,1)
@@ -132,7 +132,7 @@ class CasIntentTests(unittest.TestCase):
         with self.assertRaisesRegex(
             CasIntentDenied,"MST_CAS_STALE_OR_CHANGED_SNAPSHOT"
         ):
-            verify_pre_submit_snapshot(i2,observed_external_anchor=store.read())
+            verify_pre_submit_snapshot(i2,observed_external_anchor=store.read(),\n            expected_prepared_intent_sha256=i2["intent_sha256"])
 
     def test_unknown_ack_retry_is_not_auto_success(self):
         ckpts,initial,n1=self.data()
@@ -160,7 +160,7 @@ class CasIntentTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     CasIntentDenied,"MST_CAS_STALE_OR_CHANGED_SNAPSHOT"
                 ):
-                    verify_pre_submit_snapshot(intent,observed_external_anchor=changed)
+                    verify_pre_submit_snapshot(intent,observed_external_anchor=changed,\n                        expected_prepared_intent_sha256=intent["intent_sha256"])
 
     def test_proposal_from_wrong_public_key_rejected(self):
         ckpts,a,n=self.data()
@@ -223,12 +223,31 @@ class CasIntentTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     CasIntentDenied,"MST_CAS_PREPARED_INTENT_INTEGRITY_INVALID"
                 ):
-                    verify_pre_submit_snapshot(bad,observed_external_anchor=a)
+                    verify_pre_submit_snapshot(bad,observed_external_anchor=a,\n                        expected_prepared_intent_sha256=original["intent_sha256"])
         bad=dict(original,superfluous="FAKE")
         with self.assertRaisesRegex(
             CasIntentDenied,"MST_CAS_PREPARED_INTENT_INVALID"
         ):
-            verify_pre_submit_snapshot(bad,observed_external_anchor=a)
+            verify_pre_submit_snapshot(bad,observed_external_anchor=a,\n                        expected_prepared_intent_sha256=original["intent_sha256"])
+
+    def test_even_rehashed_replacement_cannot_match_original_intent(self):
+        from hashlib import sha256
+        ckpts,a,n=self.data()
+        original=prepare(ckpts,n,a)
+        changed=deepcopy(original)
+        changed["request_id"]="FAKE_REPLACED_REQUEST_0001"
+        changed["intent_sha256"]=sha256(json.dumps(
+            {k:v for k,v in changed.items() if k!="intent_sha256"},
+            sort_keys=True,separators=(",",":"),ensure_ascii=True,
+            allow_nan=False,
+        ).encode()).hexdigest()
+        with self.assertRaisesRegex(
+            CasIntentDenied,"MST_CAS_PREPARED_INTENT_REPLACED"
+        ):
+            verify_pre_submit_snapshot(
+                changed,observed_external_anchor=a,
+                expected_prepared_intent_sha256=original["intent_sha256"],
+            )
 
     def test_invalid_snapshot_identity_and_types_rejected(self):
         ckpts,a,n=self.data()
