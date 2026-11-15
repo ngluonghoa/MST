@@ -258,6 +258,28 @@ class SourceChainDiagnosticTests(unittest.TestCase):
         with self.assertRaisesRegex(LineageDenied,"GAP_OR_UNANCHORED_BRANCH"):
             check([a,b,c],a,b)
 
+    def test_malformed_nonstring_external_pin_cannot_crash_verifier(self):
+        a,b,c=chain()
+        for field,wrong in (
+            ("provider",["DNSE"]),
+            ("native_tf",["D1"]),
+            ("run_id",43270010001),
+            ("file_id",None),
+            ("source_sha256",{"digest":"fake"}),
+        ):
+            with self.subTest(field=field):
+                pin0=dict(pin(a,"DNSE"),**{field:wrong})
+                with self.assertRaisesRegex(
+                    LineageDenied,"MST_LINEAGE_FLOOR_PIN_INVALID",
+                ):
+                    verify_private_source_chain(
+                        [record(x) for x in (a,b,c)],
+                        parent=a["metadata"]["parents"][0],
+                        floor_pin=pin0,
+                        expected_head_pin=pin(c,"DNSE"),
+                        complete_census_supplied=True,
+                    )
+
     def test_new_valid_but_foreign_sibling_candidate_rejected(self):
         a,b,c=chain()
         alien=synthetic("SSI","43270010004")
