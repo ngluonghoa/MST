@@ -286,10 +286,26 @@ def _verified_prior(
 
 def stage_ssi_native_source(
     session: Any, env: Mapping[str,str], source_rows: list[dict[str,Any]],
+    *, ingress_binding: dict[str,Any] | None = None,
 ) -> dict[str,Any]:
     """Single private app-owned write with two readbacks; no publisher."""
     symbol,tf,first,last=_guard(env)
     rows=_normal_rows(source_rows,symbol=symbol,tf=tf,first=first,last=last)
+    # Live GitHub workflow must bind HTTP GET response to the exact
+    # provider/symbol/native TF/run request before uploading private source.
+    if env.get("GITHUB_ACTIONS") == "true" and ingress_binding is None:
+        raise cloud.CloudGateDenied("MST_SSI_STAGE_GITHUB_INGRESS_BINDING_REQUIRED")
+    ingress_sha=None
+    if ingress_binding is not None:
+        try:
+            from scripts.mst_private_source_ingress_binding import (
+                verify_source_binding,
+            )
+            ingress_sha=verify_source_binding(
+                "SSI",env,source_rows,ingress_binding,
+            )
+        except ValueError:
+            raise cloud.CloudGateDenied("MST_SSI_STAGE_INGRESS_BINDING_INVALID") from None
     # Imported helpers cannot rely on main() having performed private Drive
     # preflight. Verify exact app-owned root/CHUNKS before any source write.
     parent=cloud.require_private_chunks_scope(session)
@@ -330,6 +346,8 @@ def stage_ssi_native_source(
     }
     if prior is not None:
         archive["prior_source_incremental_delta"]=prior
+    if ingress_sha is not None:
+        archive["source_ingress_binding"]=ingress_binding
     body=json.dumps(archive,sort_keys=True,separators=(",",":"),
                     allow_nan=False).encode("utf-8")
     if not 0<len(body)<=MAX_ARCHIVE_BYTES:
@@ -353,6 +371,8 @@ def stage_ssi_native_source(
             "schema":"ssi_native_candidate_v1",
         },
     }
+    if ingress_sha is not None:
+        metadata["appProperties"]["source_ingress_binding_sha256"]=ingress_sha
     boundary="mst"+uuid4().hex
     prefix=("--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
             +json.dumps(metadata,separators=(",",":"))
