@@ -203,6 +203,7 @@ def verify_cas_receipt_claim_chain(
     previous_sha=expected_start_receipt_sha256
     previous_fence=expected_start_fence
     previous_after=None
+    seen_request_ids: set[str]=set()
     for item in entries:
         if (type(item) is not dict
                 or set(item)!={
@@ -223,6 +224,10 @@ def verify_cas_receipt_claim_chain(
             trusted_backend_key_id=trusted_backend_key_id,
             trusted_backend_public_key=trusted_backend_public_key,
         )
+        request_id=item["receipt"]["body"]["request_id"]
+        if request_id in seen_request_ids:
+            raise CasReceiptDenied("MST_CAS_RECEIPT_CHAIN_REPLAYED_REQUEST_ID")
+        seen_request_ids.add(request_id)
         previous_fence=result["observed_fence"]
         previous_sha=result["receipt_sha256"]
         previous_after=item["after_anchor"]
