@@ -73,13 +73,13 @@ def _native(provider: str, env: Mapping[str, str], raw: Any
             window = _window(provider, env)
             summary = validate_dnse_native(
                 raw, window["from_unix"], window["to_unix"],
-                timeframe=env["MST_SOURCE_TF"],
+                timeframe=env.get("MST_SOURCE_TF", "D1"),
             )
             return raw, summary["observed_native_rows"]
         from scripts.mst_ssi_native_stage import _normal_rows
         window = _window(provider, env)
         rows = _normal_rows(
-            raw, symbol=env["MST_SSI_SYMBOL"], tf=env["MST_SOURCE_TF"],
+            raw, symbol=env["MST_SSI_SYMBOL"], tf=env.get("MST_SOURCE_TF", "D1"),
             first=date.fromisoformat(window["from_date"]),
             last=date.fromisoformat(window["to_date"]),
         )
