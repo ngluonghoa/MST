@@ -459,6 +459,35 @@ def _quarantine_metadata(session: Any, file_id: str, parent: str,
                 or info["appProperties"].get("source_sha256")!=hashlib.sha256(body).hexdigest()
                 or info["appProperties"].get("mst_unpublished")!="true"):
             raise CloudGateDenied("MST_MFX_STAGED_SOURCE_METADATA_INTEGRITY_FAILURE")
+        # A new-format candidate also commits the exact sanitized native
+        # payload digest independently from the envelope/body digest. Legacy
+        # pre-§192 candidates without this optional property stay readable.
+        try:
+            archive = json.loads(body)
+            if type(archive) is not dict:
+                raise ValueError("not archive")
+            canonical = archive.get("native_canonical_sha256")
+            if canonical is not None:
+                from scripts.mst_native_source_fingerprint import (
+                    native_canonical_sha256,
+                )
+                p = {
+                    "DNSE_OFFICIAL_OPENAPI": "DNSE",
+                    "SSI_FASTCONNECT_V3_MARKET_DATA": "SSI",
+                }.get(archive.get("source"))
+                if (p is None or type(canonical) is not str
+                        or not re.fullmatch(r"[0-9a-f]{64}", canonical)
+                        or info["appProperties"].get("native_canonical_sha256") != canonical
+                        or native_canonical_sha256(
+                            p, archive.get("symbol"),
+                            archive.get("source_native_tf"),
+                            archive.get("raw_native"),
+                        ) != canonical):
+                    raise ValueError("native fingerprint mismatch")
+        except (ValueError, TypeError, KeyError):
+            raise CloudGateDenied(
+                "MST_MFX_STAGED_NATIVE_FINGERPRINT_INVALID"
+            ) from None
         return info["version"]
     except CloudGateDenied:
         raise
@@ -480,6 +509,8 @@ def stage_unpublished_dnse_source(
     tf = env.get("MST_SOURCE_TF", "D1")
     start,end=int(env["MST_DNSE_FROM_UNIX"]),int(env["MST_DNSE_TO_UNIX"])
     validated=validate_dnse_native(payload,start,end,timeframe=tf)
+    from scripts.mst_native_source_fingerprint import native_canonical_sha256
+    native_sha=native_canonical_sha256("DNSE",env["MST_DNSE_SYMBOL"],tf,payload)
     from scripts.mst_mfx_native_timeframes import provider_resolution
     native_resolution = provider_resolution("DNSE", tf)
     # Independent preflight for direct stage() imports: never rely on main().
@@ -545,6 +576,7 @@ def stage_unpublished_dnse_source(
         "official_venue_closed_verified":False,
         "independent_publish_cas_verified":False,
         "eligible_for_signals":False,
+        "native_canonical_sha256":native_sha,
         "raw_native":payload,
     }
     if prior_link is not None:
@@ -571,6 +603,7 @@ def stage_unpublished_dnse_source(
         "description":"UNPUBLISHED quarantined source - NOT Cache/Signals",
         "appProperties":{
             "mst_unpublished":"true","source_sha256":sha,
+            "native_canonical_sha256":native_sha,
             "source_symbol":env["MST_DNSE_SYMBOL"],
             "source_native_tf":tf,
             "source_run_id":env["GITHUB_RUN_ID"],
