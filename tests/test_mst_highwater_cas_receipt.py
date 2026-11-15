@@ -320,6 +320,35 @@ class SignedCasReceiptContractTests(unittest.TestCase):
                         trusted_backend_public_key=FAKE_BACKEND_PUBLIC,
                     )
 
+    def test_reused_request_id_across_new_signed_fence_is_replay(self):
+        _,chain=snapshots()
+        store=FakeAuthoritativeAtomicStore(anchor(chain))
+        cp1,e1=test_entry(chain,store,run="43270010004",
+                          request="FAKE_REUSED_CAS_REQUEST_0001")
+        # Simulate a defect in the untrusted external backend: it lost its
+        # durable idempotency index but kept the signed highwater history.
+        store.seen_requests.clear()
+        cp2,e2=test_entry(
+            [*chain,cp1],store,previous_digest=receipt_sha256(e1["receipt"]),
+            previous_fence=1,run="43270010005",
+            request="FAKE_REUSED_CAS_REQUEST_0001",
+        )
+        self.assertEqual(cp2["body"]["sequence"],5)
+        self.assertTrue(verify_entry(
+            e2,previous_digest=receipt_sha256(e1["receipt"]),
+            previous_fence=1,
+        )["ed25519_valid_for_supplied_backend_key"])
+        with self.assertRaisesRegex(
+            CasReceiptDenied,"MST_CAS_RECEIPT_CHAIN_REPLAYED_REQUEST_ID"
+        ):
+            verify_cas_receipt_claim_chain(
+                [e1,e2],expected_start_receipt_sha256=None,
+                expected_start_fence=0,
+                expected_tip_receipt_sha256=receipt_sha256(e2["receipt"]),
+                trusted_backend_key_id=FAKE_BACKEND_ID,
+                trusted_backend_public_key=FAKE_BACKEND_PUBLIC,
+            )
+
     def test_valid_signatures_do_not_supply_immutable_external_monotone_trust(self):
         _,_,_,entry=self.setup_one()
         result=verify_entry(entry)
