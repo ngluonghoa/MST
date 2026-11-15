@@ -311,6 +311,13 @@ def validate_dnse_native(
         raise CloudGateDenied("MST_MFX_DNSE_NATIVE_TF_UNSUPPORTED") from None
     if type(payload) is not dict:
         raise CloudGateDenied("MST_MFX_DNSE_NATIVE_OBJECT_REQUIRED")
+    # Exact official OHLC historical response schema. Previously an
+    # unexpected vendor field (including a token/account attribute) could
+    # pass validation and be written verbatim to private CHUNKS as raw_native.
+    # Fail closed on API version drift rather than silently persisting extras.
+    allowed = frozenset(("t","o","h","l","c","v","nextTime"))
+    if set(payload) != allowed or any(type(k) is not str for k in payload):
+        raise CloudGateDenied("MST_MFX_DNSE_NATIVE_FIELD_SET_DRIFT")
     names = ("t","o","h","l","c","v")
     if any(type(payload.get(k)) is not list for k in names):
         raise CloudGateDenied("MST_MFX_DNSE_NATIVE_ARRAYS_REQUIRED")
