@@ -56,9 +56,11 @@ def _run(value: Any) -> bool:
 
 def _proof(proof: Any, label: str) -> Mapping[str, Any]:
     if (type(proof) is not dict or set(proof) != ANCHOR_KEYS
+            or type(proof["provider"]) is not str
             or proof["provider"] not in PROVIDERS
             or type(proof["symbol"]) is not str
             or SYMBOL.fullmatch(proof["symbol"]) is None
+            or type(proof["native_tf"]) is not str
             or proof["native_tf"] not in TFS
             or not _id(proof["file_id"])
             or not _run(proof["run_id"])
