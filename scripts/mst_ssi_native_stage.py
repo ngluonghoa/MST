@@ -311,6 +311,9 @@ def stage_ssi_native_source(
             if cloud._exact_named_quarantine(session,parent,candidate_name):
                 raise cloud.CloudGateDenied("MST_SSI_STAGE_DUPLICATE_ATTEMPT_MANUAL_REVIEW")
             return no_change
+    from scripts.mst_native_source_fingerprint import native_canonical_sha256
+    canonical_rows=[rows[k] for k in sorted(rows)]
+    native_sha=native_canonical_sha256("SSI",symbol,tf,canonical_rows)
     archive={
         "schema":"mst.cloud.ssi_native_unpublished_candidate.v0.1",
         "project":"MST","source":"SSI_FASTCONNECT_V3_MARKET_DATA",
@@ -322,7 +325,8 @@ def stage_ssi_native_source(
         "price_unit_adjusted_basis_verified":False,
         "independent_publish_cas_verified":False,
         "eligible_for_signals":False,
-        "raw_native":[rows[k] for k in sorted(rows)],
+        "native_canonical_sha256":native_sha,
+        "raw_native":canonical_rows,
     }
     if prior is not None:
         archive["prior_source_incremental_delta"]=prior
@@ -343,6 +347,7 @@ def stage_ssi_native_source(
         "appProperties":{
             "mst_unpublished":"true",
             "source_sha256":checksum,
+            "native_canonical_sha256":native_sha,
             "source_symbol":symbol,"source_native_tf":tf,
             "source_run_id":env["GITHUB_RUN_ID"],
             "schema":"ssi_native_candidate_v1",
