@@ -93,7 +93,7 @@ class NativeFingerprintTests(unittest.TestCase):
         ):
             native_canonical_sha256("DNSE","FPT","D1",damaged)
         huge=copy.deepcopy(sample)
-        huge["o"][0]=int("9"*1500001)
+        huge["o"][0]="9"*1500001
         with self.assertRaises(NativeFingerprintDenied):
             native_canonical_sha256("DNSE","FPT","D1",huge)
 
