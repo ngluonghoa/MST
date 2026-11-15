@@ -488,6 +488,19 @@ def _quarantine_metadata(session: Any, file_id: str, parent: str,
             raise CloudGateDenied(
                 "MST_MFX_STAGED_NATIVE_FINGERPRINT_INVALID"
             ) from None
+        # §194: a valid body SHA alone does not certify that Drive filename,
+        # provider, symbol, timeframe, source run and native bars agree.
+        # New-format candidates MUST satisfy all identities and native OHLCV
+        # semantics. Legacy no-native-SHA files remain read-only/unpublished.
+        try:
+            from scripts.mst_private_candidate_identity import (
+                verify_new_candidate_identity,
+            )
+            verify_new_candidate_identity(archive, info)
+        except ValueError:
+            raise CloudGateDenied(
+                "MST_MFX_STAGED_CANDIDATE_IDENTITY_INVALID"
+            ) from None
         # Extra §193 in-process HTTP GET -> stage provenance receipt is
         # optional only for historical pre-§193 private candidates.
         try:
