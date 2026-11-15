@@ -130,6 +130,34 @@ class SignedCasReceiptContractTests(unittest.TestCase):
             self.assertFalse(diag[key],key)
         self.assertEqual(store.commits,1)
 
+    def test_ssi_m5_signed_source_head_receipt_scope_is_preserved(self):
+        _,chain=snapshots("SSI","M5")
+        before=anchor(chain)
+        store=FakeAuthoritativeAtomicStore(before)
+        next_checkpoint=proposed(
+            chain,run="43270010004",provider="SSI",tf="M5",
+        )
+        intent=prepare(
+            chain,next_checkpoint,before,request_id="FAKE_SSI_M5_CAS_REQUEST_0001",
+        )
+        self.assertTrue(store.atomic_compare_and_swap(intent))
+        entry={
+            "prepared_intent":intent,
+            "before_anchor":before,
+            "after_anchor":store.read(),
+            "original_intent_sha256":intent["intent_sha256"],
+            "receipt":claim(intent,before,store.read()),
+        }
+        result=verify_entry(entry)
+        self.assertTrue(result["readback_matches_signed_claim"])
+        self.assertEqual(
+            entry["receipt"]["body"]["committed_head_pin"]["provider"],"SSI",
+        )
+        self.assertEqual(
+            entry["receipt"]["body"]["committed_head_pin"]["native_tf"],"M5",
+        )
+        self.assertFalse(result["cache_published"])
+
     def test_two_concurrent_writer_one_fake_commits_only_winner_gets_receipt(self):
         _,chain=snapshots()
         before=anchor(chain)
