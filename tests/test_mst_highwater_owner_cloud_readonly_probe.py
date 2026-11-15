@@ -37,7 +37,7 @@ def replies():
         BASE + "/git/ref/heads/" + BRANCH: {
             "ref": REF, "object": {"type": "commit", "sha": OLD_SHA},
         },
-        BASE + "/rules/branches/highwater%2F" + SERIES: [
+        BASE + "/rules/branches/highwater%2F" + SERIES + "?per_page=100&page=1": [
             {"type": "deletion"}, {"type": "non_fast_forward"},
             {"type": "required_linear_history"},
         ],
@@ -117,7 +117,7 @@ class OwnerHighwaterCloudReadOnlyProbeTests(unittest.TestCase):
 
     def test_missing_one_required_rule_stays_ineligible(self):
         data = replies()
-        data[BASE + "/rules/branches/highwater%2F" + SERIES].pop()
+        data[BASE + "/rules/branches/highwater%2F" + SERIES + "?per_page=100&page=1"].pop()
         r, _ = examine(data=data)
         self.assertFalse(r["required_branch_rule_types_reported"])
         self.assertFalse(r["highwater_ref_write_authorized"])
@@ -186,7 +186,7 @@ class OwnerHighwaterCloudReadOnlyProbeTests(unittest.TestCase):
                 examine(mode=mode)
 
     def test_effective_rules_incomplete_page_malformed_denied(self):
-        path = BASE + "/rules/branches/highwater%2F" + SERIES
+        path = BASE + "/rules/branches/highwater%2F" + SERIES + "?per_page=100&page=1"
         for value in ({}, [1], [{"type": True}],
                       [{"type": "a"}] * 100):
             with self.subTest(type=type(value).__name__), self.assertRaises(
