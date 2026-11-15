@@ -114,11 +114,12 @@ class GithubHighwaterRefProposalTests(unittest.TestCase):
             self.assertFalse(diagnostic[k], k)
 
     def test_two_siblings_share_old_parent_then_fake_only_one_wins(self):
-        _, a, _, ia, ref, ca = self.data()
-        _, _, _, ib, _, cb = example(
-            run="43270010005", request="FAKE_FF_OWNER_REQ_0002",
-            sha=NEW_B_SHA,
+        chain, a, _, ia, ref, ca = self.data()
+        cp_b = proposed(chain, run="43270010005")
+        ib = prepare(
+            chain, cp_b, a, request_id="FAKE_FF_OWNER_REQ_0002",
         )
+        cb = dict(ca, sha=NEW_B_SHA)
         pa = make(ia, a, ref, ca)
         pb = make(ib, a, ref, cb)
         store = FakeFastForwardRef(OLD_SHA)
@@ -149,10 +150,11 @@ class GithubHighwaterRefProposalTests(unittest.TestCase):
         store = FakeFastForwardRef(OLD_SHA)
         pa = make(i, a, ref, ca)
         self.assertTrue(store.try_fast_forward(ca, force=pa["force"]))
-        _, _, _, old_loser, _, cb = example(
-            run="43270010005", request="FAKE_FF_OWNER_REQ_0002",
-            sha=NEW_B_SHA,
+        old_loser_cp = proposed(chain, run="43270010005")
+        old_loser = prepare(
+            chain, old_loser_cp, a, request_id="FAKE_FF_OWNER_REQ_0002",
         )
+        cb = dict(ca, sha=NEW_B_SHA)
         self.assertFalse(store.try_fast_forward(cb))
         moved = dict(ref, sha=store.sha)
         with self.assertRaisesRegex(GithubRefProposalDenied, "REF_HEAD_MISMATCH"):
