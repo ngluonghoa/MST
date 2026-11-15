@@ -58,7 +58,12 @@ def verify_new_candidate_identity(
     if type(props) is not dict:
         raise CandidateIdentityDenied("MST_SOURCE_CANDIDATE_IDENTITY_INVALID")
     if "native_canonical_sha256" not in archive:
-        if "source_ingress_binding" in archive:
+        # A half-downgraded file MUST NOT be misread as a pre-§192 legacy
+        # candidate. Legacy is recognized only if BOTH archive and Drive
+        # metadata lack the new digest, and there is no ingress receipt.
+        if ("native_canonical_sha256" in props
+                or "source_ingress_binding" in archive
+                or "source_ingress_binding_sha256" in props):
             raise CandidateIdentityDenied("MST_SOURCE_CANDIDATE_IDENTITY_INVALID")
         return False
 
