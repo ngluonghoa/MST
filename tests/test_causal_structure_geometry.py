@@ -154,9 +154,8 @@ class CausalPivot206Tests(unittest.TestCase):
     def test_duplicate_or_reordered_history_blocked(self):
         d=highs()
         for hist in (d[:3]+(d[2],), (d[1],d[0],d[2],d[3])):
-            with self.subTest(series=hist),self.assertEqual(
-                pivot(hist=hist).state,GeometryState.BLOCKED,
-            )
+            with self.subTest(series=hist):
+                self.assertEqual(pivot(hist=hist).state,GeometryState.BLOCKED)
 
     def test_mixed_provider_calendar_adjustment_and_basis_blocked(self):
         original=highs()
@@ -179,10 +178,11 @@ class CausalPivot206Tests(unittest.TestCase):
                 one.observation_revision,adjustment_revision="later_adjustment")),
         )
         for changed in cases:
-            with self.subTest(case=changed.market_bar_key),self.assertEqual(
-                pivot(hist=(original[0],snap(changed))+original[2:4]).reason,
-                "MIXED_SOURCE_BASIS_OR_POLICY",
-            )
+            with self.subTest(case=changed.market_bar_key):
+                self.assertEqual(
+                    pivot(hist=(original[0],snap(changed))+original[2:4]).reason,
+                    "MIXED_SOURCE_BASIS_OR_POLICY",
+                )
 
     def test_quality_partial_coverage_and_future_first_known_block(self):
         original=highs()
@@ -198,10 +198,11 @@ class CausalPivot206Tests(unittest.TestCase):
                     verified_at_utc=future.retrieved_at_utc+timedelta(minutes=1)),
         )
         for row in cases:
-            with self.subTest(case=row.observation_revision),self.assertEqual(
-                pivot(hist=original[:2]+(snap(row),original[3])).state,
-                GeometryState.BLOCKED,
-            )
+            with self.subTest(case=row.observation_revision):
+                self.assertEqual(
+                    pivot(hist=original[:2]+(snap(row),original[3])).state,
+                    GeometryState.BLOCKED,
+                )
 
     def test_h4_requires_independent_aggregation_not_fixture_label(self):
         data=series([
@@ -348,10 +349,11 @@ class CausalBos206Tests(unittest.TestCase):
                     row,market_bar_key=key,observation_key=obs,
                     observation_revision=rev,
                 ))
-            with self.subTest(field=field),self.assertEqual(
-                bos(atr=tuple(rows)).reason,
-                "ATR14_CROSS_TF_PROVIDER_BASIS_MISMATCH",
-            )
+            with self.subTest(field=field):
+                self.assertEqual(
+                    bos(atr=tuple(rows)).reason,
+                    "ATR14_CROSS_TF_PROVIDER_BASIS_MISMATCH",
+                )
 
     def test_breakout_missing_source_closure_or_venue_attestation_blocks(self):
         d=highs()
