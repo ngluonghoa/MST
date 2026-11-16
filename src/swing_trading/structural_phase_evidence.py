@@ -196,7 +196,8 @@ def inspect_phase_bos_evidence(
             or len(atr_d1_history) > MAX_HISTORY):
         raise PhaseEvidenceDenied("MST_207_INVALID_OR_OVERSIZED_INPUT")
     target = breakout.selected
-    if target is None or target.market_bar_key.timeframe not in route[1]:
+    target_timeframe = breakout.market_bar_key.timeframe
+    if target_timeframe not in route[1]:
         raise PhaseEvidenceDenied("MST_207_PHASE_TIMEFRAME_MISMATCH")
     side = route[0]
     ref = MANIFESTS[zone_id].predicate_for(phase)
@@ -204,9 +205,14 @@ def inspect_phase_bos_evidence(
     def finish(state, reason, pivot_id=None, bos_id=None, witnessed=None):
         return PhaseStructureEvidence(
             zone_id, strategy, variant_id, phase, ref, side,
-            target.market_bar_key.timeframe, as_of_utc, state, reason,
+            target_timeframe, as_of_utc, state, reason,
             pivot_id, bos_id, witnessed,
         )
+
+    # A revision conflict has a grounded MarketBarKey but no selected bar.
+    # This is BLOCKED, never a reason to guess a revision or report NO_SIGNAL.
+    if target is None:
+        return finish(PhaseEvidenceState.BLOCKED, "UNRESOLVED_TARGET_REVISION")
 
     geometry = inspect_closed_bos_geometry(
         pivot_history, pivot_index=pivot_index,
