@@ -76,7 +76,7 @@ these require separate consumer, migration and rollback evidence.
 | ssi_multivenue_review | source_adapter_and_quality | 129 | 11 | 59 | 0 | KEEP | none |
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 2 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| structural_phase_evidence | domain_and_reference | 313 | 27 | 100 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| structural_phase_evidence | domain_and_reference | 362 | 27 | 100 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
