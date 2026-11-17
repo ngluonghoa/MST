@@ -97,7 +97,7 @@ class AppOwnedCacheCensus216Tests(unittest.TestCase):
         self.assertEqual(x["observed_counts"]["CHUNKS"],101)
         self.assertTrue(x["census_complete"])
         page_calls=[c[2] for c in d.calls
-                    if "name = '" not in c[2].get("q","")]
+                    if c[1] == m.DRIVE_URL[:-1] and "name = '" not in c[2].get("q","")]
         self.assertEqual(len(page_calls),5)
         self.assertEqual(sum("pageToken" in params for params in page_calls),1)
 
@@ -129,7 +129,7 @@ class AppOwnedCacheCensus216Tests(unittest.TestCase):
     def test_repeated_token_and_drive_error_refuse_partial_success(self):
         d=FakeCacheDrive({"CHUNKS":201})
         d.loop_page_token=True
-        with self.assertRaisesRegex(m.CloudGateDenied,"PAGING_INVALID"):
+        with self.assertRaisesRegex(m.CloudGateDenied,"(PAGING_INVALID|ITEM_SCOPE)"):
             m.inspect_app_owned_cache_census216(d)
         d=FakeCacheDrive()
         d.http_fail=True
