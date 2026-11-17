@@ -37,13 +37,13 @@ these require separate consumer, migration and rollback evidence.
 | fixture_scan | cache_and_persistence | 88 | 8 | 44 | 0 | KEEP | none |
 | incremental_cache | cache_and_persistence | 441 | 23 | 83 | 9 | IMPROVE | HIGH_BRANCH_SCORE |
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| locked_ui10_binding | domain_and_reference | 321 | 69 | 131 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| locked_ui10_renderer | domain_and_reference | 268 | 14 | 147 | 1 | IMPROVE | FUNCTION_90_PLUS |
+| locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| locked_ui10_renderer | domain_and_reference | 290 | 16 | 169 | 1 | IMPROVE | FUNCTION_90_PLUS |
 | market_data | domain_and_reference | 162 | 23 | 29 | 22 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_cache_signal_ui_preview | domain_and_reference | 152 | 31 | 55 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 307 | 27 | 64 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_d1_math_reference | domain_and_reference | 169 | 24 | 78 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_multitf_readiness | domain_and_reference | 177 | 35 | 91 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -73,12 +73,12 @@ these require separate consumer, migration and rollback evidence.
 | ssi_multivenue_review | source_adapter_and_quality | 129 | 11 | 59 | 0 | KEEP | none |
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 1 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| structural_phase_evidence | domain_and_reference | 313 | 27 | 100 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| structural_phase_evidence | domain_and_reference | 313 | 27 | 100 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
 | vn_release_rollback | engineering_governance | 345 | 35 | 97 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 2 | KEEP | none |
+| zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 3 | KEEP | none |
 
 ## Review gates
 Any proposed change must freeze current fixture behavior, assess direct
