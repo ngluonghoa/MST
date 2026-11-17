@@ -93,6 +93,8 @@ def classify_safe_oauth_failure217(exc: Exception) -> str:
         args = exc.args
         details = args[1] if len(args) > 1 else None
         kind = details.get("error") if type(details) is dict else None
+        if type(kind) is not str:
+            kind = None  # malformed OAuth errors must never break the guard
         return {
             "invalid_grant": "MST_217_OAUTH_INVALID_GRANT_REAUTHORIZE_REQUIRED",
             "invalid_client": "MST_217_OAUTH_INVALID_CLIENT_CONFIGURATION",
