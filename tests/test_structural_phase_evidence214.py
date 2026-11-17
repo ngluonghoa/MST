@@ -102,6 +102,14 @@ class B2S2CausalNear214Tests(unittest.TestCase):
         self.assertIs(r.state,NearEvidenceState214.BLOCKED)
         self.assertIsNone(r.preview_id)
 
+    def test_broken_first_or_later_pivot_row_never_crashes_or_approves(self):
+        rows=bars_for(StructureSide.LOW,Timeframe.H1)[:4]
+        for corrupted in ((None,)+rows[1:],rows[:2]+(None,)+rows[3:]):
+            with self.subTest(first=corrupted[0] is None):
+                r=near(history=corrupted)
+                self.assertIs(r.state,NearEvidenceState214.BLOCKED)
+                self.assertIsNone(r.preview_id)
+
     def test_d1_atr_missing_14_bars_or_future_blocks(self):
         for history in ((),atr_d1()[:14]):
             r=near(atr=history)
