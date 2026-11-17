@@ -359,13 +359,17 @@ class LabelHypothesis211:
                     != self.input_row_count)
                 or self.candidate.unexpected_label_count
                     != self.out_of_continuous_count
-                or any((
-                    self.timestamp_semantics_confirmed,
-                    self.zero_volume_imputation_allowed,
-                    self.carry_forward_allowed,
-                    self.provider_correction_first_known_confirmed,
-                    self.action_eligible,
-                ))):
+                or (self.meaning is MinuteLabelMeaning211.START_UNVERIFIED
+                    and self.candidate.reason
+                    != "CLOCK_SLOT_GEOMETRY_ONLY_NO_PROVIDER_LABEL_OR_BAR_FINALITY")
+                or (self.meaning is MinuteLabelMeaning211.END_UNVERIFIED
+                    and self.candidate.reason
+                    != "END_LABEL_IS_UNVERIFIED_HYPOTHESIS_NOT_PROVIDER_SEMANTICS")
+                or self.timestamp_semantics_confirmed is not False
+                or self.zero_volume_imputation_allowed is not False
+                or self.carry_forward_allowed is not False
+                or self.provider_correction_first_known_confirmed is not False
+                or self.action_eligible is not False):
             raise HoseClockDenied("MST_211_HYPOTHESIS_CLAIMS_SOURCE_AUTHORITY")
 
 
@@ -391,13 +395,11 @@ class DualLabelComparison211:
                 or self.start.candidate.symbol != self.end.candidate.symbol
                 or self.start.candidate.trading_day != self.end.candidate.trading_day
                 or self.selected_meaning is not None
-                or any((
-                    self.source_timestamp_attested,
-                    self.venue_symbol_day_attested,
-                    self.licensed_revision_history_attested,
-                    self.source_m15_h1_eligible,
-                    self.action_eligible,
-                ))):
+                or self.source_timestamp_attested is not False
+                or self.venue_symbol_day_attested is not False
+                or self.licensed_revision_history_attested is not False
+                or self.source_m15_h1_eligible is not False
+                or self.action_eligible is not False):
             raise HoseClockDenied("MST_211_COMPARISON_CANNOT_SELECT_OR_AUTHORIZE")
 
 
