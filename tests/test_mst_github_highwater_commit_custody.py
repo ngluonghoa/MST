@@ -208,7 +208,9 @@ class GitHighwaterCustodyTests(unittest.TestCase):
 
     def test_tree_hash_must_match_original_proposal(self):
         fixture = sample()
-        changed = fixture["raw_tree"][:-1] + b"Z"
+        # Guaranteed one-bit mutation: appending a fixed byte is flaky when
+        # the original Git object SHA happens to end with that same byte.
+        changed = fixture["raw_tree"][:-1] + bytes([fixture["raw_tree"][-1] ^ 0x01])
         with self.assertRaisesRegex(GitObjectCustodyDenied, "TREE_SINGLE_BLOB"):
             check(fixture, raw_tree=changed)
         # A valid other single-blob tree cannot match old proposed tree SHA.
