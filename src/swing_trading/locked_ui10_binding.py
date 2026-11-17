@@ -8,6 +8,7 @@ ANALYSIS or confirm a buy/sell/position, nor does it render a UI.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
@@ -18,6 +19,8 @@ from typing import Any
 from .contracts import DecisionStatus, Strategy, ZONE_IDS
 from .private_cache_source_bridge import PrivateD1Diagnostic
 from .replay import require_utc
+from .structural_phase_evidence import PhaseStructureEvidence, PhaseEvidenceState, ROUTES
+from .zone_manifest_v03 import MANIFESTS
 
 UI_VERSION="UI-1.0"
 SCHEMA="mst.ui10.private_d1_diagnostic_viewmodel.v0.1"
@@ -134,6 +137,34 @@ class LockedUi10DiagnosticViewModel:
                        or x.get("hard_fail") is not True
                        or x.get("evidence")!=[] for x in audit)):
             raise LockedUi10Denied("MST_LOCKED_UI10_AUDIT_INVALID")
+        # §208: additional data is UNBOUND to the D1 reference. It is a
+        # separate diagnostic within original section F, never zone evidence.
+        previews=self.data.get("structural_preview_diagnostics",[])
+        if (type(previews) is not list or len(previews)>2
+                or len({r.get("strategy") for r in previews
+                        if type(r) is dict})!=len(previews)
+                or any(type(r) is not dict
+                       or set(r)!={"strategy","zone_id","phase","timeframe",
+                                   "predicate_ref","preview_digest_sha256",
+                                   "source_relation","status","action_eligible"}
+                       or r.get("strategy") not in ("SHORT","SWING")
+                       or r.get("status")!="UNVERIFIED"
+                       or r.get("source_relation")!="UNBOUND_TO_PRIVATE_D1"
+                       or r.get("action_eligible") is not False
+                       or (r.get("zone_id"),r.get("phase")) not in
+                          ((z,p) for z,v,p in ROUTES)
+                       or (r.get("zone_id"),r.get("timeframe")) not in
+                          ((z,tf.value) for (z,v,p),(side,tfs) in ROUTES.items()
+                             for tf in tfs)
+                       or r.get("predicate_ref") not in
+                          (MANIFESTS[z].predicate_for(p) for z,v,p in ROUTES
+                           if z==r.get("zone_id") and p==r.get("phase"))
+                       or type(r.get("preview_digest_sha256")) is not str
+                       or len(r["preview_digest_sha256"])!=64
+                       or any(x not in "0123456789abcdef"
+                              for x in r["preview_digest_sha256"])
+                       for r in previews)):
+            raise LockedUi10Denied("MST_LOCKED_UI10_UNBOUND_PREVIEW_SCOPE_INVALID")
         branches=self.data.get("strategies")
         if (type(branches) is not dict
                 or set(branches)!={"SHORT","SWING"}
@@ -319,3 +350,64 @@ def build_private_d1_ui10_diagnostic(
     raw=json.dumps(view,sort_keys=True,separators=(",",":"),
                    ensure_ascii=False,allow_nan=False).encode("utf-8")
     return LockedUi10DiagnosticViewModel(view,sha256(raw).hexdigest())
+
+
+def attach_unbound_structural_previews(
+    model: LockedUi10DiagnosticViewModel,
+    previews: tuple[PhaseStructureEvidence, ...],
+) -> LockedUi10DiagnosticViewModel:
+    """Append hash-only hypothetical M15/H1 BOS geometry to LOCKED section F.
+
+    The connected-MCP private D1 reference and externally supplied v1.2
+    structural bars are NOT validated as one issuer/provider/price basis.
+    It is forbidden to transfer preview events into zone_rows.evidence,
+    trading strategies, qualified TFs, or the 8-step completion audit.
+    """
+    if type(model) is not LockedUi10DiagnosticViewModel:
+        raise LockedUi10Denied("MST_LOCKED_UI10_PREVIEW_MODEL_TYPE")
+    LockedUi10DiagnosticViewModel(model.data,model.reference_sha256)
+    if type(previews) is not tuple or len(previews)>2:
+        raise LockedUi10Denied("MST_LOCKED_UI10_PREVIEW_COUNT_INVALID")
+    if model.data.get("structural_preview_diagnostics"):
+        raise LockedUi10Denied("MST_LOCKED_UI10_PREVIEW_REPEAT_ATTACH")
+    expected_asof=datetime.fromisoformat(model.data["as_of_utc"])
+    seen=set()
+    rows=[]
+    for p in previews:
+        if (type(p) is not PhaseStructureEvidence
+                or p.state is not PhaseEvidenceState.CROSS_GEOMETRY_UNVERIFIED
+                or p.status is not DecisionStatus.UNVERIFIED
+                or p.source_independently_attested is not False
+                or p.detector_approved is not False
+                or p.action_eligible is not False
+                or p.as_of_utc!=expected_asof
+                or (p.zone_id,p.variant_id,p.phase) not in ROUTES
+                or p.timeframe not in ROUTES[(p.zone_id,p.variant_id,p.phase)][1]
+                or p.predicate_ref!=MANIFESTS[p.zone_id].predicate_for(p.phase)
+                or p.bos_preview_id is None or p.pivot_preview_id is None
+                or p.strategy in seen):
+            raise LockedUi10Denied("MST_LOCKED_UI10_PREVIEW_NOT_UNBOUND_OR_CAUSAL")
+        seen.add(p.strategy)
+        # Rehash to scope this opaque preview handle to the exact private-D1
+        # diagnostic run; do NOT include raw upstream revisions or prices.
+        digest=sha256(
+            ("MST208/UNBOUND_TO_D1/v1|"+model.reference_sha256+"|"
+             +p.bos_preview_id+"|"+p.pivot_preview_id).encode()
+        ).hexdigest()
+        rows.append({
+            "strategy":p.strategy.value,
+            "zone_id":p.zone_id,
+            "phase":p.phase,
+            "timeframe":p.timeframe.value,
+            "predicate_ref":p.predicate_ref,
+            "preview_digest_sha256":digest,
+            "source_relation":"UNBOUND_TO_PRIVATE_D1",
+            "status":"UNVERIFIED",
+            "action_eligible":False,
+        })
+    changed=deepcopy(model.data)
+    if rows:
+        changed["structural_preview_diagnostics"]=rows
+    serialized=json.dumps(changed,sort_keys=True,separators=(",",":"),
+                          ensure_ascii=False,allow_nan=False).encode()
+    return LockedUi10DiagnosticViewModel(changed,sha256(serialized).hexdigest())
