@@ -20,12 +20,14 @@ from typing import Any
 from .contracts import DecisionStatus, Strategy
 from .locked_ui10_binding import (
     LockedUi10DiagnosticViewModel, build_private_d1_ui10_diagnostic,
+    attach_unbound_structural_previews,
 )
 from .locked_ui10_renderer import render_ui10_incomplete_html
 from .private_cache_source_bridge import (
     diagnose_private_d1_without_signals,
 )
 from .private_multitf_readiness import TF_NAMES
+from .structural_phase_evidence import PhaseStructureEvidence
 
 
 class PrivateCacheUiPreviewDenied(ValueError):
@@ -66,6 +68,11 @@ class PrivateCacheUiPreview:
                 or self.safe_summary.get("source_production_qualified") is not False
                 or self.safe_summary.get("trade_orders") != 0):
             raise PrivateCacheUiPreviewDenied("MST_CACHE_UI_PREVIEW_AUTHORITY_OR_DIGEST_INVALID")
+        count=self.safe_summary.get("unbound_structural_preview_count")
+        attached=self.viewmodel.data.get("structural_preview_diagnostics",[])
+        if (type(count) is not int or not 0<=count<=2
+                or count!=len(attached)):
+            raise PrivateCacheUiPreviewDenied("MST_CACHE_UI_UNBOUND_PREVIEW_DRIFT")
         coverage = self.safe_summary.get("required_tf_coverage")
         if (type(coverage) is not list or len(coverage) != 6
                 or [row.get("timeframe") for row in coverage
@@ -98,6 +105,7 @@ class PrivateCacheUiPreview:
 def render_private_d1_cache_signal_ui_preview(
     private_d1_snapshot: Any, *, as_of_utc: datetime,
     run_id: str, exchange: str,
+    structure_previews: tuple[PhaseStructureEvidence, ...] = (),
 ) -> PrivateCacheUiPreview:
     """Run the existing PRIVATE SOURCE→ORIGINAL UNVERIFIED ENGINE→LOCKED UI.
 
@@ -117,6 +125,7 @@ def render_private_d1_cache_signal_ui_preview(
     viewmodel = build_private_d1_ui10_diagnostic(
         short, swing, run_id=run_id, exchange=exchange,
     )
+    viewmodel = attach_unbound_structural_previews(viewmodel, structure_previews)
     html = render_ui10_incomplete_html(viewmodel)
     digest = sha256(html.encode("utf-8")).hexdigest()
     tf_coverage = [
@@ -135,6 +144,9 @@ def render_private_d1_cache_signal_ui_preview(
         "as_of_utc": as_of_utc.isoformat(),
         "required_tf_coverage": tf_coverage,
         "h4_native_provider_supported": False,
+        "unbound_structural_preview_count": len(
+            viewmodel.data.get("structural_preview_diagnostics", [])
+        ),
         "w1_context_attested": False,
         "verified_16_zone_rules": False,
         "source_production_qualified": False,
