@@ -67,6 +67,11 @@ class OAuthSafeFailure217Tests(unittest.TestCase):
         e=RefreshError("invalid_grant", {"error": 123, "secret": "LEAK"})
         self.assertEqual(m.classify_safe_oauth_failure217(e),
                          "MST_217_OAUTH_REFRESH_REJECTED_UNCLASSIFIED")
+        for bad in ([], {"unexpected": "dict"}, ["invalid_grant"]):
+            with self.subTest(error_type=type(bad).__name__):
+                e=RefreshError("SECRET", {"error":bad,"refresh_token":"SECRET"})
+                self.assertEqual(m.classify_safe_oauth_failure217(e),
+                                 "MST_217_OAUTH_REFRESH_REJECTED_UNCLASSIFIED")
 
     def test_transport_and_network_errors_static_only(self):
         for error, expected in (
