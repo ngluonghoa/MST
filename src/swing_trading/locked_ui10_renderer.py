@@ -208,8 +208,30 @@ def render_ui10_incomplete_html(model: LockedUi10DiagnosticViewModel) -> str:
         ("Bước","Tên bước","Trạng thái","Bằng chứng/Chặn"),
         step_rows,caption="Checklist xác minh thực thi 8 bước · 0/8 COMPLETE",
     )
+    # §208: show only explicitly unbound structural preview IDs in existing
+    # F section. Never inject them into the actual zone evidence/result rows.
+    preview_rows=d.get("structural_preview_diagnostics",[])
+    extra_preview=""
+    if preview_rows:
+        items=[]
+        for item in preview_rows:
+            items.append(_row(
+                _t(item["strategy"]),_t(item["zone_id"]),
+                _t(item["phase"]+" / "+item["timeframe"]),
+                _t(item["status"]),
+                '<code>'+_t(item["preview_digest_sha256"][:12])+'</code>',
+            ))
+        extra_preview=(
+            '<div class="diagnostic" data-structure-preview="unbound">'
+            '<p><strong>Thử nghiệm cấu trúc BOS — UNVERIFIED</strong></p>'
+            '<p>Chưa đối chiếu các nến M15/H1 này với dữ liệu D1 riêng tư; '
+            'không phải tín hiệu của mã cổ phiếu, không phải kết quả 16 vùng.</p>'
+            +_table(("Nhánh","Vùng","Pha/TF","Trạng thái","Mã QA"),
+                    items,caption="Chứng cứ hình học giả lập, tách biệt nguồn")
+            +'</div>'
+        )
     sections["F"]=(
-        matrix_html + legend + steps_html
+        matrix_html + legend + steps_html + extra_preview
         + '<p class="note muted">UNVERIFIED không tương đương NOT_DETECTED, '
         'NO SIGNAL hoặc kết quả phân tích đã hoàn tất.</p>'
     )
