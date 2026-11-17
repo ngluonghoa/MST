@@ -199,6 +199,113 @@ def inspect_app_owned_drive(session: Any) -> dict[str, Any]:
 
 
 
+def inspect_app_owned_cache_census216(session: Any) -> dict[str, Any]:
+    """Read-only, bounded GDrive file census; NO market data/manifest trust.
+
+    Do not equate four bootstrapped folders with an operational Cache.
+    This is an OAuth app-owned GITHUB-SIDE inventory. A separately connected
+    user's Drive visibility can differ, including apparent empty folders.
+    Counts are metadata-only; no name, ID, source row or secret in output.
+    """
+    # Check exact parent/child names, app ownership and private scope first.
+    # Re-read them in the same OAuth session, then verify each metadata row
+    # without printing or returning any private file identifiers.
+    inspect_app_owned_drive(session)
+    try:
+        root = _list_exact_child(session, DRIVE_ROOT, None)
+        if not isinstance(root, dict) or not DRIVE_ID_RE.fullmatch(root.get("id", "")):
+            raise CloudGateDenied("MST_216_PRIVATE_CENSUS_ROOT_MISSING")
+        parent = root["id"]
+        counts: dict[str, int] = {}
+        all_seen: set[str] = set()
+        for name in DRIVE_CHILDREN:
+            folder = _list_exact_child(session, name, parent)
+            if not isinstance(folder, dict):
+                raise CloudGateDenied("MST_216_PRIVATE_CENSUS_CHILD_MISSING")
+            fid = folder.get("id")
+            if not isinstance(fid, str) or not DRIVE_ID_RE.fullmatch(fid):
+                raise CloudGateDenied("MST_216_PRIVATE_CENSUS_CHILD_ID_INVALID")
+            info = _metadata(session, fid)
+            if (info.get("id") != fid or info.get("name") != name
+                    or info.get("mimeType") != MIME_FOLDER
+                    or info.get("parents") != [parent]
+                    or info.get("trashed") is not False
+                    or info.get("shared") is not False
+                    or info.get("ownedByMe") is not True
+                    or info.get("isAppAuthorized") is not True):
+                raise CloudGateDenied("MST_216_PRIVATE_CENSUS_CHILD_SCOPE_DRIFT")
+            seen_pages: set[str] = set()
+            page_token: str | None = None
+            count = 0
+            for _ in range(6):
+                params: dict[str, Any] = {
+                    "q": "'" + fid + "' in parents and trashed = false",
+                    "pageSize": 100,
+                    "fields": "nextPageToken,files(id,mimeType,parents,trashed,"
+                              "shared,ownedByMe,isAppAuthorized)",
+                }
+                if page_token is not None:
+                    params["pageToken"] = page_token
+                response = session.get(DRIVE_URL[:-1], params=params, timeout=25)
+                if response.status_code != 200:
+                    raise CloudGateDenied("MST_216_PRIVATE_CENSUS_LIST_HTTP_FAILURE")
+                doc = response.json()
+                if (type(doc) is not dict or type(doc.get("files")) is not list
+                        or len(doc["files"]) > 100):
+                    raise CloudGateDenied("MST_216_PRIVATE_CENSUS_PAGE_INVALID")
+                for item in doc["files"]:
+                    if type(item) is not dict:
+                        raise CloudGateDenied("MST_216_PRIVATE_CENSUS_ITEM_INVALID")
+                    file_id = item.get("id")
+                    if (not isinstance(file_id, str)
+                            or not DRIVE_ID_RE.fullmatch(file_id)
+                            or file_id in all_seen
+                            or item.get("parents") != [fid]
+                            or item.get("trashed") is not False
+                            or item.get("shared") is not False
+                            or item.get("ownedByMe") is not True
+                            or item.get("isAppAuthorized") is not True
+                            or not isinstance(item.get("mimeType"), str)
+                            or item["mimeType"] == MIME_FOLDER):
+                        raise CloudGateDenied("MST_216_PRIVATE_CENSUS_ITEM_SCOPE_INVALID")
+                    all_seen.add(file_id)
+                count += len(doc["files"])
+                nxt = doc.get("nextPageToken")
+                if nxt is None:
+                    break
+                if (type(nxt) is not str or not nxt
+                        or len(nxt) > 1024 or nxt in seen_pages
+                        or not doc["files"]):
+                    raise CloudGateDenied("MST_216_PRIVATE_CENSUS_PAGING_INVALID")
+                seen_pages.add(nxt)
+                page_token = nxt
+            else:
+                raise CloudGateDenied("MST_216_PRIVATE_CENSUS_PAGE_LIMIT_REACHED")
+            counts[name] = count
+        # Counts, not source certification. Even nonempty CHUNKS+MANIFESTS
+        # do not prove retained native rights, signed highwater or readback.
+        empty = all(n == 0 for n in counts.values())
+        return {
+            "schema": "mst.cloud.app_owned_cache_inventory.v0.1",
+            "visibility_context": "GITHUB_ACTIONS_OAUTH_APP_ONLY",
+            "state": ("BOOTSTRAPPED_FOLDERS_EMPTY" if empty
+                      else "PRIVATE_FILES_PRESENT_UNVERIFIED"),
+            "observed_counts": counts,
+            "census_complete": True,
+            "source_retention_rights_attested": False,
+            "published_manifest_readback_attested": False,
+            "independent_signed_highwater_attested": False,
+            "live_cache_producer_attested": False,
+            "cloud_cache_ready": False,
+            "eligible_for_trades": False,
+            "drive_writes": 0,
+        }
+    except CloudGateDenied:
+        raise
+    except Exception:
+        raise CloudGateDenied("MST_216_PRIVATE_CENSUS_FAILED_CLOSED") from None
+
+
 def require_private_chunks_scope(session: Any) -> str:
     """Independently verify exact private app-owned root+CHUNKS for stage calls.
 
@@ -721,6 +828,8 @@ def main() -> None:
         "automatic_scheduling_enabled_by_this_workflow": False,
         "trade_orders": 0,
     }
+    if mode == MODE_DRIVE:
+        receipt["cache_inventory"] = inspect_app_owned_cache_census216(session)
     if mode in (MODE_DNSE,MODE_DNSE_NATIVE,MODE_STAGE,MODE_STAGE_NATIVE):
         import requests
         observation, payload = _fetch_dnse_once(requests.Session(),os.environ)
