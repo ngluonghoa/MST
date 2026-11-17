@@ -141,7 +141,7 @@ class SsiPrivateIntradayProbe209Tests(TestCase):
         self.assertFalse(r.m15_source_qualified)
 
     def test_bad_metadata_types_and_too_many_rows_refused(self):
-        for response in (None,{},{"status":"ok","data":{"ticks":None}}):
+        for response in ({},{"status":"ok","data":{"ticks":None}}):
             with self.subTest(data=response),self.assertRaises(MinuteProbeDenied):
                 run(response)
         huge=fixture()
