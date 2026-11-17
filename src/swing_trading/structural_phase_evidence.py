@@ -37,20 +37,69 @@ SCHEMA = "mst.preview.phase_structure_evidence.v0.1"
 EVENT_VERSION = "MST_PREVIEW_STRUCTURE_SHA256_V0_1"
 MAX_HISTORY = 512
 
-# Explicit, conservative §24.4 BOS-relevant phase branches. This is NOT a
-# statement that other mandatory phase ingredients are satisfied.
+# Explicit, source-traceable §24.4 CLOSED structural break branches.
+# §207 original 4 R_E branches are retained. §213 adds 14 R_F candidates
+# where the spec actually calls for a confirmed close across a known pivot,
+# support, resistance or micro-structure. A structural break alone is NEVER
+# the full phase: R0/R_C context, position, volume, risk and other R_F
+# ingredients are not proven here. Variant-specific OR/TP alternatives are
+# deliberately not inferred or silently selected.
 _ROUTES = {
+    # §207 original R_E geometry paths (behavior and event ID unchanged).
     ("B1", "B1/E_BOS_UP", "R_E"): (StructureSide.HIGH, (Timeframe.M15,)),
     ("B3", "B3/E_BOS_UP", "R_E"): (StructureSide.HIGH, (Timeframe.M15,)),
     ("S4", "S4/E_BOS_DOWN", "R_E"): (
         StructureSide.LOW, (Timeframe.M15, Timeframe.H1),
     ),
     ("B8", "B8/BASE", "R_E"): (StructureSide.HIGH, (Timeframe.M15,)),
+    # §213 source-locked R_F closed-break *ingredients only*, no eligibility.
+    ("B1", "B1/E_BOS_UP", "R_F"): (StructureSide.HIGH, (Timeframe.D1,)),
+    ("B2", "B2/BASE", "R_F"): (
+        StructureSide.HIGH, (Timeframe.M15, Timeframe.H1),
+    ),
+    ("B4", "B4/BASE", "R_F"): (StructureSide.HIGH, (Timeframe.M15,)),
+    ("B6", "B6/C_TWO_CONTRACTIONS", "R_F"): (
+        StructureSide.HIGH, (Timeframe.H1, Timeframe.D1),
+    ),
+    ("B7", "B7/E_RECLAIM", "R_F"): (
+        StructureSide.HIGH, (Timeframe.M15, Timeframe.H1),
+    ),
+    ("B8", "B8/BASE", "R_F"): (
+        StructureSide.HIGH, (Timeframe.H1, Timeframe.D1),
+    ),
+    ("S1", "S1/E_CHOCH_DOWN", "R_F"): (StructureSide.LOW, (Timeframe.D1,)),
+    ("S2", "S2/BASE", "R_F"): (
+        StructureSide.LOW, (Timeframe.M15, Timeframe.H1),
+    ),
+    ("S3", "S3/F_MICRO_BREAK", "R_F"): (
+        StructureSide.LOW, (Timeframe.M15, Timeframe.H1),
+    ),
+    ("S4", "S4/E_BOS_DOWN", "R_F"): (
+        StructureSide.LOW, (Timeframe.H1, Timeframe.D1),
+    ),
+    ("S5", "S5/BASE", "R_F"): (StructureSide.LOW, (Timeframe.M15,)),
+    ("S6", "S6/BASE", "R_F"): (
+        StructureSide.LOW, (Timeframe.H1, Timeframe.D1),
+    ),
+    ("S7", "S7/F_MICRO_BREAK", "R_F"): (
+        StructureSide.LOW, (Timeframe.H1, Timeframe.D1),
+    ),
+    ("S8", "S8/BASE", "R_F"): (
+        StructureSide.LOW, (Timeframe.H1, Timeframe.D1),
+    ),
 }
 ROUTES = MappingProxyType(_ROUTES)
-if any(z not in MANIFESTS or v not in MANIFESTS[z].variants
-       or phase != "R_E" for z, v, phase in ROUTES):
-    raise RuntimeError("MST_207_SOURCE_PHASE_ROUTE_DRIFT")
+if (len(ROUTES) != 18
+        or sum(phase == "R_E" for _, _, phase in ROUTES) != 4
+        or sum(phase == "R_F" for _, _, phase in ROUTES) != 14
+        or any(z not in MANIFESTS or v not in MANIFESTS[z].variants
+               or phase not in ("R_E", "R_F")
+               or not isinstance(side, StructureSide)
+               or not frames
+               or any(tf not in (Timeframe.M15, Timeframe.H1, Timeframe.D1)
+                      for tf in frames)
+               for (z, v, phase), (side, frames) in ROUTES.items())):
+    raise RuntimeError("MST_213_SOURCE_PHASE_ROUTE_DRIFT")
 
 
 class PhaseEvidenceState(str, Enum):
