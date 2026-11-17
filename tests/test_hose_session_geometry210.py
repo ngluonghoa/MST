@@ -456,7 +456,7 @@ class DualLabel211Tests(unittest.TestCase):
         self.assertEqual(r.end.candidate.regular_minute_label_count,223)
 
     def test_wrong_source_day_or_future_label_cannot_compare(self):
-        with self.assertRaises(HoseClockDenied):
+        with self.assertRaises(ValueError):
             compare_211(trading_day=date(2026,11,11))
         with self.assertRaisesRegex(HoseClockDenied,"NOT_ELIGIBLE"):
             compare_211(as_of_utc=datetime(2026,11,9,8,15,tzinfo=timezone.utc))
@@ -489,6 +489,11 @@ class DualLabel211Tests(unittest.TestCase):
             replace(r,action_eligible=True)
         with self.assertRaises(HoseClockDenied):
             replace(r.end,carry_forward_allowed=True)
+        # False-like values must not bypass strict source-authority booleans.
+        with self.assertRaises(HoseClockDenied):
+            replace(r.end,timestamp_semantics_confirmed=0)
+        with self.assertRaises(HoseClockDenied):
+            replace(r,source_timestamp_attested=None)
 
     def test_no_prices_marketbars_or_truthy_authority_in_projections(self):
         r=compare_211()
