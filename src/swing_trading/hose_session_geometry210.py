@@ -321,3 +321,172 @@ def inspect_hose_ssi_regular_schedule_candidate(
         auction,windows[Timeframe.M15],windows[Timeframe.H1],
         "CLOCK_SLOT_GEOMETRY_ONLY_NO_PROVIDER_LABEL_OR_BAR_FINALITY",
     )
+
+# §211: Compare label-START and label-END *hypotheses* without selecting one.
+# SSI MCP minute labels and the distinct official FastConnect product have not
+# established a publisher-attested label meaning, issuer first-known, stock
+# board-regime/day calendar, or licensed historical source revisions.
+SCHEMA_211 = "mst.ssi.minute_label_dual_hypothesis.v0.1"
+
+
+class MinuteLabelMeaning211(str, Enum):
+    START_UNVERIFIED = "MINUTE_START_UNVERIFIED"
+    END_UNVERIFIED = "MINUTE_END_UNVERIFIED"
+
+
+@dataclass(frozen=True)
+class LabelHypothesis211:
+    meaning: MinuteLabelMeaning211
+    candidate: HoseCandidateSession
+    input_row_count: int
+    out_of_continuous_count: int
+    timestamp_semantics_confirmed: bool = False
+    zero_volume_imputation_allowed: bool = False
+    carry_forward_allowed: bool = False
+    provider_correction_first_known_confirmed: bool = False
+    action_eligible: bool = False
+
+    def __post_init__(self) -> None:
+        if (not isinstance(self.meaning, MinuteLabelMeaning211)
+                or not isinstance(self.candidate, HoseCandidateSession)
+                or self.candidate.state is HoseSessionState.BLOCKED
+                or type(self.input_row_count) is not int
+                or type(self.out_of_continuous_count) is not int
+                or self.input_row_count < 1 or self.out_of_continuous_count < 0
+                or (self.candidate.regular_minute_label_count
+                    + self.out_of_continuous_count
+                    + int(self.candidate.auction_1445_captured)
+                    != self.input_row_count)
+                or self.candidate.unexpected_label_count
+                    != self.out_of_continuous_count
+                or any((
+                    self.timestamp_semantics_confirmed,
+                    self.zero_volume_imputation_allowed,
+                    self.carry_forward_allowed,
+                    self.provider_correction_first_known_confirmed,
+                    self.action_eligible,
+                ))):
+            raise HoseClockDenied("MST_211_HYPOTHESIS_CLAIMS_SOURCE_AUTHORITY")
+
+
+@dataclass(frozen=True)
+class DualLabelComparison211:
+    schema: str
+    start: LabelHypothesis211
+    end: LabelHypothesis211
+    selected_meaning: None = None
+    source_timestamp_attested: bool = False
+    venue_symbol_day_attested: bool = False
+    licensed_revision_history_attested: bool = False
+    source_m15_h1_eligible: bool = False
+    action_eligible: bool = False
+
+    def __post_init__(self) -> None:
+        if (self.schema != SCHEMA_211
+                or not isinstance(self.start, LabelHypothesis211)
+                or not isinstance(self.end, LabelHypothesis211)
+                or self.start.meaning is not MinuteLabelMeaning211.START_UNVERIFIED
+                or self.end.meaning is not MinuteLabelMeaning211.END_UNVERIFIED
+                or self.start.input_row_count != self.end.input_row_count
+                or self.start.candidate.symbol != self.end.candidate.symbol
+                or self.start.candidate.trading_day != self.end.candidate.trading_day
+                or self.selected_meaning is not None
+                or any((
+                    self.source_timestamp_attested,
+                    self.venue_symbol_day_attested,
+                    self.licensed_revision_history_attested,
+                    self.source_m15_h1_eligible,
+                    self.action_eligible,
+                ))):
+            raise HoseClockDenied("MST_211_COMPARISON_CANNOT_SELECT_OR_AUTHORIZE")
+
+
+def inspect_ssi_dual_label_hypotheses211(
+    response: dict, *, symbol: str, trading_day: date,
+    as_of_utc: datetime, daily_matched_volume: int | None,
+) -> DualLabelComparison211:
+    """Compare plausible SSI range-label minute START vs END placements.
+
+    A timestamp ending a minute hypothetically belongs to [label-1m,label).
+    Exact 14:45 is isolated as an ATC *candidate* under either hypothesis,
+    never shifted into regular continuous trading. Lunch/ATO/ATC spillovers
+    remain unclassified, and absent labels are not assumed zero-volume.
+    Better coverage is NOT publisher verification or a chosen clock policy.
+
+    Deliberately returns only counts, window boundaries and false authorities:
+    no source OHLC, MarketBarKey, first-known, backtest or trading outcome.
+    """
+    start = inspect_hose_ssi_regular_schedule_candidate(
+        response, symbol=symbol, trading_day=trading_day,
+        as_of_utc=as_of_utc, daily_matched_volume=daily_matched_volume,
+    )
+    if start.state is HoseSessionState.BLOCKED:
+        raise HoseClockDenied("MST_211_SOURCE_DAY_NOT_ELIGIBLE_FOR_COMPARISON")
+
+    rows = response["data"]["ticks"]  # shape and ordering validated by §209
+    end_slots: set[int] = set()
+    end_spillover = 0
+    for row in rows:
+        label, _ = inspect_mode_scoped_ssi_label(
+            row["trading_date"], session_day=trading_day,
+            mode=SsiQueryMode.RANGE_DAY_FIRST_OBSERVED,
+        )
+        minute = _clock_minutes(label)
+        if minute == 14*60+45:
+            continue  # Never claim an ATC print is a regular one-minute bar.
+        hypothetical_bucket = minute-1
+        within_continuous = any(
+            lo <= hypothetical_bucket < hi for lo,hi,_ in REGULAR_WINDOWS
+        )
+        if within_continuous:
+            end_slots.add(hypothetical_bucket)
+        else:
+            end_spillover += 1
+
+    def windows_for(
+        slots: set[int], tf: Timeframe, step: int,
+    ) -> tuple[CandidateWindow, ...]:
+        windows = []
+        for lo,hi,session in REGULAR_WINDOWS:
+            for start_minute in range(lo,hi,step):
+                end_minute = min(start_minute+step,hi)
+                count = sum(m in slots for m in range(start_minute,end_minute))
+                length = end_minute-start_minute
+                if count < length:
+                    state = WindowLabelState.LABELS_MISSING_UNCLASSIFIED
+                elif length < step:
+                    state = WindowLabelState.PARTIAL_SESSION_WINDOW
+                else:
+                    state = WindowLabelState.LABELS_PRESENT_UNVERIFIED
+                windows.append(CandidateWindow(
+                    tf,session,_hhmm(start_minute),_hhmm(end_minute),
+                    length,count,length-count,state,
+                ))
+        return tuple(windows)
+
+    missing = EXPECTED_CONTINUOUS_MINUTES-len(end_slots)
+    if missing < 0:
+        raise HoseClockDenied("MST_211_HYPOTHESIS_EXCESS_MINUTE_SLOTS")
+    end_state = (
+        HoseSessionState.OBSERVED_SCHEDULE_SHAPE_UNVERIFIED
+        if missing == 0 and end_spillover == 0 and start.auction_1445_captured
+        else HoseSessionState.MISSING_OR_EXTRA_LABELS_UNVERIFIED
+    )
+    hypothetical_end = HoseCandidateSession(
+        SCHEMA, symbol, trading_day, end_state, len(end_slots),
+        missing, end_spillover, start.auction_1445_captured,
+        windows_for(end_slots, Timeframe.M15, 15),
+        windows_for(end_slots, Timeframe.H1, 60),
+        "END_LABEL_IS_UNVERIFIED_HYPOTHESIS_NOT_PROVIDER_SEMANTICS",
+    )
+    return DualLabelComparison211(
+        SCHEMA_211,
+        LabelHypothesis211(
+            MinuteLabelMeaning211.START_UNVERIFIED, start,
+            len(rows),start.unexpected_label_count,
+        ),
+        LabelHypothesis211(
+            MinuteLabelMeaning211.END_UNVERIFIED,hypothetical_end,
+            len(rows),end_spillover,
+        ),
+    )
