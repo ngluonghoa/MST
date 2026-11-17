@@ -26,12 +26,13 @@ from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy,
     inspect_causal_pivot, inspect_closed_bos_geometry,
 )
+from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .contracts import DecisionStatus, Strategy, ZONE_IDS
 from .engine import evaluate_unimplemented_zones
 from .market_data import Timeframe
 from .replay import require_utc
 from .source_quality import ResolvedBarSnapshotV12
-from .zone_manifest_v03 import MANIFESTS
+from .zone_manifest_v03 import MANIFESTS, inspect_near_zone_arithmetic
 
 SCHEMA = "mst.preview.phase_structure_evidence.v0.1"
 EVENT_VERSION = "MST_PREVIEW_STRUCTURE_SHA256_V0_1"
@@ -359,4 +360,196 @@ def project_unverified_16_zone_evidence(
                                         else None,
         )
         for d in decisions
+    )
+
+# §214 source §24.4 B2.RC.PULLBACK_NEAR_SUPPORT /
+# S2.RC.RALLY_NEAR_RESISTANCE: actual causal support/resistance geometry,
+# NOT a parameterized/approved detector or a substitute for R0/R_E/R_F.
+B2S2_NEAR_SCHEMA_214 = "mst.b2s2.rc.causal_near_geometry.v0.1"
+_B2S2_NEAR_VARIANTS_214 = {"B2": ("B2/BASE", StructureSide.LOW),
+                             "S2": ("S2/BASE", StructureSide.HIGH)}
+
+
+class NearEvidenceState214(str, Enum):
+    BLOCKED = "BLOCKED"
+    CAUSAL_DISTANCE_UNCALIBRATED = "CAUSAL_DISTANCE_UNCALIBRATED"
+
+
+@dataclass(frozen=True)
+class CausalNearEvidence214:
+    zone_id: str
+    strategy: Strategy
+    as_of_utc: datetime
+    state: NearEvidenceState214
+    reason: str
+    distance_atr: Decimal | None
+    candidate_k_near: Decimal | None
+    candidate_in_band: bool | None
+    preview_id: str | None
+    schema: str = B2S2_NEAR_SCHEMA_214
+    phase: str = "R_C"
+    status: DecisionStatus = DecisionStatus.UNVERIFIED
+    support_resistance_attested: bool = False
+    price_and_atr_independently_attested: bool = False
+    parameter_approved: bool = False
+    phase_executable: bool = False
+    action_eligible: bool = False
+
+    def __post_init__(self) -> None:
+        require_utc(self.as_of_utc)
+        if (self.zone_id not in _B2S2_NEAR_VARIANTS_214
+                or not isinstance(self.strategy, Strategy)
+                or not isinstance(self.state, NearEvidenceState214)
+                or type(self.reason) is not str or not self.reason
+                or self.schema != B2S2_NEAR_SCHEMA_214
+                or self.phase != "R_C"
+                or self.status is not DecisionStatus.UNVERIFIED
+                or self.support_resistance_attested is not False
+                or self.price_and_atr_independently_attested is not False
+                or self.parameter_approved is not False
+                or self.phase_executable is not False
+                or self.action_eligible is not False):
+            raise PhaseEvidenceDenied("MST_214_UNVERIFIED_NEAR_AUTHORITY_REQUIRED")
+        if self.state is NearEvidenceState214.BLOCKED:
+            if (self.distance_atr is not None
+                    or self.candidate_k_near is not None
+                    or self.candidate_in_band is not None
+                    or self.preview_id is not None):
+                raise PhaseEvidenceDenied("MST_214_BLOCKED_NEAR_OUTPUT_FORBIDDEN")
+        elif (type(self.distance_atr) is not Decimal
+              or not self.distance_atr.is_finite()
+              or self.distance_atr < 0
+              or (self.candidate_k_near is not None
+                  and (type(self.candidate_k_near) is not Decimal
+                       or not self.candidate_k_near.is_finite()
+                       or self.candidate_k_near < 0))
+              or (self.candidate_k_near is None
+                  and self.candidate_in_band is not None)
+              or (self.candidate_k_near is not None
+                  and type(self.candidate_in_band) is not bool)
+              or type(self.preview_id) is not str
+              or not self.preview_id.startswith("MST_B2S2_RC_PREVIEW_V1:")
+              or len(self.preview_id) != len("MST_B2S2_RC_PREVIEW_V1:") + 64
+              or any(x not in "0123456789abcdef"
+                     for x in self.preview_id.split(":")[1])):
+            raise PhaseEvidenceDenied("MST_214_NEAR_GEOMETRY_INCOMPLETE")
+
+
+def _near_cross_tf_scope214(bar) -> tuple:
+    """Common source/basis scope, excluding legitimately distinct TF streams."""
+    k, obs, rev = bar.market_bar_key, bar.observation_key, bar.observation_revision
+    return (k.instrument_id, k.exchange, k.instrument_class,
+            k.price_basis, k.calendar_version,
+            obs.project_id, obs.provider_id, obs.origin,
+            rev.adjustment_revision)
+
+
+def inspect_b2s2_rc_causal_near214(
+    *, zone_id: str, strategy: Strategy,
+    pullback_m15: ResolvedBarSnapshotV12,
+    pivot_history: tuple[ResolvedBarSnapshotV12, ...],
+    candidate_index: int, left_count: int, right_count: int,
+    tie_policy: TiePolicy,
+    atr_d1_history: tuple[ResolvedBarSnapshotV12, ...],
+    as_of_utc: datetime,
+    candidate_k_near: Decimal | None = None,
+) -> CausalNearEvidence214:
+    """Execute R_C *distance arithmetic* from validated causal v1.2 bars.
+
+    The pivot must be an eligible historical H1/D1 structural extreme,
+    genuinely known before the M15 target START. Wilder ATR14 D1 must also
+    be known before that START, with the exact same provider/basis/calendar
+    and adjustment revision. No fabricated default k, trend, market regime,
+    official exchange-day, position or final R_C detector can be inferred.
+
+    candidate_k_near, when supplied, is an *unapproved what-if parameter*.
+    The result is always UNVERIFIED, including when the distance is zero.
+    """
+    require_utc(as_of_utc)
+    if (zone_id not in _B2S2_NEAR_VARIANTS_214
+            or not isinstance(strategy, Strategy)):
+        raise PhaseEvidenceDenied("MST_214_ZONE_OR_STRATEGY_INVALID")
+    if (candidate_k_near is not None
+            and (type(candidate_k_near) is not Decimal
+                 or not candidate_k_near.is_finite()
+                 or candidate_k_near < 0)):
+        raise PhaseEvidenceDenied("MST_214_UNAPPROVED_NEAR_K_INVALID")
+
+    def blocked(reason: str) -> CausalNearEvidence214:
+        return CausalNearEvidence214(
+            zone_id, strategy, as_of_utc,
+            NearEvidenceState214.BLOCKED, reason, None, None, None, None,
+        )
+
+    target = pullback_m15.selected if isinstance(
+        pullback_m15, ResolvedBarSnapshotV12) else None
+    if (target is None or target.market_bar_key.timeframe is not Timeframe.M15
+            or not pullback_m15.confirmation_prerequisites(as_of_utc)
+            or target.bar_end_utc > as_of_utc):
+        return blocked("M15_PULLBACK_NOT_CLOSED_AND_QUALIFIED")
+    start = target.market_bar_key.bar_start_utc
+    if (type(pivot_history) is not tuple or not pivot_history
+            or len(pivot_history) > MAX_HISTORY
+            or any(not isinstance(row, ResolvedBarSnapshotV12)
+                   or row.market_bar_key.timeframe not in (Timeframe.H1, Timeframe.D1)
+                   or row.market_bar_key.timeframe != pivot_history[0].market_bar_key.timeframe
+                   for row in pivot_history)):
+        return blocked("PIVOT_HISTORY_NOT_H1_OR_D1")
+    side = _B2S2_NEAR_VARIANTS_214[zone_id][1]
+    # §206 checks all historical rows and right bars; no future pivot use.
+    pivot = inspect_causal_pivot(
+        pivot_history, candidate_index=candidate_index,
+        left_count=left_count, right_count=right_count,
+        side=side, tie_policy=tie_policy, as_of_utc=start,
+    )
+    if pivot.state is not GeometryState.DESCRIPTIVE_ONLY:
+        return blocked("PIVOT_" + pivot.reason)
+    if pivot.geometric_extremum is not True:
+        return blocked("PIVOT_NOT_A_CAUSAL_STRUCTURAL_EXTREME")
+    anchor = pivot_history[candidate_index].selected
+    if (anchor is None or pivot.witness_known_at_utc > start
+            or anchor.bar_end_utc > start
+            or _near_cross_tf_scope214(anchor) != _near_cross_tf_scope214(target)):
+        return blocked("PIVOT_NOT_IN_TARGET_SOURCE_SCOPE")
+
+    if (type(atr_d1_history) is not tuple
+            or not atr_d1_history or len(atr_d1_history) > MAX_HISTORY):
+        return blocked("ATR_D1_HISTORY_MISSING_OR_OVERSIZED")
+    atr = calculate_wilder_atr14(
+        atr_d1_history, as_of_utc=as_of_utc, known_before_utc=start,
+    )
+    if (atr.state is not IndicatorState.COMPUTED_UNCALIBRATED
+            or atr.value is None):
+        return blocked("ATR14_" + atr.reason)
+    d1 = atr_d1_history[0].selected
+    if (d1 is None
+            or _near_cross_tf_scope214(d1) != _near_cross_tf_scope214(target)):
+        return blocked("ATR14_PROVIDER_BASIS_OR_ADJUSTMENT_MISMATCH")
+    candidate_price = target.low if zone_id == "B2" else target.high
+    # §24.5 single pivot point treated as a provisional [pivot,pivot] band.
+    # Full approved price/zone band policy and k calibration are still open.
+    arithmetic = inspect_near_zone_arithmetic(
+        price=candidate_price, zone_lower=pivot.pivot_price,
+        zone_upper=pivot.pivot_price, atr_d1=atr.value,
+        candidate_k_near=candidate_k_near,
+    )
+    digest = _digest({
+        "schema": B2S2_NEAR_SCHEMA_214, "zone": zone_id,
+        "strategy": strategy.value,
+        "side": side.value, "tie_policy": tie_policy.value,
+        "pivot_left": left_count, "pivot_right": right_count,
+        "pivot_index": candidate_index,
+        "pivot_history": [_bar_identity(row) for row in pivot_history],
+        "target": _bar_identity(pullback_m15),
+        "atr_history": [_bar_identity(row) for row in atr_d1_history],
+        "candidate_k": str(candidate_k_near),
+        "normalized_distance": str(arithmetic.normalized_by_atr),
+    })
+    return CausalNearEvidence214(
+        zone_id, strategy, as_of_utc,
+        NearEvidenceState214.CAUSAL_DISTANCE_UNCALIBRATED,
+        "R_C_NORMALIZED_DISTANCE_ONLY_K_AND_CONTEXT_NOT_APPROVED",
+        arithmetic.normalized_by_atr, candidate_k_near,
+        arithmetic.in_candidate_band,
+        "MST_B2S2_RC_PREVIEW_V1:" + digest,
     )
