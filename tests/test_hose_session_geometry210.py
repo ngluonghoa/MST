@@ -352,5 +352,167 @@ class HoseSourceClock210Tests(unittest.TestCase):
             )
 
 
+from swing_trading.hose_session_geometry210 import (
+    DualLabelComparison211, LabelHypothesis211, MinuteLabelMeaning211,
+    SCHEMA_211, inspect_ssi_dual_label_hypotheses211,
+)
+
+
+def compare_211(payload=None, **kwargs):
+    return inspect_ssi_dual_label_hypotheses211(
+        fake() if payload is None else payload,
+        symbol=kwargs.pop("symbol", "AAA"),
+        trading_day=kwargs.pop("trading_day", DAY),
+        as_of_utc=kwargs.pop("as_of_utc", NOW),
+        daily_matched_volume=kwargs.pop("daily_matched_volume", 1606),
+        **kwargs,
+    )
+
+
+class DualLabel211Tests(unittest.TestCase):
+    """All records fictional; source/venue authority remains false."""
+
+    def test_225_plus_atc_start_better_coverage_is_not_verified_semantics(self):
+        r=compare_211()
+        self.assertEqual(r.schema,SCHEMA_211)
+        self.assertEqual(r.start.candidate.regular_minute_label_count,225)
+        self.assertEqual(r.start.candidate.missing_expected_labels,0)
+        self.assertEqual(r.start.out_of_continuous_count,0)
+        self.assertEqual(r.end.candidate.regular_minute_label_count,223)
+        self.assertEqual(r.end.candidate.missing_expected_labels,2)
+        self.assertEqual(r.end.out_of_continuous_count,2)
+        self.assertIsNone(r.selected_meaning)
+        self.assertFalse(r.source_timestamp_attested)
+
+    def test_exact_shifted_m15_last_window_morning_and_afternoon(self):
+        r=compare_211()
+        self.assertEqual(len(r.end.candidate.m15),15)
+        self.assertEqual(
+            [(x.start_local,x.end_local,x.missing_labels)
+             for x in r.end.candidate.m15 if x.missing_labels],
+            [("11:15","11:30",1),("14:15","14:30",1)],
+        )
+        self.assertEqual(r.end.candidate.m15[0].observed_labels,15)
+        self.assertEqual(r.end.candidate.m15[9].observed_labels,15)
+
+    def test_h1_tail_never_autofills_missing_or_crosses_lunch(self):
+        r=compare_211()
+        self.assertEqual(len(r.end.candidate.h1),5)
+        self.assertEqual(
+            [(x.start_local,x.expected_labels,x.observed_labels,x.state)
+             for x in r.end.candidate.h1 if x.missing_labels],
+            [
+                ("11:15",15,14,WindowLabelState.LABELS_MISSING_UNCLASSIFIED),
+                ("14:00",30,29,WindowLabelState.LABELS_MISSING_UNCLASSIFIED),
+            ],
+        )
+        self.assertTrue(all(
+            not (x.start_local < "13:00" < x.end_local)
+            for x in r.end.candidate.h1
+        ))
+
+    def test_auction_1445_never_is_1444_regular_minute(self):
+        r=compare_211()
+        self.assertTrue(r.start.candidate.auction_1445_captured)
+        self.assertTrue(r.end.candidate.auction_1445_captured)
+        self.assertEqual(r.end.candidate.h1[-1].end_local,"14:30")
+        self.assertEqual(r.end.candidate.m15[-1].end_local,"14:30")
+        self.assertEqual(r.end.input_row_count,226)
+
+    def test_missing_auction_remains_unknown_both_modes(self):
+        p=fake()
+        p["data"]["ticks"]=[
+            x for x in p["data"]["ticks"]
+            if not x["trading_date"].endswith("14:45:00")
+        ]
+        r=compare_211(p,daily_matched_volume=1575)
+        self.assertFalse(r.start.candidate.auction_1445_captured)
+        self.assertFalse(r.end.candidate.auction_1445_captured)
+        self.assertIs(r.start.candidate.state,
+                      HoseSessionState.MISSING_OR_EXTRA_LABELS_UNVERIFIED)
+
+    def test_single_missing_minute_cannot_be_zero_filled(self):
+        p=fake()
+        p["data"]["ticks"]=[
+            x for x in p["data"]["ticks"]
+            if not x["trading_date"].endswith("10:00:00")
+        ]
+        r=compare_211(p,daily_matched_volume=1599)
+        self.assertEqual(r.start.candidate.missing_expected_labels,1)
+        self.assertEqual(r.end.candidate.missing_expected_labels,3)
+        self.assertFalse(r.start.zero_volume_imputation_allowed)
+        self.assertFalse(r.end.carry_forward_allowed)
+
+    def test_source_ato_row_is_spillover_not_relabelled_normal(self):
+        p=fake()
+        p["data"]["ticks"].append({
+            "symbol":"AAA","trading_date":"10/11/2026 09:00:00",
+            "open":"10000","high":"10000","low":"10000",
+            "close":"10000","volume":"0",
+        })
+        r=compare_211(p)
+        self.assertEqual(r.start.out_of_continuous_count,1)
+        self.assertEqual(r.end.out_of_continuous_count,3)
+        self.assertEqual(r.end.candidate.regular_minute_label_count,223)
+
+    def test_wrong_source_day_or_future_label_cannot_compare(self):
+        with self.assertRaises(HoseClockDenied):
+            compare_211(trading_day=date(2026,11,11))
+        with self.assertRaisesRegex(HoseClockDenied,"NOT_ELIGIBLE"):
+            compare_211(as_of_utc=datetime(2026,11,9,8,15,tzinfo=timezone.utc))
+
+    def test_mixed_latest_mode_and_source_reordering_denied(self):
+        p=fake()
+        p["data"]["ticks"][0]["trading_date"]="11/17/2026 14:45:00"
+        with self.assertRaises(ValueError):
+            compare_211(p)
+        p=fake()
+        p["data"]["ticks"].reverse()
+        with self.assertRaises(ValueError):
+            compare_211(p)
+
+    def test_incorrect_hypothesis_or_session_identity_replacement_denied(self):
+        r=compare_211()
+        with self.assertRaises(HoseClockDenied):
+            replace(r.start,meaning=MinuteLabelMeaning211.END_UNVERIFIED)
+        with self.assertRaises(HoseClockDenied):
+            replace(r,selected_meaning=MinuteLabelMeaning211.START_UNVERIFIED)
+        with self.assertRaises(HoseClockDenied):
+            replace(r.end,input_row_count=999)
+        with self.assertRaises(HoseClockDenied):
+            replace(r.end,timestamp_semantics_confirmed=True)
+        with self.assertRaises(HoseClockDenied):
+            replace(r,venue_symbol_day_attested=True)
+        with self.assertRaises(HoseClockDenied):
+            replace(r,source_m15_h1_eligible=True)
+        with self.assertRaises(HoseClockDenied):
+            replace(r,action_eligible=True)
+        with self.assertRaises(HoseClockDenied):
+            replace(r.end,carry_forward_allowed=True)
+
+    def test_no_prices_marketbars_or_truthy_authority_in_projections(self):
+        r=compare_211()
+        for hypothesis in (r.start,r.end):
+            self.assertIsInstance(hypothesis,LabelHypothesis211)
+            self.assertNotIn("ohlcv",hypothesis.__dict__)
+            self.assertNotIn("close",hypothesis.__dict__)
+            self.assertNotIn("price",hypothesis.__dict__)
+            self.assertFalse(hypothesis.action_eligible)
+            self.assertFalse(hypothesis.candidate.m15_source_qualified)
+            self.assertFalse(hypothesis.candidate.h1_source_qualified)
+            self.assertFalse(hypothesis.candidate.venue_day_and_board_regime_verified)
+            self.assertFalse(hypothesis.provider_correction_first_known_confirmed)
+        self.assertFalse(r.licensed_revision_history_attested)
+        self.assertFalse(r.action_eligible)
+
+    def test_deterministic_pure_fixture_same_hypotheses_without_trade(self):
+        a=compare_211()
+        b=compare_211(deepcopy(fake()))
+        self.assertIsInstance(a,DualLabelComparison211)
+        self.assertEqual(a,b)
+        self.assertIs(a.start.meaning,MinuteLabelMeaning211.START_UNVERIFIED)
+        self.assertIs(a.end.meaning,MinuteLabelMeaning211.END_UNVERIFIED)
+
+
 if __name__=="__main__":
     unittest.main()
