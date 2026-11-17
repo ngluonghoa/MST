@@ -490,8 +490,9 @@ def inspect_b2s2_rc_causal_near214(
     start = target.market_bar_key.bar_start_utc
     if (type(pivot_history) is not tuple or not pivot_history
             or len(pivot_history) > MAX_HISTORY
+            or not isinstance(pivot_history[0], ResolvedBarSnapshotV12)
+            or pivot_history[0].market_bar_key.timeframe not in (Timeframe.H1, Timeframe.D1)
             or any(not isinstance(row, ResolvedBarSnapshotV12)
-                   or row.market_bar_key.timeframe not in (Timeframe.H1, Timeframe.D1)
                    or row.market_bar_key.timeframe != pivot_history[0].market_bar_key.timeframe
                    for row in pivot_history)):
         return blocked("PIVOT_HISTORY_NOT_H1_OR_D1")
