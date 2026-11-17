@@ -171,8 +171,8 @@ class CandidateWindow:
         elif self.state is WindowLabelState.LABELS_MISSING_UNCLASSIFIED:
             if not self.missing_labels:
                 raise HoseClockDenied("MST_210_MISSING_WINDOW_WAS_COMPLETE")
-        elif self.expected_labels==60:
-            raise HoseClockDenied("MST_210_PARTIAL_WINDOW_IS_FULL_HOUR")
+        elif self.expected_labels == (15 if self.timeframe is Timeframe.M15 else 60):
+            raise HoseClockDenied("MST_210_PARTIAL_WINDOW_WAS_FULL_LENGTH")
 
 
 @dataclass(frozen=True)
