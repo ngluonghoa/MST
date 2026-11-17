@@ -45,19 +45,23 @@ def evidence(
 
 class PhaseStructureEvidence207Tests(unittest.TestCase):
     def test_exact_original_four_bos_phase_routes_only(self):
-        self.assertEqual(
-            tuple(ROUTES),
-            (("B1","B1/E_BOS_UP","R_E"),
-             ("B3","B3/E_BOS_UP","R_E"),
-             ("S4","S4/E_BOS_DOWN","R_E"),
-             ("B8","B8/BASE","R_E")),
+        original=(
+            ("B1","B1/E_BOS_UP","R_E"),
+            ("B3","B3/E_BOS_UP","R_E"),
+            ("S4","S4/E_BOS_DOWN","R_E"),
+            ("B8","B8/BASE","R_E"),
         )
+        self.assertEqual(
+            tuple(k for k in ROUTES if k[2]=="R_E"),original,
+        )
+        self.assertEqual(len(ROUTES),18)
+        self.assertEqual(sum(k[2]=="R_F" for k in ROUTES),14)
         for z,v,p in ROUTES:
-            self.assertEqual(p,"R_E")
+            self.assertIn(p,("R_E","R_F"))
             self.assertIn(z,ZONE_IDS)
             self.assertEqual(
                 ROUTES[(z,v,p)][0],
-                StructureSide.LOW if z == "S4" else StructureSide.HIGH,
+                StructureSide.LOW if z.startswith("S") else StructureSide.HIGH,
             )
 
     def test_b1_b3_b8_bullish_and_s4_bearish_attach_as_unverified(self):
@@ -220,7 +224,7 @@ class PhaseStructureEvidence207Tests(unittest.TestCase):
         with self.assertRaisesRegex(PhaseEvidenceDenied,"UNSUPPORTED_ZONE"):
             evidence(variant="B1/E_RECLAIM")
         with self.assertRaises(PhaseEvidenceDenied):
-            evidence(phase="R_F")
+            evidence(phase="R_C")
         with self.assertRaises(PhaseEvidenceDenied):
             evidence(zone="S6")
         with self.assertRaises(PhaseEvidenceDenied):
