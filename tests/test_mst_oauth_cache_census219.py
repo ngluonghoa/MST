@@ -221,6 +221,40 @@ class CacheCensus219Tests(unittest.TestCase):
         with self.assertRaisesRegex(m.CensusDenied, "PAGE_INVALID"):
             m.census_app_owned_cache(drive)
 
+    def test_empty_page_with_next_token_continues_to_real_items(self):
+        # Google Drive files.list may legally return an empty nonfinal page.
+        drive = FakeAppOwnedDrive()
+        def pages(name, params):
+            if name != "AUDIT":
+                return {"files": [], "incompleteSearch": False}
+            if not params.get("pageToken"):
+                return {
+                    "files": [], "nextPageToken": "PAGE_2",
+                    "incompleteSearch": False,
+                }
+            self.assertEqual(params["pageToken"], "PAGE_2")
+            self.assertIn("incompleteSearch", params["fields"])
+            return {"files": [drive.file("AUDIT")], "incompleteSearch": False}
+        drive.page_behavior = pages
+        result = m.census_app_owned_cache(drive)
+        self.assertEqual(result["observed_counts"]["AUDIT"], 1)
+        self.assertEqual(result["state"], "PRIVATE_FILES_PRESENT_UNVERIFIED")
+        self.assertFalse(result["production_cache_ready"])
+        self.assertEqual(drive.post_calls, 0)
+
+    def test_incomplete_search_or_malformed_flag_fails_closed(self):
+        for flag in (True, None, "true", 1):
+            drive = FakeAppOwnedDrive()
+            drive.page_behavior = (
+                lambda name, params, flag=flag:
+                {"files": [], "incompleteSearch": flag}
+            )
+            with self.subTest(flag=flag), self.assertRaisesRegex(
+                m.CensusDenied, "INCOMPLETE_SEARCH"
+            ):
+                m.census_app_owned_cache(drive)
+            self.assertEqual(drive.post_calls, 0)
+
     def test_pagination_more_than_limit_fails_closed(self):
         drive = FakeAppOwnedDrive()
         def many_pages(name, params):
