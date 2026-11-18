@@ -17,7 +17,7 @@ from scripts.mst_oauth_manual_drive_bootstrap import (
     DRIVE_FILES, OWNER_ID, OWNER_REPO, REPO_ID, ROOT_NAME, FOLDER_MIME,
     OAuthSecrets, _list_exact_child, _new_authorized_session,
 )
-from scripts.mst_oauth_cache_census219 import census_app_owned_cache
+from scripts.mst_oauth_cache_census219 import CensusDenied, census_app_owned_cache
 
 WORKFLOW_REF = (
     "ngluonghoa/MST/.github/workflows/"
@@ -175,7 +175,10 @@ def synthetic_staging_canary(session: Any, run_id: str) -> dict[str, Any]:
     if type(run_id) is not str or not RUN_RE.fullmatch(run_id):
         raise CanaryDenied("MST_220_RUN_ID_UNTRUSTED")
     # Existing §219 census must pass before writing. Does not promote Cache.
-    audit = census_app_owned_cache(session)
+    try:
+        audit = census_app_owned_cache(session)
+    except CensusDenied:
+        raise CanaryDenied("MST_220_PREWRITE_CENSUS_NOT_SAFE") from None
     if not audit["census_complete"] or audit["production_cache_ready"] is not False:
         raise CanaryDenied("MST_220_PREWRITE_CENSUS_NOT_SAFE")
     try:
