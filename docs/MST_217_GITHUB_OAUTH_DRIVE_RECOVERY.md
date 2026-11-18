@@ -37,3 +37,9 @@ Only allowlisted structured error types/codes are inspected. No provider body, e
 6. Even a successful census and nonempty CHUNKS/MANIFESTS do not prove source licensing, authoritative candle closure, first-known, independent signed monotonic CAS, durable immutable chunk/manifest readback, full 16 zone parity, approved UI-1.0 or actual trade eligibility.
 
 Release target 2026-11-22 is CONDITIONAL engineering RC. P0-C remains NO-GO until separately attested real cloud-side evidence exists. Preserve PR23 Draft and protected main without automatic merges or trading.
+
+## Post-recovery update — 2026-11-18
+
+The initial §217 incident described above is **historical** and no longer a present OAuth blocker: after the owner renewed MST OAuth credentials through the existing Google client and scope, protected-main GitHub manual probe https://github.com/ngluonghoa/MST/actions/runs/44247189161 returned SUCCESS with actual_google_drive_metadata_read=true and app_owned_cache_root_discovered=true. This verified **only read-only Drive root access**, not OAuth token permanence, market-data storage, private child folder contents, SHA-256 media write/readback, publisher CAS, or trading. The safe fixed-code classifier in this PR remains useful for future OAuth failures; the original failure reason was not conclusively decoded from the old generic log.
+
+Subsequent protected-main atomic PRs #27 and #28 were squash-merged (commits 0e5fcadf54ab8e2e4fc3313a52cc667ab22690ff and 3141a08eb8cea57a24627d8ab5c54d03941981de). They provide separately gated manual four-folder metadata census and optional synthetic STAGING_ONLY media canary, respectively. **No live census/canary has been executed merely by these merges**. This diagnostic PR contains no new scope, secret mutation, Drive write, market API call, scheduled workflow or trade.
