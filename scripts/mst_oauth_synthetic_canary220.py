@@ -94,8 +94,12 @@ def _exact_named_files(session: Any, folder_id: str, filename: str) -> list[dict
         "q": "'" + _id(folder_id) + "' in parents and name = '" + filename
              + "' and trashed = false",
         "pageSize": 100,
-        "fields": "nextPageToken,files(id,name,mimeType,parents,trashed)",
+        "fields": "nextPageToken,incompleteSearch,files(id,name,mimeType,parents,trashed)",
     })
+    # A partial Drive search cannot prove that the canary name is unused.
+    # Missing incompleteSearch means false by Drive API default.
+    if files.get("incompleteSearch", False) is not False:
+        raise CanaryDenied("MST_220_CANARY_NAME_SEARCH_INCOMPLETE")
     items = files.get("files")
     if (type(items) is not list or len(items) > 1
             or files.get("nextPageToken") is not None):
