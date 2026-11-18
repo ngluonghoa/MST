@@ -1,0 +1,47 @@
+name: MST GitHub OAuth app-owned Cache census - MANUAL READ-ONLY
+
+# §219: no push, cron, PR trigger, provider market API, Drive upload or trade.
+# This workflow needs a separate owner-reviewed squash merge to default main.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Explicitly authorize private Drive metadata GET-only census'
+        required: true
+        type: choice
+        default: 'NO'
+        options:
+          - 'NO'
+          - 'RUN_READONLY_CENSUS'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-oauth-appowned-cache-census-manual
+  cancel-in-progress: false
+
+jobs:
+  private-appowned-cache-census:
+    name: Four-folder GitHub OAuth metadata inventory, NO market/trade
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm == 'RUN_READONLY_CENSUS' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout protected main without persistent GitHub credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned Google OAuth and HTTPS dependencies
+        run: python -m pip install --disable-pip-version-check google-auth==2.43.0 requests==2.32.5
+      - name: Census existing app-owned Google Drive folder metadata (GET-only)
+        env:
+          MST_CACHE_CENSUS_CONFIRM: ${{ inputs.confirm }}
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: python -m scripts.mst_oauth_cache_census219
