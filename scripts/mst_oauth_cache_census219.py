@@ -131,12 +131,16 @@ def census_app_owned_cache(session: Any) -> dict[str, Any]:
                 params: dict[str, Any] = {
                     "q": "'" + child_id + "' in parents and trashed = false",
                     "pageSize": PAGE_SIZE,
-                    "fields": "nextPageToken,files(id,mimeType,parents,trashed,"
+                    "fields": "nextPageToken,incompleteSearch,files(id,mimeType,parents,trashed,"
                               "shared,ownedByMe,isAppAuthorized)",
                 }
                 if token is not None:
                     params["pageToken"] = token
                 page = _get_json(session, DRIVE_FILES, params)
+                # An omitted incompleteSearch is the API default; an explicit
+                # true or malformed value cannot certify an exhaustive count.
+                if page.get("incompleteSearch", False) is not False:
+                    raise CensusDenied("MST_219_PRIVATE_CENSUS_INCOMPLETE_SEARCH")
                 files = page.get("files")
                 if type(files) is not list or len(files) > PAGE_SIZE:
                     raise CensusDenied("MST_219_PRIVATE_CENSUS_PAGE_INVALID")
@@ -159,8 +163,7 @@ def census_app_owned_cache(session: Any) -> dict[str, Any]:
                 if new_token is None:
                     break
                 if (type(new_token) is not str or not new_token
-                        or len(new_token) > 1024 or new_token in used_tokens
-                        or not files):
+                        or len(new_token) > 1024 or new_token in used_tokens):
                     raise CensusDenied("MST_219_PRIVATE_CENSUS_PAGINATION_INVALID")
                 used_tokens.add(new_token)
                 token = new_token
