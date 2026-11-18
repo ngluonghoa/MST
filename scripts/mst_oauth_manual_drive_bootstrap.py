@@ -79,6 +79,38 @@ def require_manual_main_context(env: Mapping[str, str], *, allow_write: bool = F
     return OAuthSecrets(*(env[key] for key in SECRET_NAMES))
 
 
+def classify_safe_oauth_failure217(exc: Exception) -> str:
+    """Classify only fixed OAuth/transport error types; NEVER print exception.
+
+    google-auth RefreshError can contain provider error text, HTTP payload,
+    tokens and client details. Read ONLY one allowlisted OAuth error code from
+    the *structured* second arg, never exception str/repr/traceback.
+    Classification is diagnostics, not a remedy, retry policy or authority.
+    """
+    cls = type(exc)
+    if (cls.__module__ == "google.auth.exceptions"
+            and cls.__name__ == "RefreshError"):
+        args = exc.args
+        details = args[1] if len(args) > 1 else None
+        kind = details.get("error") if type(details) is dict else None
+        if type(kind) is not str:
+            kind = None  # malformed OAuth errors must never break the guard
+        return {
+            "invalid_grant": "MST_217_OAUTH_INVALID_GRANT_REAUTHORIZE_REQUIRED",
+            "invalid_client": "MST_217_OAUTH_INVALID_CLIENT_CONFIGURATION",
+            "unauthorized_client": "MST_217_OAUTH_UNAUTHORIZED_CLIENT",
+        }.get(kind, "MST_217_OAUTH_REFRESH_REJECTED_UNCLASSIFIED")
+    if (cls.__module__ == "google.auth.exceptions"
+            and cls.__name__ == "TransportError"):
+        return "MST_217_OAUTH_TRANSPORT_ERROR"
+    if (cls.__module__ in ("requests.exceptions", "urllib3.exceptions")
+            and cls.__name__ in ("Timeout", "ConnectTimeout", "ReadTimeout",
+                                 "ConnectionError", "NewConnectionError",
+                                 "MaxRetryError", "SSLError")):
+        return "MST_217_OAUTH_NETWORK_OR_TLS_ERROR"
+    return "MST_OAUTH_DRIVE_REQUEST_FAILED_CLOSED"
+
+
 def _get_response(session: Any, method: str, url: str, *,
                   params: dict[str, Any], body: dict | None = None) -> dict:
     try:
@@ -89,6 +121,16 @@ def _get_response(session: Any, method: str, url: str, *,
         else:
             raise BootstrapDenied("UNSUPPORTED_DRIVE_METHOD")
         if response.status_code not in (200, 201):
+            # Static HTTP diagnostic only: no URL, response body or headers.
+            # A non-2xx response never retries or authorizes Drive writes.
+            if response.status_code == 401:
+                raise BootstrapDenied("MST_217_DRIVE_HTTP_401_UNAUTHORIZED")
+            if response.status_code == 403:
+                raise BootstrapDenied("MST_217_DRIVE_HTTP_403_FORBIDDEN")
+            if response.status_code == 429:
+                raise BootstrapDenied("MST_217_DRIVE_HTTP_429_RATE_LIMITED")
+            if response.status_code in (408, 500, 502, 503, 504):
+                raise BootstrapDenied("MST_217_DRIVE_HTTP_TRANSIENT_FAILURE")
             raise BootstrapDenied("MST_OAUTH_DRIVE_REQUEST_REJECTED")
         payload = response.json()
         if type(payload) is not dict:
@@ -96,8 +138,8 @@ def _get_response(session: Any, method: str, url: str, *,
         return payload
     except BootstrapDenied:
         raise
-    except Exception:
-        raise BootstrapDenied("MST_OAUTH_DRIVE_REQUEST_FAILED_CLOSED") from None
+    except Exception as exc:
+        raise BootstrapDenied(classify_safe_oauth_failure217(exc)) from None
 
 
 def _list_exact_child(session: Any, name: str, parent: str | None) -> dict | None:
