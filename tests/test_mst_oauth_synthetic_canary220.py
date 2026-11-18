@@ -18,6 +18,7 @@ class CanaryDrive(FakeAppOwnedDrive):
         self.corrupt_media = False
         self.invalid_metadata = False
         self.hide_postwrite = False
+        self.incomplete_name_lookup = False
 
     def get(self, url, *, params, timeout, **kwargs):
         if url.startswith(m.DRIVE_FILES + "/") and self.created is not None:
@@ -45,7 +46,9 @@ class CanaryDrive(FakeAppOwnedDrive):
                         k: self.created[k] for k in
                         ("id", "name", "mimeType", "parents", "trashed")
                     }]
-                return Response({"files": found})
+                if self.incomplete_name_lookup:
+                    return Response({"files": found, "incompleteSearch": True})
+                return Response({"files": found, "incompleteSearch": False})
         return super().get(url, params=params, timeout=timeout, **kwargs)
 
     def post(self, url, *, params, data, headers, timeout, **kwargs):
@@ -160,6 +163,40 @@ class SyntheticCanary220Tests(unittest.TestCase):
             self.assertFalse(receipt[item])
         self.assertNotIn(d.created["id"], str(receipt))
         self.assertNotIn("FAKE_REFRESH_TOKEN", str(receipt))
+
+    def test_incomplete_name_search_denied_before_any_upload(self):
+        drive = CanaryDrive()
+        drive.incomplete_name_lookup = True
+        with self.assertRaisesRegex(
+            m.CanaryDenied, "CANARY_NAME_SEARCH_INCOMPLETE"
+        ):
+            m.synthetic_staging_canary(drive, "44249999999")
+        self.assertEqual(drive.posts, 0)
+        exact_queries = [
+            call for call in drive.calls if call[0] == "GET"
+            and call[1] == m.DRIVE_FILES
+            and "name = '" in call[2].get("q", "")
+            and m.CANARY_PREFIX in call[2].get("q", "")
+        ]
+        self.assertEqual(len(exact_queries), 1)
+        self.assertIn("incompleteSearch", exact_queries[0][2]["fields"])
+
+    def test_incomplete_postwrite_name_search_never_returns_pass(self):
+        drive = CanaryDrive()
+        original_get = drive.get
+
+        def altered_get(url, *, params, timeout, **kwargs):
+            if drive.posts == 1:
+                drive.incomplete_name_lookup = True
+            return original_get(url, params=params, timeout=timeout, **kwargs)
+
+        drive.get = altered_get
+        with self.assertRaisesRegex(
+            m.CanaryDenied, "CANARY_NAME_SEARCH_INCOMPLETE"
+        ):
+            m.synthetic_staging_canary(drive, "44249999999")
+        self.assertEqual(drive.posts, 1)
+        self.assertIsNotNone(drive.created)
 
     def test_refuse_second_call_same_run_before_upload(self):
         d = CanaryDrive()
