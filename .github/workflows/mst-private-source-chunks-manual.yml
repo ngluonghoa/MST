@@ -1,0 +1,88 @@
+name: MST SSI private unpublished Cloud CHUNKS - MANUAL RIGHTS GATED
+
+# §241: NO push, pull_request, cron, broker API or market Cache promotion.
+# This does not assert provider rights: the owner must independently confirm.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "STAGE_SOURCE_ONLY writes an unpublished private CHUNK if all independent owner/retention gates are true"
+        type: choice
+        required: true
+        default: "NO"
+        options:
+          - "NO"
+          - "STAGE_SOURCE_ONLY"
+      native_tf:
+        description: "SSI native OHLC resolution; H4/W1 not native"
+        type: choice
+        required: true
+        default: "D1"
+        options:
+          - "D1"
+          - "H1"
+          - "M30"
+          - "M15"
+          - "M5"
+      symbol:
+        description: "Bounded pilot stock, no market scanner"
+        type: choice
+        required: true
+        default: "FPT"
+        options:
+          - "FPT"
+          - "HPG"
+          - "DCM"
+      from_date:
+        description: "YYYY-MM-DD inclusive, conservatively bounded by native timeframe"
+        type: string
+        required: true
+      to_date:
+        description: "YYYY-MM-DD inclusive, conservatively bounded by native timeframe"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-private-unpublished-source-chunks-single-writer
+  cancel-in-progress: false
+
+jobs:
+  source-private-stage:
+    name: Protected main only - SSI native private unpublished staging
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm == 'STAGE_SOURCE_ONLY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout protected main without persisted GitHub credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned private OAuth and HTTPS runtime
+        run: python -m pip install --disable-pip-version-check google-auth==2.43.0 requests==2.32.5
+      - name: SSI native source to private unpublished app-owned CHUNK (no manifest)
+        env:
+          MST_CHUNK_STAGE_CONFIRM: ${{ inputs.confirm }}
+          MST_PRIVATE_CHUNKS_WRITE_ACCEPTED: ${{ vars.MST_PRIVATE_CHUNKS_WRITE_ACCEPTED }}
+          MST_SOURCE_RETENTION_RIGHTS_CONFIRMED: ${{ vars.MST_SOURCE_RETENTION_RIGHTS_CONFIRMED }}
+          MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
+          MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}
+          MST_OAUTH_BOOTSTRAP_ACCEPTED: ${{ vars.MST_OAUTH_BOOTSTRAP_ACCEPTED }}
+          MST_SOURCE_PROVIDER: "SSI"
+          MST_SOURCE_TF: ${{ inputs.native_tf }}
+          MST_SOURCE_SYMBOL: ${{ inputs.symbol }}
+          MST_SSI_SYMBOL: ${{ inputs.symbol }}
+          MST_SSI_FROM_DATE: ${{ inputs.from_date }}
+          MST_SSI_TO_DATE: ${{ inputs.to_date }}
+          MST_SSI_API_KEY: ${{ secrets.MST_SSI_API_KEY }}
+          MST_SSI_API_SECRET: ${{ secrets.MST_SSI_API_SECRET }}
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: python -m scripts.mst_ssi_cloud_private_chunk241
