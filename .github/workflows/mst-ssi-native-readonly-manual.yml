@@ -1,0 +1,81 @@
+name: MST SSI native OHLC read-only - MANUAL OWNER GATED
+
+# §233: protected-main manual only, SSI FastConnect market-data API ONLY.
+# No pull_request, push, schedule, Google Drive upload, Cache promotion or trade.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Explicitly select READ_SSI_ONLY; provider rights vars must already be set'
+        required: true
+        type: choice
+        default: 'NO'
+        options:
+          - 'NO'
+          - 'READ_SSI_ONLY'
+      native_tf:
+        description: 'Provider-supported direct timeframe; H4/W1 not native'
+        required: true
+        type: choice
+        default: 'D1'
+        options:
+          - 'D1'
+          - 'H1'
+          - 'M30'
+          - 'M15'
+          - 'M5'
+      symbol:
+        description: 'Bounded stock symbol'
+        required: true
+        type: choice
+        default: 'FPT'
+        options:
+          - 'FPT'
+          - 'HPG'
+          - 'DCM'
+      from_date:
+        description: 'YYYY-MM-DD start; bounded by native timeframe'
+        required: true
+        type: string
+      to_date:
+        description: 'YYYY-MM-DD end; bounded by native timeframe'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-ssi-native-readonly-main-manual
+  cancel-in-progress: false
+
+jobs:
+  ssi-native-readonly:
+    name: Main-only SSI marketdata source count and shape, no price log
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm == 'READ_SSI_ONLY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout protected main without persisted GitHub credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned HTTPS dependency
+        run: python -m pip install --disable-pip-version-check requests==2.32.5
+      - name: Verify SSI native OHLC shape privately, output count-only receipt
+        env:
+          MST_SSI_PROBE_CONFIRM: ${{ inputs.confirm }}
+          MST_MFX_SOURCE_MODE: ssi-native-readonly
+          MST_SOURCE_TF: ${{ inputs.native_tf }}
+          MST_SSI_SYMBOL: ${{ inputs.symbol }}
+          MST_SSI_FROM_DATE: ${{ inputs.from_date }}
+          MST_SSI_TO_DATE: ${{ inputs.to_date }}
+          MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
+          MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}
+          MST_SSI_API_KEY: ${{ secrets.MST_SSI_API_KEY }}
+          MST_SSI_API_SECRET: ${{ secrets.MST_SSI_API_SECRET }}
+        run: python -m scripts.mst_ssi_native_cloud_readonly233
