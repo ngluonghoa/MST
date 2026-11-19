@@ -37,9 +37,10 @@ these require separate consumer, migration and rollback evidence.
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
 | evidence_recovery | evidence_and_rights | 81 | 4 | 23 | 1 | KEEP | none |
 | fixture_scan | cache_and_persistence | 88 | 8 | 44 | 0 | KEEP | none |
+| hose_session_geometry210 | domain_and_reference | 494 | 28 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | incremental_cache | cache_and_persistence | 441 | 23 | 83 | 9 | IMPROVE | HIGH_BRANCH_SCORE |
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| market_data | domain_and_reference | 162 | 23 | 29 | 20 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| market_data | domain_and_reference | 162 | 23 | 29 | 21 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -57,7 +58,7 @@ these require separate consumer, migration and rollback evidence.
 | reference_offline_verified_archive | evidence_and_rights | 159 | 15 | 96 | 0 | IMPROVE | FUNCTION_90_PLUS |
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| replay | domain_and_reference | 26 | 3 | 5 | 35 | KEEP | HIGH_FAN_IN |
+| replay | domain_and_reference | 26 | 3 | 5 | 36 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 191 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -66,7 +67,7 @@ these require separate consumer, migration and rollback evidence.
 | source_quality | domain_and_reference | 296 | 39 | 58 | 10 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | ssi_historical_availability | source_adapter_and_quality | 95 | 12 | 45 | 0 | KEEP | none |
 | ssi_intraday_label_diagnostics | source_adapter_and_quality | 181 | 17 | 87 | 0 | KEEP | none |
-| ssi_intraday_session_probe209 | domain_and_reference | 202 | 38 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| ssi_intraday_session_probe209 | domain_and_reference | 202 | 38 | 104 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | ssi_multivenue_review | source_adapter_and_quality | 129 | 11 | 59 | 0 | KEEP | none |
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 2 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
