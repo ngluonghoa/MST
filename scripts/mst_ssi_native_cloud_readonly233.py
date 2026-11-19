@@ -10,7 +10,6 @@ import json
 import os
 from typing import Any, Mapping
 
-import requests
 
 from scripts.mst_mfx_ssi_readonly import (
     SsiSourceDenied, guard_ssi, read_ssi_native_once, MAX_PAGES, MAX_ROWS,
@@ -101,6 +100,12 @@ def run_probe(session: Any, env: Mapping[str, str]) -> dict[str, object]:
 
 
 def main() -> None:
+    # Keep offline unittest import path free of runtime-only HTTPS packages.
+    # The protected GitHub workflow installs the pinned requests dependency.
+    try:
+        import requests
+    except Exception:
+        raise SsiCloudProbeDenied("MST_233_HTTPS_DEPENDENCY_UNAVAILABLE") from None
     receipt = run_probe(requests.Session(), os.environ)
     print(json.dumps(receipt, sort_keys=True))
 
