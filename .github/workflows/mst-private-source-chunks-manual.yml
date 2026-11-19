@@ -13,6 +13,14 @@ on:
         options:
           - "NO"
           - "STAGE_SOURCE_ONLY"
+      manifest_mode:
+        description: "CHUNK_ONLY (default) or separately approved unpublished MANIFESTS candidate; no CAS/publish"
+        type: choice
+        required: true
+        default: "CHUNK_ONLY"
+        options:
+          - "CHUNK_ONLY"
+          - "UNPUBLISHED_MANIFEST"
       native_tf:
         description: "SSI native OHLC resolution; H4/W1 not native"
         type: choice
@@ -70,6 +78,8 @@ jobs:
         env:
           MST_CHUNK_STAGE_CONFIRM: ${{ inputs.confirm }}
           MST_PRIVATE_CHUNKS_WRITE_ACCEPTED: ${{ vars.MST_PRIVATE_CHUNKS_WRITE_ACCEPTED }}
+          MST_MANIFEST_STAGE_MODE: ${{ inputs.manifest_mode }}
+          MST_PRIVATE_MANIFEST_WRITE_ACCEPTED: ${{ vars.MST_PRIVATE_MANIFEST_WRITE_ACCEPTED }}
           MST_SOURCE_RETENTION_RIGHTS_CONFIRMED: ${{ vars.MST_SOURCE_RETENTION_RIGHTS_CONFIRMED }}
           MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
           MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}

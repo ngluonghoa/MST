@@ -19,6 +19,9 @@ from scripts.mst_private_chunk_readback240 import (
     CONTEXT as CHUNK_CONTEXT, ChunkDenied, _get_json,
     upload_private_unpublished_chunk, SCHEMA,
 )
+from scripts.mst_private_unpublished_manifest242 import (
+    ManifestDenied, stage_unpublished_manifest,
+)
 from scripts.mst_mfx_ssi_readonly import (
     SsiSourceDenied, _fetch_ssi_native_once, guard_ssi,
     MAX_ROWS,
@@ -64,6 +67,12 @@ def require_manual_source_stage(env: Mapping[str, str]) -> None:
         or env.get("MST_OAUTH_BOOTSTRAP_ACCEPTED") == "true"
         or env.get("MST_GDRIVE_SERVICE_ACCOUNT_JSON")):
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_MAIN_OWNER_GATES_REQUIRED")
+    manifest_mode = env.get("MST_MANIFEST_STAGE_MODE", "CHUNK_ONLY")
+    if manifest_mode not in ("CHUNK_ONLY", "UNPUBLISHED_MANIFEST"):
+        raise SsiStageDenied("MST_SSI_CLOUD_STAGE_INVALID_MANIFEST_MODE")
+    if (manifest_mode == "UNPUBLISHED_MANIFEST"
+        and env.get("MST_PRIVATE_MANIFEST_WRITE_ACCEPTED") != "true"):
+        raise SsiStageDenied("MST_SSI_CLOUD_STAGE_MANIFEST_OWNER_GATE_REQUIRED")
     if any(type(env.get(key)) is not str or not env[key].strip()
            for key in OWNER_SECRET_KEYS):
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_MISSING_OAUTH_SECRETS")
@@ -83,11 +92,11 @@ def _one_private_folder(
     drive: Any, *, name: str, parent: str | None,
 ) -> str:
     """Exact bounded census, no first-match behavior or shared-parent escape."""
-    if name not in (ROOT_NAME, CHILD_NAME):
+    if name not in (ROOT_NAME, CHILD_NAME, "MANIFESTS"):
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_PRIVATE_FOLDER_NOT_UNIQUE")
     if parent is None and name != ROOT_NAME:
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_PRIVATE_FOLDER_NOT_UNIQUE")
-    if parent is not None and name != CHILD_NAME:
+    if parent is not None and name not in (CHILD_NAME, "MANIFESTS"):
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_PRIVATE_FOLDER_NOT_UNIQUE")
     parent_expr = "'root'" if parent is None else "'" + parent + "'"
     response = _get_json(drive, DRIVE, params={
@@ -125,6 +134,11 @@ def _one_private_folder(
 def discover_private_chunks_folder(drive: Any) -> str:
     root = _one_private_folder(drive, name=ROOT_NAME, parent=None)
     return _one_private_folder(drive, name=CHILD_NAME, parent=root)
+
+
+def discover_private_manifests_folder(drive: Any) -> str:
+    root = _one_private_folder(drive, name=ROOT_NAME, parent=None)
+    return _one_private_folder(drive, name="MANIFESTS", parent=root)
 
 
 def source_envelope(
@@ -179,6 +193,10 @@ def run_private_ssi_stage(
     # gates precede both: fail without fetching confidential data on bad Drive.
     try:
         folder = discover_private_chunks_folder(drive_session)
+        manifest_enabled = (env.get("MST_MANIFEST_STAGE_MODE", "CHUNK_ONLY")
+                            == "UNPUBLISHED_MANIFEST")
+        manifests_folder = (discover_private_manifests_folder(drive_session)
+                            if manifest_enabled else None)
         source_env = dict(env)
         source_env["MST_MFX_SOURCE_MODE"] = "ssi-native-quarantine-stage"
         report, captured = _fetch_ssi_native_once(source_session, source_env)
@@ -188,11 +206,18 @@ def run_private_ssi_stage(
         result = upload_private_unpublished_chunk(
             drive_session, write_env, folder, raw
         )
-    except (ChunkDenied, SsiSourceDenied, BootstrapDenied, SsiStageDenied):
+        if manifest_enabled:
+            write_env["MST_PRIVATE_MANIFESTS_FOLDER_ID"] = manifests_folder
+            stage_unpublished_manifest(
+                drive_session, write_env, folder, manifests_folder, result
+            )
+    except (ChunkDenied, SsiSourceDenied, BootstrapDenied,
+            SsiStageDenied, ManifestDenied):
         raise
     except Exception:
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_UNEXPECTED_FAILURE") from None
     receipt = result.public_receipt()
+    receipt["unpublished_private_manifest_staged"] = manifest_enabled
     receipt["source_observed_rows"] = len(captured)
     receipt["source_provider"] = "SSI_FASTCONNECT_V3_MARKET_DATA"
     receipt["source_timestamp_semantics_attested"] = False
@@ -209,7 +234,8 @@ def main() -> None:
         oauth = OAuthSecrets(*(os.environ[key] for key in OWNER_SECRET_KEYS))
         drive = _new_authorized_session(oauth)
         receipt = run_private_ssi_stage(requests.Session(), drive, os.environ)
-    except (ChunkDenied, SsiSourceDenied, BootstrapDenied, SsiStageDenied):
+    except (ChunkDenied, SsiSourceDenied, BootstrapDenied,
+            SsiStageDenied, ManifestDenied):
         raise
     except Exception:
         raise SsiStageDenied("MST_SSI_CLOUD_STAGE_UNEXPECTED_FAILURE") from None
@@ -219,6 +245,7 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except (ChunkDenied, SsiSourceDenied, BootstrapDenied, SsiStageDenied) as exc:
+    except (ChunkDenied, SsiSourceDenied, BootstrapDenied,
+            SsiStageDenied, ManifestDenied) as exc:
         # Known fixed error code only, never a source exception repr/response.
         raise SystemExit(str(exc)) from None
