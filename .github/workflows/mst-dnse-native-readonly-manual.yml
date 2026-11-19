@@ -1,0 +1,79 @@
+name: MST DNSE signed native OHLC read-only - MANUAL OWNER GATED
+
+# §234 official DNSE OpenAPI. No push, cron, Drive write or broker API.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Owner authorizes DNSE market-data read only; rights must be verified separately'
+        type: choice
+        required: true
+        default: 'NO'
+        options:
+          - 'NO'
+          - 'READ_DNSE_ONLY'
+      native_tf:
+        description: 'DNSE native OHLC TF; H4 and W1 intentionally excluded'
+        type: choice
+        required: true
+        default: 'D1'
+        options:
+          - 'D1'
+          - 'H1'
+          - 'M30'
+          - 'M15'
+          - 'M5'
+      symbol:
+        description: 'Small audited scope; no wide market scan'
+        type: choice
+        required: true
+        default: 'FPT'
+        options:
+          - 'FPT'
+          - 'HPG'
+          - 'DCM'
+      from_date:
+        description: 'Inclusive start YYYY-MM-DD, bounded by timeframe'
+        type: string
+        required: true
+      to_date:
+        description: 'Inclusive end YYYY-MM-DD, bounded by timeframe'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-dnse-native-readonly-main-manual
+  cancel-in-progress: false
+
+jobs:
+  dnse-native-readonly:
+    name: Protected-main DNSE OHLC signature and invariant probe
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm == 'READ_DNSE_ONLY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout protected main without persisted GitHub credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned HTTPS dependency
+        run: python -m pip install --disable-pip-version-check requests==2.32.5
+      - name: Validate bounded signed DNSE OHLC source privately, emit count only
+        env:
+          MST_DNSE_PROBE_CONFIRM: ${{ inputs.confirm }}
+          MST_SOURCE_TF: ${{ inputs.native_tf }}
+          MST_DNSE_SYMBOL: ${{ inputs.symbol }}
+          MST_DNSE_FROM_DATE: ${{ inputs.from_date }}
+          MST_DNSE_TO_DATE: ${{ inputs.to_date }}
+          MST_DNSE_READONLY_OWNER_ACCEPTED: ${{ vars.MST_DNSE_READONLY_OWNER_ACCEPTED }}
+          MST_DNSE_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_SOURCE_RIGHTS_CONFIRMED }}
+          MST_DNSE_API_KEY: ${{ secrets.MST_DNSE_API_KEY }}
+          MST_DNSE_API_SECRET: ${{ secrets.MST_DNSE_API_SECRET }}
+        run: python -m scripts.mst_dnse_native_cloud_readonly234
