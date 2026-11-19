@@ -81,7 +81,7 @@ class FakeManifestDrive(FakeSession):
             if self.manifest_uploaded or self.manifest_existing:
                 entries = [{
                     "id": MANIFEST_FILE,
-                    "name": self.manifest_name or "MST_UNPUBLISHED_MANIFEST_TEST",
+                    "name": self.manifest_name or params["q"].split("name = '", 1)[1].split("'", 1)[0],
                     "mimeType": m.MIME,
                     "parents": [MANIFESTS], "trashed": False,
                 }]
@@ -225,7 +225,7 @@ class PrivateUnpublishedManifest242(unittest.TestCase):
     def test_stale_chunk_source_identity_denied(self):
         drive = FakeManifestDrive()
         forged = replace(chunk(drive), sha256="b"*64)
-        with self.assertRaises(m.ManifestDenied):
+        with self.assertRaisesRegex(m.ChunkDenied, "CENSUS_SCOPE_INVALID"):
             stage(drive, src=forged)
         self.assertFalse(drive.manifest_uploaded)
 
