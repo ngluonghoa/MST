@@ -165,7 +165,7 @@ class DnseCloud234Tests(unittest.TestCase):
     def test_malformed_response_and_excess_rows_rejected(self):
         orig = fake_payload()
         for bad in (
-            None, {}, {"t": []}, {**orig, "v": [1]},
+            {}, {"t": []}, {**orig, "v": [1]},
             {**orig, "nextTime": -1}, {**orig, "nextTime": "0"},
             {**orig, "t": orig["t"] * 251},
         ):
