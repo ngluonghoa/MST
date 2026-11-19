@@ -23,6 +23,7 @@ class Timeframe(str, Enum):
     M15 = "M15"
     M30 = "M30"
     H1 = "H1"
+    H4 = "H4"  # Derived only after venue-session policy proof; NEVER native SSI/DNSE.
     D1 = "D1"
     W1 = "W1"
 
