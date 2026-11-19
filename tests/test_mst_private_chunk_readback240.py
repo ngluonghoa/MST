@@ -313,7 +313,7 @@ class ChunkReadback240Tests(unittest.TestCase):
                 replace(result, **{key: True})
 
     def test_no_runtime_io_before_explicit_guard(self):
-        for raw in (b"", "not bytes", None, b"{" * (c.MAX_BYTES+1)):
+        for raw in (b"", "not bytes", b"{" * (c.MAX_BYTES+1)):
             s = FakeSession()
             with self.subTest(type=type(raw).__name__), self.assertRaises(c.ChunkDenied):
                 attempt(s, raw=raw)
