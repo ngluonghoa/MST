@@ -159,6 +159,7 @@ class ResearchMcpCrossFeed248(unittest.TestCase):
     def test_duplicate_or_missing_provider_denied(self):
         items=fixtures()
         items[1]["source"]="SSI_MCP_COMPACT_D1"
+        items[1]["price_unit"]="VND"
         with self.assertRaisesRegex(BasisAuditDenied,"DUPLICATE_OR_MISSING_SOURCE"):
             evaluate(items)
         for bad in ([],fixtures()[:2],fixtures()+fixtures()[:1],True):
