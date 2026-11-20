@@ -88,7 +88,10 @@ class SourceOwnerPreflight249(unittest.TestCase):
                            "MST_PRIVATE_CHUNKS_WRITE_ACCEPTED"):
                     self.assertEqual(r["ssi_native_readonly"]["configuration_status"],
                                      "DECLARED_ONLY_UNVERIFIED")
-                self.assertEqual(r["ssi_private_chunk_stage"]["configuration_status"], "HOLD")
+                expected = ("DECLARED_ONLY_UNVERIFIED"
+                            if key == "MST_DNSE_SOURCE_RIGHTS_CONFIRMED"
+                            else "HOLD")
+                self.assertEqual(r["ssi_private_chunk_stage"]["configuration_status"], expected)
 
     def test_optional_manifest_write_gate_not_inherited(self):
         e=good()
