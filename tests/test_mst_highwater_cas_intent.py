@@ -114,6 +114,10 @@ class SignedCasIntent246(unittest.TestCase):
         old, new, anchor=examples()
         tampered=deepcopy(old)
         tampered["body"]["sequence"]=2
+        # Keep the fake *observed* tip consistent so the signature-check
+        # path, rather than the earlier stale-tip guard, is exercised.
+        anchor["tip_checkpoint_sha256"]=checkpoint_digest(tampered)
+        anchor["generation"]=2
         with self.assertRaisesRegex(m.CasIntentDenied,"SIGNED_SUCCESSOR_INVALID"):
             prepare(old=tampered,new=new,anchor=anchor,
                     tip=checkpoint_digest(tampered))
