@@ -70,8 +70,9 @@ def check(ckpts, *, pub=PUBLIC, tip=None, key_id=KEY_ID):
     return h.verify_signed_highwater_candidates(
         ckpts, trusted_key_id=key_id,
         trusted_ed25519_public_key=pub,
-        expected_tip_checkpoint_sha256=(h.checkpoint_digest(ckpts[-1])
-                                        if tip is None else tip),
+        expected_tip_checkpoint_sha256=(tip if tip is not None else
+                                        h.checkpoint_digest(ckpts[-1]) if
+                                        type(ckpts) is list and ckpts else "0"*64),
     )
 
 
@@ -248,7 +249,8 @@ class SignedHighwaterReadonly245(unittest.TestCase):
 
     def test_signature_not_canonical_base64_denied(self):
         a = genesis()
-        for sig in (a["signature_b64"][:-1]+"?", "x", a["signature_b64"][:-2]+"=="):
+        for sig in (a["signature_b64"][:-1]+"?", "x",
+                    a["signature_b64"][:10]+"?"+a["signature_b64"][11:]):
             bad=deepcopy(a)
             bad["signature_b64"]=sig
             with self.subTest(sig=sig[:10]),self.assertRaises(h.HighwaterDenied):
