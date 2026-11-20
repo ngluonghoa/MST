@@ -1,0 +1,57 @@
+name: MST SSI/DNSE source Cloud owner prerequisites - MANUAL ZERO HTTP
+
+# §249: human-dispatched protected main only. Does NOT contact SSI, DNSE,
+# Google Drive, highwater backend or broker; never print credential values.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "CHECK_ONLY validates syntactic owner declarations and secret presence, not actual access or rights"
+        type: choice
+        required: true
+        default: "NO"
+        options:
+          - "NO"
+          - "CHECK_ONLY"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-owner-source-config-preflight-single-writer
+  cancel-in-progress: false
+
+jobs:
+  owner-source-readiness:
+    name: Owner Cloud configuration preflight - zero outbound HTTP
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && inputs.confirm == 'CHECK_ONLY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Checkout protected main without persisted credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Print only static blocked categories, never owner secret values
+        env:
+          MST_SOURCE_PREFLIGHT_CONFIRM: ${{ inputs.confirm }}
+          MST_SSI_READONLY_OWNER_ACCEPTED: ${{ vars.MST_SSI_READONLY_OWNER_ACCEPTED }}
+          MST_SSI_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_SSI_SOURCE_RIGHTS_CONFIRMED }}
+          MST_DNSE_READONLY_OWNER_ACCEPTED: ${{ vars.MST_DNSE_READONLY_OWNER_ACCEPTED }}
+          MST_DNSE_SOURCE_RIGHTS_CONFIRMED: ${{ vars.MST_DNSE_SOURCE_RIGHTS_CONFIRMED }}
+          MST_PRIVATE_CHUNKS_WRITE_ACCEPTED: ${{ vars.MST_PRIVATE_CHUNKS_WRITE_ACCEPTED }}
+          MST_SOURCE_RETENTION_RIGHTS_CONFIRMED: ${{ vars.MST_SOURCE_RETENTION_RIGHTS_CONFIRMED }}
+          MST_PRIVATE_MANIFEST_WRITE_ACCEPTED: ${{ vars.MST_PRIVATE_MANIFEST_WRITE_ACCEPTED }}
+          MST_OAUTH_BOOTSTRAP_ACCEPTED: ${{ vars.MST_OAUTH_BOOTSTRAP_ACCEPTED }}
+          MST_SSI_API_KEY: ${{ secrets.MST_SSI_API_KEY }}
+          MST_SSI_API_SECRET: ${{ secrets.MST_SSI_API_SECRET }}
+          MST_DNSE_API_KEY: ${{ secrets.MST_DNSE_API_KEY }}
+          MST_DNSE_API_SECRET: ${{ secrets.MST_DNSE_API_SECRET }}
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+        run: python -m scripts.mst_source_owner_cloud_preflight249
