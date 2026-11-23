@@ -227,13 +227,11 @@ class TypedQuarantineDiagnostic256(unittest.TestCase):
 
     def test_errors_do_not_print_private_raw_data(self):
         src, bar = refs("DNSE")
-        try:
+        with self.assertRaises(PrivateSourceDenied) as caught:
             replace(bar, close_vnd=Decimal("NaN"))
-        except PrivateSourceDenied as exc:
-            self.assertEqual(str(exc), "MST_PRIVATE_BRIDGE_TYPED_PRICE_INVALID")
-        else:
-            self.fail("source value bypassed the typed-data gate")
-        self.assertNotIn(src.raw_source_sha256, str(exc))
+        fixed_code = str(caught.exception)
+        self.assertEqual(fixed_code, "MST_PRIVATE_BRIDGE_TYPED_PRICE_INVALID")
+        self.assertNotIn(src.raw_source_sha256, fixed_code)
 
 
 if __name__ == "__main__":
