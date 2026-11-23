@@ -54,9 +54,11 @@ class FictionalUi10CloudArtifact255(unittest.TestCase):
                 "openapi.dnse.com.vn",
                 "BUY NOW",
                 "AUTO_TRADE",
-                "FULL_ANALYSIS",
             ):
                 self.assertNotIn(forbidden, printable)
+            # The locked report may mention FULL_ANALYSIS only as a DENIAL,
+            # never as a successful publication status.
+            self.assertNotIn('"publication_state":"FULL_ANALYSIS"', printable)
             self.assertTrue(receipt["input_is_fictional"])
             for gate in (
                 "real_provider_data_read", "cloud_secret_read",
