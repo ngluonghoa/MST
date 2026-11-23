@@ -1,0 +1,54 @@
+name: MST UI-1.0 A-I fictional INCOMPLETE HTML - CLOUD REVIEW
+
+# §255: one authentic GitHub-hosted HTML build per relevant protected-main
+# code change, never a live source workflow, broker, publisher or cache task.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/mst-ui10-fictional-review.yml"
+      - "scripts/mst_ui10_fictional_cloud_artifact255.py"
+      - "src/swing_trading/private_cache_signal_ui_preview.py"
+      - "src/swing_trading/private_cache_source_bridge.py"
+      - "src/swing_trading/locked_ui10_binding.py"
+      - "src/swing_trading/locked_ui10_renderer.py"
+      - "tests/test_mst_ui10_fictional_cloud_artifact255.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-ui10-fictional-main-review
+  cancel-in-progress: false
+
+jobs:
+  fictional-ui-review:
+    name: Main-only 16-zone A-I static HTML fake-only review
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout protected main without persisted credentials
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Test fictional HTML review and source isolation
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -p 'test_mst_ui10_fictional_cloud_artifact255.py' -v
+      - name: Generate three-file FICTIONAL INCOMPLETE review bundle
+        env:
+          PYTHONPATH: src
+        run: python -m scripts.mst_ui10_fictional_cloud_artifact255
+      - name: Upload clearly labelled fake HTML + redacted receipt (no real market source)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mst-ui10-FICTIONAL-NO-TRADE-${{ github.run_id }}
+          path: out/mst-ui10-fictional/
+          if-no-files-found: error
+          retention-days: 14
