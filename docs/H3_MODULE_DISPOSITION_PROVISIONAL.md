@@ -47,7 +47,7 @@ these require separate consumer, migration and rollback evidence.
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_cache_source_bridge | domain_and_reference | 307 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
+| private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_multitf_readiness | domain_and_reference | 177 | 35 | 91 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
