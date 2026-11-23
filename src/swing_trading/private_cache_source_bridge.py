@@ -49,16 +49,30 @@ class QuarantinedD1Bar:
     provisional_source: bool = False
 
     def __post_init__(self) -> None:
-        if (self.provider not in PROVIDERS
-                or not _SYMBOL.fullmatch(self.symbol)
-                or self.trading_date > date(9999, 12, 31)):
+        # §256: callers can construct dataclasses without going through _bar().
+        # Enforce the same numeric, source-identity and authority invariants at
+        # the typed-object boundary. Never leak caller supplied raw values.
+        if (type(self.provider) is not str or self.provider not in PROVIDERS
+                or type(self.symbol) is not str
+                or _SYMBOL.fullmatch(self.symbol) is None
+                or type(self.trading_date) is not date
+                or type(self.reported_price_basis) is not PriceBasis
+                or type(self.provisional_source) is not bool):
             raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_BAD_IDENTITY")
-        if self.low_vnd > min(self.open_vnd, self.close_vnd):
+        prices = (
+            self.open_vnd, self.high_vnd, self.low_vnd, self.close_vnd,
+        )
+        if any(type(x) is not Decimal or not x.is_finite()
+               or not Decimal(0) < x <= MAX_PRICE_VND for x in prices):
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_TYPED_PRICE_INVALID")
+        if (self.low_vnd > min(self.open_vnd, self.close_vnd)
+                or self.high_vnd < max(
+                    self.open_vnd, self.low_vnd, self.close_vnd)):
             raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_OHLC_BAD_ORDER")
-        if self.high_vnd < max(self.open_vnd, self.close_vnd, self.low_vnd):
-            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_OHLC_BAD_ORDER")
-        if self.volume_shares < 0:
-            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_VOLUME_NEGATIVE")
+        if type(self.volume_shares) is not int:
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_VOLUME_TYPE")
+        if not 0 <= self.volume_shares <= (1 << 63) - 1:
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_VOLUME_RANGE")
 
     @property
     def eligible_for_signals(self) -> bool:
@@ -81,10 +95,36 @@ class PrivateD1Reference:
     eligible_for_backtest: bool = False
 
     def __post_init__(self) -> None:
-        if (not _SHA.fullmatch(self.raw_source_sha256)
-                or self.source_rows_observed != len(self.bars)
-                or not self.bars):
+        if (type(self.provider) is not str or self.provider not in PROVIDERS
+                or type(self.symbol) is not str
+                or _SYMBOL.fullmatch(self.symbol) is None
+                or type(self.source_snapshot_day) is not date
+                or type(self.raw_source_sha256) is not str
+                or _SHA.fullmatch(self.raw_source_sha256) is None
+                or type(self.source_rows_observed) is not int
+                or type(self.bars) is not tuple
+                or not 1 <= self.source_rows_observed <= MAX_SOURCE_ROWS
+                or len(self.bars) != self.source_rows_observed
+                or type(self.has_provisional_source) is not bool):
             raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_DIGEST_OR_ROWS_INVALID")
+        if any(type(b) is not QuarantinedD1Bar
+               or b.provider != self.provider or b.symbol != self.symbol
+               or b.trading_date > self.source_snapshot_day
+               for b in self.bars):
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_SOURCE_PARTITION_DRIFT")
+        days = tuple(b.trading_date for b in self.bars)
+        if tuple(sorted(set(days))) != days:
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_DUPLICATE_OR_UNSORTED")
+        if self.has_provisional_source is not any(
+            b.provisional_source for b in self.bars
+        ):
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_PROVISIONAL_DRIFT")
+        if (self.source_is_appowned_publisher is not False
+                or self.venue_close_attested is not False
+                or self.issuer_first_known_attested is not False
+                or self.eligible_for_signals is not False
+                or self.eligible_for_backtest is not False):
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_AUTHORITY_FORGED")
 
 
 @dataclass(frozen=True)
@@ -98,8 +138,18 @@ class PrivateD1Diagnostic:
 
     def __post_init__(self) -> None:
         require_utc(self.as_of_utc)
-        if not isinstance(self.strategy, Strategy):
+        if type(self.strategy) is not Strategy:
             raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_BAD_STRATEGY")
+        if type(self.source) is not PrivateD1Reference:
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_DIAGNOSTIC_SOURCE_INVALID")
+        if self.source.source_snapshot_day > self.as_of_utc.date():
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_RETROSPECTIVE_LOOKAHEAD")
+        if (self.eligible_for_signals is not False
+                or type(self.trading_or_broker_calls) is not int
+                or self.trading_or_broker_calls != 0):
+            raise PrivateSourceDenied("MST_PRIVATE_BRIDGE_DIAGNOSTIC_AUTHORITY_FORGED")
+        # The report boundary independently checks 16 zone verdict contents;
+        # a caller-mutated tuple must not be silently turned into a signal.
 
 
 def _bounded_num(value: Any) -> Decimal:
