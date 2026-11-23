@@ -63,7 +63,7 @@ def strictly_fictional_source() -> dict:
 
 def build_fictional_ui_artifact(output_dir: Path) -> dict:
     """Produce ONLY a static review bundle. Refuse any authoritativeness."""
-    if type(output_dir) is not Path:
+    if not isinstance(output_dir, Path):
         raise ValueError("MST_255_EXACT_PATH_REQUIRED")
     snapshot = strictly_fictional_source()
     preview = render_private_d1_cache_signal_ui_preview(
