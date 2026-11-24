@@ -1,0 +1,3 @@
+# §264 S7 R0/R_C exact support retest ingredient
+Source: frozen Swing Trading 1.8 Master Spec §§16.7,24.4,24.5; private §261–263 research is not copied into this public repo.
+Reuses existing LOW pivot/BOS and Wilder ATR14, with a later M15 reference approached from below. Distances are descriptive only, no default NEAR or expiry. Separate unsigned origin and retest fingerprints preserve different pivots and revisions. No authenticated source, calendar adjacency, full S7 predicate, volume/risk/position, detector registration, or action authority. All original 16 zone states remain UNVERIFIED. Synthetic fixtures only. No provider or Drive request.
