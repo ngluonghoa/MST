@@ -14,6 +14,8 @@ from .causal_structure_geometry import (
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
+from .private_multitf_readiness import BaselineResolvedInputs
+from .phase_input_routing369 import route_phase_inputs
 from .replay import require_utc
 from .source_quality import ResolvedBarSnapshotV12
 from .structural_phase_evidence import (
@@ -396,3 +398,175 @@ def inspect_s7_confirmation_evidence(
         early.origin_preview_id, early.retest_preview_id, early.early_preview_id,
         phase.bos_preview_id, digest, phase.witness_known_at_utc,
     )
+
+
+@dataclass(frozen=True)
+class S7OriginPlan374:
+    timeframe: Timeframe
+    history_start: int
+    breakdown_index: int
+    pivot_index: int
+    left_count: int
+    right_count: int
+    atr_start: int
+    atr_stop: int
+    retest_atr_start: int
+    retest_atr_stop: int
+    retest_index: int
+    mode: S7EarlyMode
+    followup_index: int | None
+    tie_policy: TiePolicy
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class S7MicroPlan374:
+    timeframe: Timeframe
+    history_start: int
+    confirmation_index: int
+    pivot_index: int
+    left_count: int
+    right_count: int
+    atr_start: int
+    atr_stop: int
+    tie_policy: TiePolicy
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class S7BaselinePreview374:
+    strategy: Strategy
+    variant_id: str
+    as_of_utc: datetime
+    routed_phases: tuple
+    retest: S7RetestEvidence | None
+    early: S7EarlyEvidence | None
+    confirmation: S7ConfirmationEvidence | None
+    reason: str
+
+    @property
+    def status(self):
+        return DecisionStatus.UNVERIFIED
+
+    @property
+    def action_eligible(self):
+        return False
+
+
+def _slice374(rows, start, stop):
+    if type(start) is not int or type(stop) is not int or not 0 <= start < stop:
+        raise ValueError("MST_374_INVALID_SLICE")
+    if rows and stop > len(rows):
+        raise ValueError("MST_374_SLICE_OUTSIDE_SCOPE")
+    return rows[start:stop]
+
+
+def _index374(rows, index):
+    if type(index) is not int or index < 0:
+        raise ValueError("MST_374_INVALID_INDEX")
+    if rows and index >= len(rows):
+        raise ValueError("MST_374_INDEX_OUTSIDE_SCOPE")
+    return rows[index] if rows else None
+
+
+def _validate_break374(plan, target_index):
+    if (type(plan.timeframe) is not Timeframe
+            or plan.timeframe not in (Timeframe.D1, Timeframe.H1)
+            or type(plan.tie_policy) is not TiePolicy):
+        raise ValueError("MST_374_EXPLICIT_BREAK_FRAME_OR_TIE")
+    nums = (target_index, plan.history_start, plan.pivot_index,
+            plan.left_count, plan.right_count)
+    if any(type(n) is not int or n < 0 for n in nums):
+        raise ValueError("MST_374_INVALID_BREAK_INDEX")
+    if (min(plan.left_count, plan.right_count) < 1
+            or plan.pivot_index < plan.left_count
+            or plan.history_start + plan.pivot_index + plan.right_count >= target_index - 1):
+        raise ValueError("MST_374_INVALID_BREAK_WINDOW")
+
+
+def _origin374(inputs, plan, strategy):
+    _validate_break374(plan, plan.breakdown_index)
+    if type(plan.retest_index) is not int or plan.retest_index < 1:
+        raise ValueError("MST_374_RETEST_REQUIRES_PRIOR")
+    if type(plan.mode) is not S7EarlyMode:
+        raise ValueError("MST_374_EXPLICIT_EARLY_MODE")
+    if plan.mode is S7EarlyMode.LATER_CLOSE_BELOW:
+        if type(plan.followup_index) is not int or plan.followup_index != plan.retest_index + 1:
+            raise ValueError("MST_374_EXPLICIT_NEXT_OBSERVED_FOLLOWUP")
+    elif plan.followup_index is not None:
+        raise ValueError("MST_374_TOUCH_HAS_NO_FOLLOWUP")
+    higher = inputs.snapshots_for(plan.timeframe)
+    m15 = inputs.snapshots_for(Timeframe.M15)
+    d1 = inputs.snapshots_for(Timeframe.D1)
+    history = _slice374(higher, plan.history_start, plan.breakdown_index - 1)
+    atr = _slice374(d1, plan.atr_start, plan.atr_stop)
+    retest_atr = _slice374(d1, plan.retest_atr_start, plan.retest_atr_stop)
+    breakdown = _index374(higher, plan.breakdown_index)
+    prior = _index374(m15, plan.retest_index - 1)
+    retest = _index374(m15, plan.retest_index)
+    followup = None if plan.followup_index is None else _index374(m15, plan.followup_index)
+    if not history or not atr or not retest_atr or prior is None or retest is None:
+        return None, followup
+    return dict(pivot_history=history, pivot_index=plan.pivot_index,
+                left_count=plan.left_count, right_count=plan.right_count,
+                tie_policy=plan.tie_policy, previous=higher[plan.breakdown_index - 1],
+                breakdown=breakdown, prior_retest=prior, retest=retest,
+                atr_d1_history=atr, retest_atr_d1_history=retest_atr,
+                candidate_epsilon=plan.candidate_epsilon, strategy=strategy,
+                as_of_utc=inputs.as_of_utc), followup
+
+
+def _micro374(inputs, plan):
+    _validate_break374(plan, plan.confirmation_index)
+    rows = inputs.snapshots_for(plan.timeframe)
+    history = _slice374(rows, plan.history_start, plan.confirmation_index - 1)
+    atr = _slice374(inputs.snapshots_for(Timeframe.D1), plan.atr_start, plan.atr_stop)
+    target = _index374(rows, plan.confirmation_index)
+    if not history or not atr or target is None:
+        return None
+    return dict(confirmation=target, micro_history=history,
+                micro_index=plan.pivot_index, micro_left=plan.left_count,
+                micro_right=plan.right_count, micro_previous=rows[plan.confirmation_index - 1],
+                micro_atr_history=atr, micro_tie_policy=plan.tie_policy,
+                micro_epsilon=plan.candidate_epsilon)
+
+
+def inspect_s7_baseline_preview(inputs, *, strategy, variant_id, origin_plan, micro_plan=None):
+    """Recompute one exact S7 chain from bound rows; continuation stays pending.
+
+    Plan indices address contiguous observed slices, not attested exchange
+    adjacency. Explicit continuation has no approved predicate; never substitute
+    the micro-break result or invent a continuation threshold.
+    """
+    if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
+            or type(origin_plan) is not S7OriginPlan374
+            or variant_id not in ("S7/F_MICRO_BREAK", "S7/F_CONTINUATION")):
+        raise ValueError("MST_374_EXPLICIT_S7_PLAN_REQUIRED")
+    if variant_id == "S7/F_MICRO_BREAK":
+        if type(micro_plan) is not S7MicroPlan374:
+            raise ValueError("MST_374_EXPLICIT_MICRO_PLAN_REQUIRED")
+    elif micro_plan is not None:
+        raise ValueError("MST_374_CONTINUATION_NOT_MICRO_FALLBACK")
+    base, followup = _origin374(inputs, origin_plan, strategy)
+    micro = _micro374(inputs, micro_plan) if micro_plan is not None else None
+    routes = tuple(route_phase_inputs(
+        inputs, zone_id="S7", strategy=strategy, variant_id=variant_id, phase=phase,
+        selected_frame=(origin_plan.timeframe if phase == "R0" else
+                        micro_plan.timeframe if phase == "R_F" and micro_plan is not None else None),
+    ) for phase in ("R0", "R_C", "R_E", "R_F"))
+
+    def finish(reason, retest=None, early=None, confirmation=None):
+        return S7BaselinePreview374(strategy, variant_id, inputs.as_of_utc,
+                                    routes, retest, early, confirmation, reason)
+
+    if base is None:
+        return finish("ORIGIN_OR_RETEST_INPUT_MISSING")
+    retest = inspect_s7_retest_evidence(**base)
+    early = inspect_s7_early_evidence(mode=origin_plan.mode, followup=followup, **base)
+    if variant_id == "S7/F_CONTINUATION":
+        return finish("CONTINUATION_PREDICATE_SPEC_PENDING", retest, early)
+    if micro is None:
+        return finish("MICRO_INPUT_MISSING", retest, early)
+    confirmation = inspect_s7_confirmation_evidence(
+        variant_id=variant_id, mode=origin_plan.mode, followup=followup, **micro, **base)
+    return finish(confirmation.reason, retest, early, confirmation)
