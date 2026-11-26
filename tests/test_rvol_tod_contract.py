@@ -263,7 +263,7 @@ class TODContractTests(unittest.TestCase):
                          IndicatorState.BLOCKED)
 
 
-def raw_prefix_fixture(i, timeframe=Timeframe.M15, multiplier=1, afternoon=False):
+def raw_prefix_fixture(i, timeframe=Timeframe.M15, multiplier=1, afternoon=False, shifted=False):
     length = {Timeframe.M1: 1, Timeframe.M5: 5, Timeframe.M15: 15}[timeframe]
     opening = START + timedelta(days=i)
     if afternoon:
@@ -271,8 +271,9 @@ def raw_prefix_fixture(i, timeframe=Timeframe.M15, multiplier=1, afternoon=False
         starts = [opening + timedelta(minutes=j) for j in range(2)]
         starts += [slot_start + timedelta(minutes=j) for j in range(length)]
     else:
-        slot_start = opening + timedelta(minutes=length)
-        starts = [opening + timedelta(minutes=j) for j in range(2 * length)]
+        offset = length + int(shifted)
+        slot_start = opening + timedelta(minutes=offset)
+        starts = [opening + timedelta(minutes=j) for j in range(offset + length)]
     rows = []
     for j, start in enumerate(starts):
         end = start + timedelta(minutes=1)
@@ -369,6 +370,15 @@ class RawPrefixTOD358Tests(unittest.TestCase):
                                      tuple(x[0] for x in pairs[:-1]),
                                      tuple(x[1] for x in pairs[:-1]))
             self.assertEqual(result.value, Decimal("1"))
+
+    def test_shifted_m15_slot_rejected_even_with_full_prefix(self):
+        pairs = tuple(raw_prefix_fixture(i, shifted=True) for i in range(21))
+        t, tp = pairs[-1]
+        p = tuple(x[0] for x in pairs[:-1])
+        pp = tuple(x[1] for x in pairs[:-1])
+        self.assertEqual(calculate_rvol_tod20(t, p, as_of_utc=AS_OF).value, Decimal("1"))
+        self.assertEqual(self.run_prefix(t, tp, p, pp).reason,
+                         "TARGET_CALENDAR_OR_COMPLETE_PREFIX_SCOPE_MISMATCH")
 
     def test_missing_prior_minute_not_zero_filled(self):
         p = self.pp[0]

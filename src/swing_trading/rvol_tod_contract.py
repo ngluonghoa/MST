@@ -226,8 +226,12 @@ def _prefix_expected(item, row, prefix):
     duration = {Timeframe.M1: 1, Timeframe.M5: 5, Timeframe.M15: 15}.get(key.timeframe)
     if (duration is None or key.price_basis is not PriceBasis.RAW
             or key.instrument_class is not InstrumentClass.STOCK
-            or row.bar_end_utc - key.bar_start_utc != timedelta(minutes=duration)
-            or calendar.resolve_intraday(key, row.bar_end_utc) is None):
+            or row.bar_end_utc - key.bar_start_utc != timedelta(minutes=duration)):
+        return None
+    session = calendar.resolve_intraday(key, row.bar_end_utc)
+    if session is None:
+        return None
+    if (key.bar_start_utc - session.start_utc) % timedelta(minutes=duration):
         return None
     continuous = [s for s in calendar.sessions if s.session_type is SessionType.CONTINUOUS]
     if not continuous:

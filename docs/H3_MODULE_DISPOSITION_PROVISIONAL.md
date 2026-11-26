@@ -65,7 +65,7 @@ these require separate consumer, migration and rollback evidence.
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | replay | domain_and_reference | 26 | 3 | 5 | 42 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
-| rvol_tod_contract | domain_and_reference | 353 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | s7_retest_evidence | domain_and_reference | 398 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 2 | KEEP | none |
