@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Protocol, Sequence
 
+from .replay import require_utc
+
 
 class DecisionStatus(str, Enum):
     UNVERIFIED = "UNVERIFIED"
@@ -57,3 +59,12 @@ class ZoneRuleRegistry(Protocol):
 
 class MarketDataPort(Protocol):
     def available_events(self, as_of_utc: datetime) -> Sequence[object]: ...
+
+
+def evaluate_unimplemented_zones(strategy: Strategy, as_of_utc: datetime) -> tuple[SignalDecision, ...]:
+    """Never emit NOT_DETECTED or DETECTED for an unimplemented zone."""
+    require_utc(as_of_utc)
+    return tuple(
+        SignalDecision(zone_id=zone, strategy=strategy, status=DecisionStatus.UNVERIFIED)
+        for zone in ZONE_IDS
+    )
