@@ -25,7 +25,7 @@ these require separate consumer, migration and rollback evidence.
 | cache_snapshot_bundle | cache_and_persistence | 357 | 24 | 61 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | cache_swap_preview | domain_and_reference | 133 | 16 | 47 | 0 | KEEP | none |
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
-| causal_compression_candidate395 | domain_and_reference | 86 | 8 | 27 | 0 | KEEP | none |
+| causal_compression_candidate395 | domain_and_reference | 86 | 7 | 27 | 0 | KEEP | none |
 | causal_contraction_candidate386 | domain_and_reference | 140 | 10 | 25 | 1 | KEEP | none |
 | causal_cross_tf_candidate392 | domain_and_reference | 97 | 10 | 33 | 1 | KEEP | none |
 | causal_indicators | domain_and_reference | 404 | 18 | 58 | 12 | KEEP | HIGH_FAN_IN |
