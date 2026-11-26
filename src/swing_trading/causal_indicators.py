@@ -313,3 +313,92 @@ def calculate_rvol_tf20_raw_matched(
         result.indicator_id, result.as_of_utc, result.state, result.reason,
         result.value, result.used_bar_count, "RVOL_TF_RAW_MATCHED_WITNESS_V0_1",
     )
+
+
+@dataclass(frozen=True)
+class Sma50DeltaCandidate381:
+    """Signed same-cutoff math only; neither historical signal nor trend."""
+    as_of_utc: datetime
+    lookback: int
+    state: IndicatorState
+    reason: str
+    earlier_sma50: Decimal | None
+    current_sma50: Decimal | None
+    used_bar_count: int
+
+    def __post_init__(self):
+        require_utc(self.as_of_utc)
+        _sma50_lookback381(self.lookback)
+        if type(self.state) is not IndicatorState:
+            raise ValueError("MST_381_INVALID_STATE")
+        values = (self.earlier_sma50, self.current_sma50)
+        if self.state is IndicatorState.BLOCKED:
+            if values != (None, None) or self.used_bar_count != 0:
+                raise ValueError("MST_381_BLOCKED_VALUES_FORBIDDEN")
+        elif (any(type(v) is not Decimal or not v.is_finite() or v <= 0 for v in values)
+              or type(self.used_bar_count) is not int
+              or self.used_bar_count != 50 + self.lookback):
+            raise ValueError("MST_381_INVALID_SMA_RESULT")
+
+    @property
+    def delta(self):
+        if self.state is IndicatorState.BLOCKED:
+            return None
+        return self.current_sma50 - self.earlier_sma50
+
+    @property
+    def delta_per_supplied_bar(self):
+        delta = self.delta
+        return None if delta is None else delta / Decimal(self.lookback)
+
+    @property
+    def rule_version(self):
+        return "SMA50_ENDPOINT_DELTA_CANDIDATE_V0_1"
+
+    @property
+    def data_certified(self):
+        return False
+
+    @property
+    def parameter_approved(self):
+        return False
+
+    @property
+    def actionable(self):
+        return False
+
+
+def _sma50_lookback381(lookback):
+    if type(lookback) is not int or not 1 <= lookback <= 462:
+        raise ValueError("MST_381_EXPLICIT_BOUNDED_LOOKBACK_REQUIRED")
+
+
+def calculate_d1_sma50_delta_candidate(history, *, lookback, as_of_utc, known_before_utc=None):
+    """Compare first and last 50 closes of exactly 50+lookback D1 bars.
+
+    Source draft N=10 is not an automatic default or approved threshold.
+    End-point delta per supplied bar is one explicit candidate, not a
+    regression slope, EMA, approved trend policy, or earlier-as-known replay.
+    Supplied dates need not establish independently certified continuity.
+    """
+    require_utc(as_of_utc)
+    _sma50_lookback381(lookback)
+    if known_before_utc is not None:
+        require_utc(known_before_utc)
+    cutoff = min(as_of_utc, known_before_utc) if known_before_utc else as_of_utc
+
+    def blocked(reason):
+        return Sma50DeltaCandidate381(as_of_utc, lookback, IndicatorState.BLOCKED,
+                                     reason, None, None, 0)
+
+    if type(history) is not tuple or len(history) != 50 + lookback:
+        return blocked("REQUIRE_EXACT_50_PLUS_LOOKBACK_IMMUTABLE_D1_BARS")
+    rows, reason = _validate_ordered_bars(history, as_of_utc, cutoff, Timeframe.D1)
+    if rows is None:
+        return blocked(reason)
+    earlier = sum((r.close for r in rows[:50]), Decimal(0)) / Decimal(50)
+    current = sum((r.close for r in rows[-50:]), Decimal(0)) / Decimal(50)
+    return Sma50DeltaCandidate381(
+        as_of_utc, lookback, IndicatorState.COMPUTED_UNCALIBRATED,
+        "SAME_CUTOFF_SUPPLIED_D1_SMA_ENDPOINT_MATH_ONLY", earlier, current, len(rows),
+    )

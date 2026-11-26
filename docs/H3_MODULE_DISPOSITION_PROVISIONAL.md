@@ -24,7 +24,7 @@ these require separate consumer, migration and rollback evidence.
 | cache_snapshot_bundle | cache_and_persistence | 357 | 24 | 61 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | cache_swap_preview | domain_and_reference | 133 | 16 | 47 | 0 | KEEP | none |
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
-| causal_indicators | domain_and_reference | 315 | 18 | 58 | 7 | KEEP | none |
+| causal_indicators | domain_and_reference | 404 | 18 | 58 | 7 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | contracts | domain_and_reference | 70 | 5 | 7 | 16 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
