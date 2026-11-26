@@ -26,6 +26,7 @@ from .b5_formula_geometry import (
 from .s7_retest_evidence import (
     S7BaselinePreview374, S7OriginPlan374, S7MicroPlan374, inspect_s7_baseline_preview,
 )
+from .range_baseline_preview385 import RangeEnginePlan385, RangeEnginePreview385, inspect_routed_range_preview
 from .zone_manifest_v03 import MANIFESTS
 
 PREVIEW_ZONES = ("B2", "B5", "S2", "S7")
@@ -86,7 +87,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385
 
 
 @dataclass(frozen=True)
@@ -139,6 +140,7 @@ class BaselineEnginePreview375:
 _PHASES377 = ("R0", "R_C", "R_E", "R_F")
 _GEOMETRY377 = {
     "BLOCKED": "BLOCKED",
+    "MISSING_INPUT": "MISSING_INPUT",
     "GEOMETRY_MATCH_UNVERIFIED": "GEOMETRY_MATCH_ONLY",
     "GEOMETRY_NONMATCH_UNVERIFIED": "GEOMETRY_NONMATCH_ONLY",
     "CROSS_GEOMETRY_UNVERIFIED": "GEOMETRY_MATCH_ONLY",
@@ -207,7 +209,7 @@ def _s7_states377(preview):
 
 
 def _preview_states377(preview):
-    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376):
+    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385):
         return _pair_states377(preview)
     if type(preview) is B5RFPreview373:
         return _b5_states377(preview)
@@ -239,6 +241,8 @@ def _request_supported376(request):
         return False
     if type(request.zone_id) is not str or type(request.strategy) is not Strategy:
         return False
+    if type(request.plan) is RangeEnginePlan385:
+        return request.zone_id in ("B3", "S4")
     if request.zone_id in PREVIEW_ZONES:
         return True
     return (type(request.plan) is StructuralEnginePlan376
@@ -284,6 +288,8 @@ def _dispatch375(inputs, request):
         request.zone_id, request.strategy, request.variant_id, request.plan)
     if type(variant) is not str or variant not in MANIFESTS[zone].variants:
         raise ValueError("MST_375_VARIANT_INVALID")
+    if type(plan) is RangeEnginePlan385:
+        return inspect_routed_range_preview(inputs, zone_id=zone, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is StructuralEnginePlan376:
         return _structural376(inputs, request)
     if zone in ("B2", "S2") and type(plan) is B2S2PreviewPlan371:
