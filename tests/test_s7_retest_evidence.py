@@ -7,6 +7,7 @@ import unittest
 from swing_trading.contracts import DecisionStatus, Strategy
 from swing_trading.causal_structure_geometry import TiePolicy
 from swing_trading.market_data import Timeframe
+from swing_trading.source_quality import resolve_as_known
 from swing_trading.s7_retest_evidence import (
     inspect_s7_retest_evidence, inspect_s7_early_evidence, S7EarlyMode,
     inspect_s7_confirmation_evidence,
@@ -274,6 +275,108 @@ class S7ConfirmationEvidenceTests(unittest.TestCase):
         b=inspect_s7_confirmation_evidence(**p)
         self.assertEqual(a.origin_preview_id,b.origin_preview_id)
         self.assertNotEqual(a.confirmation_preview_id,b.confirmation_preview_id)
+
+
+
+class S7ChainAudit268Tests(unittest.TestCase):
+    def chain(self):
+        return S7ConfirmationEvidenceTests().chain()
+
+    @staticmethod
+    def h1(row):
+        key = replace(row.market_bar_key,timeframe=Timeframe.H1)
+        obs = replace(row.observation_key,market_bar_key=key)
+        end = key.bar_start_utc+timedelta(hours=1)
+        retrieved = end+timedelta(minutes=1)
+        rev = replace(row.observation_revision,observation_key=obs,
+                      first_known_time_utc=end,retrieved_at_utc=retrieved)
+        return snap(replace(row,market_bar_key=key,observation_key=obs,
+                            observation_revision=rev,bar_end_utc=end,
+                            retrieved_at_utc=retrieved,
+                            verified_at_utc=retrieved+timedelta(minutes=1)))
+
+    def test_h1_full_hour_confirmation_both_strategies_and_origins(self):
+        for strategy in (Strategy.SHORT,Strategy.SWING):
+            for origin_tf in (Timeframe.D1,Timeframe.H1):
+                p=self.chain()
+                p["strategy"]=strategy
+                p["micro_history"]=tuple(self.h1(x.selected) for x in p["micro_history"])
+                for key in ("micro_previous","confirmation"):
+                    p[key]=self.h1(p[key].selected)
+                if origin_tf is Timeframe.H1:
+                    p["pivot_history"]=tuple(self.h1(x.selected) for x in p["pivot_history"])
+                    for key in ("previous","breakdown"):
+                        p[key]=self.h1(p[key].selected)
+                self.assertEqual(p["confirmation"].selected.bar_end_utc-
+                                 p["confirmation"].market_bar_key.bar_start_utc,
+                                 timedelta(hours=1))
+                r=inspect_s7_confirmation_evidence(**p)
+                self.assertEqual(r.reason,"RF_CHAIN_GEOMETRY_UNCALIBRATED")
+                self.assertIs(r.status,DecisionStatus.UNVERIFIED)
+                self.assertFalse(r.action_eligible)
+
+    def test_base_repeated_identical_history_allowed_but_conflicting_payload_denied(self):
+        p=inputs()
+        a=inspect_s7_retest_evidence(**p)
+        self.assertIsNotNone(a.origin_preview_id)
+        rows=p["retest_atr_d1_history"]
+        changed=snap(replace(rows[0].selected,close=D("10.5")))
+        p["retest_atr_d1_history"]=(changed,)+rows[1:]
+        r=inspect_s7_retest_evidence(**p)
+        self.assertEqual(r.reason,"S7_CHAIN_REVISION_CONFLICT")
+        self.assertIsNone(r.retest_preview_id)
+
+    def test_cross_phase_conflicting_source_revision_blocks(self):
+        p=self.chain()
+        rows=p["micro_atr_history"]
+        raw=rows[0].selected
+        changed=snap(replace(raw,observation_revision=replace(
+            raw.observation_revision,source_revision_or_payload_digest="other-revision")))
+        p["micro_atr_history"]=(changed,)+rows[1:]
+        r=inspect_s7_confirmation_evidence(**p)
+        self.assertEqual(r.reason,"S7_CHAIN_REVISION_CONFLICT")
+        self.assertIsNone(r.confirmation_preview_id)
+
+    def test_cross_phase_identical_key_different_ohlc_blocks(self):
+        p=self.chain()
+        rows=p["micro_atr_history"]
+        p["micro_atr_history"]=(snap(replace(rows[0].selected,close=D("10.5"))),)+rows[1:]
+        self.assertEqual(inspect_s7_confirmation_evidence(**p).reason,
+                         "S7_CHAIN_REVISION_CONFLICT")
+
+    def test_resolved_revision_conflict_in_micro_history_blocks(self):
+        p=self.chain()
+        rows=p["micro_history"]
+        raw=rows[0].selected
+        changed=replace(raw,observation_revision=replace(
+            raw.observation_revision,source_revision_or_payload_digest="conflict"))
+        ambiguous=resolve_as_known(raw.market_bar_key,(raw,changed),AS_OF)
+        p["micro_history"]=(ambiguous,)+rows[1:]
+        r=inspect_s7_confirmation_evidence(**p)
+        self.assertEqual(r.reason,"RF_MICRO_PIVOT_SOURCE_OR_SEQUENCE_MISMATCH")
+
+    def test_late_retest_revision_cannot_enter_earlier_confirmation(self):
+        p=self.chain()
+        raw=p["retest"].selected
+        cutoff=p["confirmation"].market_bar_key.bar_start_utc
+        known=cutoff+timedelta(minutes=1)
+        retrieved=known+timedelta(minutes=1)
+        corrected=replace(raw,observation_revision=replace(
+            raw.observation_revision,source_revision_or_payload_digest="late",
+            first_known_time_utc=known,retrieved_at_utc=retrieved),
+            retrieved_at_utc=retrieved,verified_at_utc=retrieved+timedelta(minutes=1))
+        p["retest"]=snap(corrected)
+        r=inspect_s7_confirmation_evidence(**p)
+        self.assertEqual(r.reason,"RF_EARLY_SHAPE_NOT_CAUSALLY_PRESENT")
+
+    def test_mixed_adjustment_revision_target_blocked(self):
+        p=self.chain()
+        raw=p["confirmation"].selected
+        changed=replace(raw,observation_revision=replace(
+            raw.observation_revision,adjustment_revision="different-adjustment"))
+        p["confirmation"]=snap(changed)
+        self.assertEqual(inspect_s7_confirmation_evidence(**p).reason,
+                         "RF_TARGET_SOURCE_MISMATCH")
 
 
 if __name__ == "__main__":

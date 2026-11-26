@@ -15,9 +15,35 @@ from .causal_structure_geometry import (
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .replay import require_utc
+from .source_quality import ResolvedBarSnapshotV12
 from .structural_phase_evidence import (
     _bar_identity, _digest, PhaseEvidenceState, inspect_phase_bos_evidence,
 )
+
+
+
+def _consistent_chain_observations(*groups):
+    """Reject contradictory snapshots of one exact MarketBarKey across phases.
+
+    This is an in-memory consistency gate, not a provider revision policy.
+    Identical repeated observations are allowed across distinct dependencies;
+    an unresolved input or a different selected payload for the same key
+    cannot be silently spliced into a single diagnostic chain.
+    """
+    seen = {}
+    for group in groups:
+        if type(group) is not tuple:
+            return False
+        for snap in group:
+            if not isinstance(snap, ResolvedBarSnapshotV12):
+                return False
+            if snap.selected is None:
+                return False
+            key = snap.market_bar_key
+            if key in seen and seen[key] != snap.selected:
+                return False
+            seen[key] = snap.selected
+    return True
 
 
 @dataclass(frozen=True)
@@ -113,6 +139,11 @@ def inspect_s7_retest_evidence(
         return blocked("RETEST_ATR_UNAVAILABLE")
     if _cross_tf_identity(retest_atr_d1_history[0].selected) != _cross_tf_identity(b):
         return blocked("RETEST_ATR_SOURCE_MISMATCH")
+    if not _consistent_chain_observations(
+        pivot_history, (previous, breakdown, prior_retest, retest),
+        atr_d1_history, retest_atr_d1_history,
+    ):
+        return blocked("S7_CHAIN_REVISION_CONFLICT")
     price = pivot.pivot_price
     origin = _digest({"version": "S7_ORIGIN_PREVIEW_264", "pivot_history":
                       [_bar_identity(x) for x in pivot_history],
@@ -345,6 +376,15 @@ def inspect_s7_confirmation_evidence(
     )
     if phase.state is not PhaseEvidenceState.CROSS_GEOMETRY_UNVERIFIED:
         return blocked("RF_MICRO_CROSS_NOT_PRESENT")
+    early_bars = (followup,) if followup is not None else ()
+    if not _consistent_chain_observations(
+        base_inputs["pivot_history"], base_inputs["atr_d1_history"],
+        base_inputs["retest_atr_d1_history"],
+        (base_inputs["previous"], base_inputs["breakdown"],
+         base_inputs["prior_retest"], base_inputs["retest"]),
+        early_bars, micro_history, (micro_previous, confirmation), micro_atr_history,
+    ):
+        return blocked("S7_CHAIN_REVISION_CONFLICT")
     digest = _digest({
         "version": "S7_RF_CHAIN_PREVIEW_267", "variant": variant_id,
         "origin": early.origin_preview_id, "retest": early.retest_preview_id,
