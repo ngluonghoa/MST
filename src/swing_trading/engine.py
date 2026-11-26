@@ -15,11 +15,16 @@ from .private_multitf_readiness import BaselineResolvedInputs
 from .market_data import Timeframe
 from .causal_structure_geometry import TiePolicy
 from .structural_phase_evidence import ROUTES, inspect_routed_phase_bos
-from .b2s2_swing_evidence215 import B2S2PreviewPlan371, inspect_b2s2_baseline_preview
-from .b5_formula_geometry import (
-    B5RetestPlan372, B5RFPlan373, B5RFVolumePlan373, inspect_b5_baseline_confirmation,
+from .b2s2_swing_evidence215 import (
+    B2S2BaselinePreview371, B2S2PreviewPlan371, inspect_b2s2_baseline_preview,
 )
-from .s7_retest_evidence import S7OriginPlan374, S7MicroPlan374, inspect_s7_baseline_preview
+from .b5_formula_geometry import (
+    B5RetestPlan372, B5RFPlan373, B5RFVolumePlan373, B5RFPreview373,
+    inspect_b5_baseline_confirmation,
+)
+from .s7_retest_evidence import (
+    S7BaselinePreview374, S7OriginPlan374, S7MicroPlan374, inspect_s7_baseline_preview,
+)
 from .zone_manifest_v03 import MANIFESTS
 
 PREVIEW_ZONES = ("B2", "B5", "S2", "S7")
@@ -118,6 +123,114 @@ class BaselineEnginePreview375:
             "publication_state": self.publication_state, "decision": self.decision,
             "source_released": False, "detector_parity_verified": False, "trade_orders": 0,
         }
+
+
+    def safe_phase_summary(self):
+        """Separate redacted contract; legacy summary and decisions unchanged."""
+        summary = self.safe_summary()
+        summary["schema"] = "mst.private.baseline_engine_phase_preview.v0.1"
+        for output, row in zip(summary["zones"], self.rows):
+            output["phases"] = _phase_rows377(row)
+        return summary
+
+
+
+_PHASES377 = ("R0", "R_C", "R_E", "R_F")
+_GEOMETRY377 = {
+    "BLOCKED": "BLOCKED",
+    "GEOMETRY_MATCH_UNVERIFIED": "GEOMETRY_MATCH_ONLY",
+    "GEOMETRY_NONMATCH_UNVERIFIED": "GEOMETRY_NONMATCH_ONLY",
+    "CROSS_GEOMETRY_UNVERIFIED": "GEOMETRY_MATCH_ONLY",
+    "NONCROSS_GEOMETRY_ONLY": "GEOMETRY_NONMATCH_ONLY",
+    "CAUSAL_DISTANCE_UNCALIBRATED": "DISTANCE_ONLY",
+    "RAW_RETEST_UNCALIBRATED": "CHAIN_GEOMETRY_ONLY",
+    "RAW_CONFIRMATION_UNCALIBRATED": "CHAIN_GEOMETRY_ONLY",
+}
+
+
+def _route_input_state377(route):
+    if route is None:
+        return "NOT_ROUTED"
+    if any(x.startswith("MISSING_") for x in route.unresolved):
+        return "MISSING_REQUIRED_INPUT"
+    if any(x.startswith(("UNRESOLVED_REVISION_", "LOCAL_PREREQUISITES_INCOMPLETE_"))
+           for x in route.unresolved):
+        return "BLOCKED_REQUIRED_INPUT"
+    return "REQUIREMENTS_PENDING"
+
+
+def _pair_states377(preview):
+    return {r.phase: (r, _GEOMETRY377.get(e.state.value, "BLOCKED"))
+            for r, e in preview.assessments}
+
+
+def _b5_states377(preview):
+    base = _GEOMETRY377.get(preview.retest.state.value, "BLOCKED")
+    # The retest result is combined R0/RC/RE geometry, not three phase passes.
+    if base == "GEOMETRY_NONMATCH_ONLY":
+        base = "CHAIN_NONMATCH_ONLY"
+    return dict([(r.phase, (r, base)) for r in preview.retest.routed_phases]
+                + [("R_F", (preview.routed_rf,
+                            _GEOMETRY377.get(preview.state.value, "BLOCKED")))])
+
+
+def _s7_retest_state377(retest):
+    if retest is None:
+        return "MISSING_INPUT"
+    return "CHAIN_GEOMETRY_ONLY" if retest.retest_preview_id is not None else "BLOCKED"
+
+
+def _s7_early_state377(early):
+    if early is None:
+        return "NOT_EVALUATED"
+    if early.shape_observed is True:
+        return "GEOMETRY_MATCH_ONLY"
+    if early.shape_observed is False:
+        return "GEOMETRY_NONMATCH_ONLY"
+    return "BLOCKED"
+
+
+def _s7_rf_state377(preview):
+    if preview.variant_id == "S7/F_CONTINUATION":
+        return "SPEC_PENDING"
+    if preview.confirmation is None:
+        return "MISSING_INPUT" if preview.reason == "MICRO_INPUT_MISSING" else "NOT_EVALUATED"
+    return ("CHAIN_GEOMETRY_ONLY" if preview.confirmation.confirmation_preview_id is not None
+            else "BLOCKED")
+
+
+def _s7_states377(preview):
+    base = _s7_retest_state377(preview.retest)
+    states = (base, base, _s7_early_state377(preview.early), _s7_rf_state377(preview))
+    return {r.phase: (r, state) for r, state in zip(preview.routed_phases, states)}
+
+
+def _preview_states377(preview):
+    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376):
+        return _pair_states377(preview)
+    if type(preview) is B5RFPreview373:
+        return _b5_states377(preview)
+    if type(preview) is S7BaselinePreview374:
+        return _s7_states377(preview)
+    if preview is not None:
+        raise RuntimeError("MST_377_UNKNOWN_PREVIEW_TYPE")
+    return {}
+
+
+def _phase_rows377(row):
+    states = _preview_states377(row.private_preview)
+    default = "NOT_REQUESTED" if row.private_preview is not None else "NOT_CONFIGURED"
+    if row.reason == "PREVIEW_REJECTED_UNVERIFIED":
+        default = "CONFIG_REJECTED"
+    return [_phase_row377(p, *states.get(p, (None, default))) for p in _PHASES377]
+
+
+def _phase_row377(phase, route, state):
+    inputs = _route_input_state377(route)
+    if state == "BLOCKED" and inputs == "MISSING_REQUIRED_INPUT":
+        state = "MISSING_INPUT"
+    return {"phase": phase, "ingredient_state": state, "input_state": inputs,
+            "phase_verified": False, "action_eligible": False}
 
 
 def _request_supported376(request):
