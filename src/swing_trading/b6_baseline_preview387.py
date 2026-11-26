@@ -5,12 +5,21 @@ from enum import Enum
 
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
 from .causal_indicators import IndicatorState, calculate_wilder_atr14
-from .causal_structure_geometry import _cross_tf_identity, _source_identity
+from .causal_structure_geometry import (
+    GeometryState, StructureSide, _cross_tf_identity, _source_identity,
+    inspect_closed_bos_geometry,
+)
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .source_quality import CoverageState
+
+
+@dataclass(frozen=True)
+class B6RFPlan388:
+    breakout_index: int
+    candidate_epsilon: Decimal
 
 
 @dataclass(frozen=True)
@@ -22,6 +31,7 @@ class B6EnginePlan387:
     atr_stop: int
     target_index: int
     candidate_k_near: Decimal
+    rf: B6RFPlan388 | None = None
 
 
 class B6State387(str, Enum):
@@ -143,8 +153,64 @@ def _re387(inputs, history, atr_rows, plan):
     return _distance387(pair, history, atr_rows, plan, atr)
 
 
+
+def _rf_plan388(plan):
+    rf = plan.rf
+    if type(rf) is not B6RFPlan388 or type(rf.breakout_index) is not int:
+        raise ValueError("MST_388_EXPLICIT_D1_BREAKOUT_PLAN")
+    if rf.breakout_index <= plan.d1_stop:
+        raise ValueError("MST_388_BREAKOUT_AND_PRIOR_MUST_FOLLOW_CONTRACTION_SLICE")
+    eps = rf.candidate_epsilon
+    if type(eps) is not Decimal or not eps.is_finite() or eps < 0:
+        raise ValueError("MST_388_EXPLICIT_EPSILON")
+
+
+def _rf_rows388(inputs, plan):
+    rows = inputs.snapshots_for(Timeframe.D1)
+    if not rows:
+        return None
+    index = plan.rf.breakout_index
+    if index >= len(rows):
+        return None
+    return rows[index-1], rows[index]
+
+
+def _rf_order388(inputs, pair, plan):
+    m15 = _m15_pair387(inputs, plan.target_index)
+    if m15 is None or pair[1].selected is None:
+        return False
+    cutoff = pair[1].selected.market_bar_key.bar_start_utc
+    return m15[1].confirmation_prerequisites(cutoff)
+
+
+def _cross388(history, atr_rows, pair, plan, cutoff):
+    p = plan.contraction
+    return inspect_closed_bos_geometry(
+        history, pivot_index=p.swings[-1][0], left_count=p.left_count,
+        right_count=p.right_count, side=StructureSide.HIGH, tie_policy=p.tie_policy,
+        previous=pair[0], breakout=pair[1], atr_d1_history=atr_rows,
+        candidate_epsilon=plan.rf.candidate_epsilon, as_of_utc=cutoff,
+    )
+
+
+def _rf388(inputs, history, atr_rows, plan, early):
+    _rf_plan388(plan)
+    pair = _rf_rows388(inputs, plan)
+    if pair is None:
+        return B6Ingredient387(B6State387.MISSING, "D1_BREAKOUT_OR_PREVIOUS_MISSING")
+    if early.state is not B6State387.DISTANCE or early.approach is not True:
+        return B6Ingredient387(B6State387.BLOCKED, "M15_APPROACH_GEOMETRY_MISSING")
+    if not _rf_order388(inputs, pair, plan):
+        return B6Ingredient387(B6State387.BLOCKED, "M15_APPROACH_NOT_KNOWN_BEFORE_BREAKOUT")
+    geom = _cross388(history, atr_rows, pair, plan, inputs.as_of_utc)
+    if geom.state is GeometryState.BLOCKED:
+        return B6Ingredient387(B6State387.BLOCKED, "D1_CLOSED_CROSS_" + geom.reason)
+    state = B6State387.MATCH if geom.candidate_cross else B6State387.NONMATCH
+    return B6Ingredient387(state, "SAME_PIVOT_D1_CROSS_ONLY_VOLUME_RISK_PENDING")
+
+
 def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
-    """Only explicit two-contraction branch; not R0 trend/base or R_F breakout.
+    """Only explicit two-contraction branch; not an approved R0 or R_F.
 
     No alternate compression fallback, no claimed volume dry-up or ATR approval.
     Target must be M15 and both D1 histories causally known at target start.
@@ -160,5 +226,9 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     scope = dict(zone_id="B6", strategy=strategy, variant_id=variant_id)
     rc = route_phase_inputs(inputs, phase="R_C", **scope)
     re = route_phase_inputs(inputs, phase="R_E", **scope)
-    return B6EnginePreview387(((rc, _rc387(history, plan, inputs.as_of_utc)),
-                               (re, _re387(inputs, history, atr_rows, plan))))
+    early = _re387(inputs, history, atr_rows, plan)
+    assessments = ((rc, _rc387(history, plan, inputs.as_of_utc)), (re, early))
+    if plan.rf is not None:
+        rf = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.D1, **scope)
+        assessments += ((rf, _rf388(inputs, history, atr_rows, plan, early)),)
+    return B6EnginePreview387(assessments)
