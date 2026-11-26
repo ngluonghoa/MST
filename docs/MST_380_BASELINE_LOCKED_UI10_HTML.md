@@ -1,0 +1,3 @@
+# §380 — Same-input baseline HTML with locked UI-1.0 layout
+
+A separate public function executes the §379 runtime directly, rejects detached runtime/legacy D1 objects, and renders source-unqualified diagnostics in the existing zone reason column. Shared internal renderer keeps A–I headings, legends, CSS, CSP, and row counts. The legacy D1 boundary and its source wording remain separate. Five fictional tests compare the semantic golden, missing input and strategy separation, deterministic redaction, and wrong-boundary rejection. This is not visual/browser acceptance, source qualification, report publication, or Step08. Rollback: revert this atomic PR.
