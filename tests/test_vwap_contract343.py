@@ -137,3 +137,12 @@ class VwapContract343(unittest.TestCase):
         row = a[0].snapshot.selected
         conflict = resolve_as_known(row.market_bar_key, (row, row), END)
         self.assertIsNone(calc((replace(a[0], snapshot=conflict), *a[1:])).value)
+
+    def test_unbounded_or_nonminute_calendar_rejected(self):
+        cal = calendar()
+        bad = replace(cal.sessions[0], end_utc=minute(0)+timedelta(days=2))
+        long_calendar = replace(cal, sessions=(bad,))
+        self.assertIsNone(calc(sample(), calendar=long_calendar).value)
+        fractional = replace(cal.sessions[0], start_utc=minute(0)+timedelta(seconds=1),
+                             end_utc=minute(2)+timedelta(seconds=1))
+        self.assertIsNone(calc(sample(), calendar=replace(cal, sessions=(fractional,))).value)

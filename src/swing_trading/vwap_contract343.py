@@ -66,7 +66,8 @@ def _expected_minutes(calendar, start, through):
     expected = []
     for s in continuous:
         delta = s.end_utc - s.start_utc
-        if delta % timedelta(minutes=1):
+        if (delta > timedelta(days=1) or delta % timedelta(minutes=1)
+                or s.start_utc.second or s.start_utc.microsecond):
             return None
         for i in range(delta // timedelta(minutes=1)):
             t = s.start_utc + timedelta(minutes=i)
