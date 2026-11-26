@@ -26,14 +26,14 @@ these require separate consumer, migration and rollback evidence.
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
 | causal_indicators | domain_and_reference | 404 | 18 | 58 | 8 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 6 | IMPROVE | HIGH_BRANCH_SCORE |
-| causal_trend_candidate382 | domain_and_reference | 88 | 11 | 19 | 0 | KEEP | none |
+| causal_trend_candidate382 | domain_and_reference | 88 | 11 | 19 | 1 | KEEP | none |
 | contracts | domain_and_reference | 70 | 5 | 7 | 16 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 333 | 10 | 19 | 2 | KEEP | none |
+| engine | domain_and_reference | 396 | 10 | 19 | 2 | KEEP | none |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
