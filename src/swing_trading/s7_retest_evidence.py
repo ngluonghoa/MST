@@ -5,6 +5,7 @@ calendar, source entitlement, trade or approved S7 phase.
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
 from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .causal_structure_geometry import (
@@ -126,4 +127,113 @@ def inspect_s7_retest_evidence(
         strategy, as_of_utc, "EXACT_PIVOT_GEOMETRY_UNCALIBRATED",
         origin, evidence, abs(b.close-price)/atr.value,
         max(b.low-price, Decimal(0), price-b.high)/atr.value, b.close > price,
+    )
+
+
+class S7EarlyMode(str, Enum):
+    """Explicit research shapes, NOT new canonical strategy variants."""
+    TOUCH_CLOSE_BELOW = "TOUCH_CLOSE_BELOW"
+    LATER_CLOSE_BELOW = "LATER_CLOSE_BELOW"
+
+
+@dataclass(frozen=True)
+class S7EarlyEvidence:
+    strategy: Strategy
+    as_of_utc: datetime
+    mode: S7EarlyMode
+    reason: str
+    origin_preview_id: str | None = None
+    retest_preview_id: str | None = None
+    early_preview_id: str | None = None
+    shape_observed: bool | None = None
+    witness_known_at_utc: datetime | None = None
+    status: DecisionStatus = DecisionStatus.UNVERIFIED
+    action_eligible: bool = False
+    detector_approved: bool = False
+    source_independently_attested: bool = False
+
+    def __post_init__(self):
+        require_utc(self.as_of_utc)
+        if (not isinstance(self.strategy, Strategy)
+                or not isinstance(self.mode, S7EarlyMode)
+                or type(self.reason) is not str or not self.reason
+                or self.status is not DecisionStatus.UNVERIFIED
+                or self.action_eligible is not False
+                or self.detector_approved is not False
+                or self.source_independently_attested is not False):
+            raise ValueError("S7_EARLY_AUTHORITY_FORBIDDEN")
+        ids = (self.origin_preview_id, self.retest_preview_id, self.early_preview_id)
+        fields = (*ids, self.shape_observed, self.witness_known_at_utc)
+        if self.reason == "M15_SHAPE_ONLY_UNCALIBRATED":
+            if (any(type(x) is not str or len(x) != 64
+                    or any(c not in "0123456789abcdef" for c in x) for x in ids)
+                    or type(self.shape_observed) is not bool):
+                raise ValueError("S7_EARLY_SHAPE_INVALID")
+            require_utc(self.witness_known_at_utc)
+            if self.witness_known_at_utc > self.as_of_utc:
+                raise ValueError("S7_EARLY_FUTURE_WITNESS")
+        elif any(x is not None for x in fields):
+            raise ValueError("S7_EARLY_BLOCKED_HAS_OUTPUT")
+
+
+def inspect_s7_early_evidence(
+    *, mode: S7EarlyMode, followup=None, **base_inputs,
+) -> S7EarlyEvidence:
+    """Source-locked §24.4 R_E M15 ingredient, without an approved predicate.
+
+    Recompute R0/R_C from the exact inputs; never accept caller-supplied
+    evidence IDs. TOUCH_CLOSE_BELOW: high reaches pivot, close strictly
+    below. LATER_CLOSE_BELOW: retest close strictly above pivot, then a
+    distinct closed M15 bar below. The latter retest must be known by the
+    followup start. Equality is not a cross. No implicit mode fallback,
+    no inferred exchange adjacency, expiry, wick ordering, NEAR threshold,
+    LH, invalidation, source rights, or full S7 phase. False geometry is
+    not NOT_DETECTED. No action or provider qualification.
+    """
+    if not isinstance(mode, S7EarlyMode):
+        raise ValueError("S7_EARLY_EXPLICIT_MODE_REQUIRED")
+    as_of = base_inputs["as_of_utc"]
+    strategy = base_inputs["strategy"]
+    require_utc(as_of)
+
+    def blocked(reason):
+        return S7EarlyEvidence(strategy, as_of, mode, reason)
+
+    if mode is S7EarlyMode.TOUCH_CLOSE_BELOW and followup is not None:
+        return blocked("UNEXPECTED_FOLLOWUP")
+    if mode is S7EarlyMode.LATER_CLOSE_BELOW and followup is None:
+        return blocked("MISSING_FOLLOWUP")
+    base = inspect_s7_retest_evidence(**base_inputs)
+    if base.origin_preview_id is None or base.retest_preview_id is None:
+        return blocked("BASE_" + base.reason)
+    retest = base_inputs["retest"]
+    b = retest.selected
+    # The same LOW pivot was already recomputed and validated by the base
+    # function. Reuse that exact input bar, not a supplied price or ID.
+    pivot = base_inputs["pivot_history"][base_inputs["pivot_index"]].selected.low
+    if mode is S7EarlyMode.TOUCH_CLOSE_BELOW:
+        shape = b.high >= pivot and b.close < pivot
+        witness = b
+        followup_identity = None
+    else:
+        c = _eligible(followup, cutoff=as_of)
+        if (c is None or c.market_bar_key.timeframe is not Timeframe.M15
+                or _source_identity(c) != _source_identity(b)
+                or c.market_bar_key == b.market_bar_key
+                or b.bar_end_utc > c.market_bar_key.bar_start_utc
+                or _eligible(retest, cutoff=c.market_bar_key.bar_start_utc) is None):
+            return blocked("FOLLOWUP_SOURCE_OR_CLOCK_MISMATCH")
+        shape = b.close > pivot and c.close < pivot
+        witness = c
+        followup_identity = _bar_identity(followup)
+    digest = _digest({
+        "version": "S7_EARLY_PREVIEW_266", "mode": mode.value,
+        "origin": base.origin_preview_id, "retest": base.retest_preview_id,
+        "followup": followup_identity,
+    })
+    known = max(witness.bar_end_utc, witness.verified_at_utc,
+                witness.observation_revision.first_known_time_utc)
+    return S7EarlyEvidence(
+        strategy, as_of, mode, "M15_SHAPE_ONLY_UNCALIBRATED",
+        base.origin_preview_id, base.retest_preview_id, digest, shape, known,
     )

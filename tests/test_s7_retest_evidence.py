@@ -7,7 +7,9 @@ import unittest
 from swing_trading.contracts import DecisionStatus, Strategy
 from swing_trading.causal_structure_geometry import TiePolicy
 from swing_trading.market_data import Timeframe
-from swing_trading.s7_retest_evidence import inspect_s7_retest_evidence
+from swing_trading.s7_retest_evidence import (
+    inspect_s7_retest_evidence, inspect_s7_early_evidence, S7EarlyMode,
+)
 from test_causal_indicators import AS_OF, START, make_bar, snap, d1
 
 
@@ -83,6 +85,102 @@ class S7RetestEvidenceTests(unittest.TestCase):
             for value in (True,0,None):
                 with self.assertRaises(ValueError):
                     replace(r,**{key:value})
+
+
+class S7EarlyEvidenceTests(unittest.TestCase):
+    def touch(self, **changes):
+        p = inputs()
+        p["retest"] = snap(replace(p["retest"].selected, close=D("2.5"), **changes))
+        return p
+
+    def later(self):
+        p = inputs()
+        p["retest"] = snap(replace(p["retest"].selected, close=D("4")))
+        start = p["retest"].selected.market_bar_key.bar_start_utc+timedelta(minutes=30)
+        c = snap(make_bar(102,timeframe=Timeframe.M15,start=start,
+                          open_price=D("4"),low=D("2"),close=D("2.5")))
+        return p,c
+
+    def test_touch_reject_geometry_and_exact_base_link(self):
+        for strategy in (Strategy.SHORT, Strategy.SWING):
+            p = dict(self.touch(),strategy=strategy)
+            r = inspect_s7_early_evidence(mode=S7EarlyMode.TOUCH_CLOSE_BELOW,**p)
+            base = inspect_s7_retest_evidence(**p)
+            self.assertTrue(r.shape_observed)
+            self.assertEqual(r.origin_preview_id,base.origin_preview_id)
+            self.assertEqual(r.retest_preview_id,base.retest_preview_id)
+            self.assertIs(r.status,DecisionStatus.UNVERIFIED)
+            self.assertFalse(r.action_eligible)
+            self.assertEqual(r,inspect_s7_early_evidence(mode=r.mode,**p))
+
+    def test_touch_missing_and_equal_close_are_not_rejection(self):
+        for p in (self.touch(high=D("2.9")),inputs()):
+            r=inspect_s7_early_evidence(mode=S7EarlyMode.TOUCH_CLOSE_BELOW,**p)
+            self.assertIs(r.shape_observed,False)
+            self.assertIs(r.status,DecisionStatus.UNVERIFIED)
+
+    def test_later_return_requires_strict_above_then_below(self):
+        p,c=self.later()
+        r=inspect_s7_early_evidence(mode=S7EarlyMode.LATER_CLOSE_BELOW,followup=c,**p)
+        self.assertTrue(r.shape_observed)
+        self.assertEqual(r.witness_known_at_utc,c.selected.verified_at_utc)
+        c2=snap(replace(c.selected,close=D("3")))
+        r2=inspect_s7_early_evidence(mode=r.mode,followup=c2,**p)
+        self.assertFalse(r2.shape_observed)
+        self.assertEqual(r.origin_preview_id,r2.origin_preview_id)
+        self.assertNotEqual(r.early_preview_id,r2.early_preview_id)
+
+    def test_explicit_modes_no_fallback(self):
+        p,c=self.later()
+        self.assertEqual(inspect_s7_early_evidence(mode=S7EarlyMode.LATER_CLOSE_BELOW,**p).reason,
+                         "MISSING_FOLLOWUP")
+        self.assertEqual(inspect_s7_early_evidence(mode=S7EarlyMode.TOUCH_CLOSE_BELOW,followup=c,**p).reason,
+                         "UNEXPECTED_FOLLOWUP")
+        with self.assertRaises(ValueError):
+            inspect_s7_early_evidence(mode="TOUCH_CLOSE_BELOW",**p)
+
+    def test_followup_future_or_duplicate_blocked(self):
+        p,c=self.later()
+        for candidate,cutoff in ((c,c.selected.bar_end_utc),(p["retest"],AS_OF)):
+            r=inspect_s7_early_evidence(mode=S7EarlyMode.LATER_CLOSE_BELOW,
+                                      followup=candidate,**dict(p,as_of_utc=cutoff))
+            self.assertEqual(r.reason,"FOLLOWUP_SOURCE_OR_CLOCK_MISMATCH")
+            self.assertIsNone(r.early_preview_id)
+
+    def test_followup_wrong_tf_and_mixed_source_blocked(self):
+        p,c=self.later()
+        wrong=snap(make_bar(104,timeframe=Timeframe.M5,
+                           start=c.selected.market_bar_key.bar_start_utc,
+                           open_price=D("4"),low=D("2"),close=D("2.5")))
+        raw=c.selected
+        obs=replace(raw.observation_key,provider_id="DIFFERENT")
+        other=snap(replace(raw,observation_key=obs,
+                           observation_revision=replace(raw.observation_revision,observation_key=obs)))
+        for candidate in (wrong,other):
+            r=inspect_s7_early_evidence(mode=S7EarlyMode.LATER_CLOSE_BELOW,
+                                       followup=candidate,**p)
+            self.assertEqual(r.reason,"FOLLOWUP_SOURCE_OR_CLOCK_MISMATCH")
+
+    def test_retest_not_known_by_followup_start_blocked(self):
+        p,c=self.later()
+        raw=p["retest"].selected
+        p["retest"]=snap(replace(raw,verified_at_utc=c.selected.bar_end_utc))
+        r=inspect_s7_early_evidence(mode=S7EarlyMode.LATER_CLOSE_BELOW,followup=c,**p)
+        self.assertEqual(r.reason,"FOLLOWUP_SOURCE_OR_CLOCK_MISMATCH")
+
+    def test_missing_base_and_forged_authority_blocked(self):
+        p=self.touch()
+        r=inspect_s7_early_evidence(mode=S7EarlyMode.TOUCH_CLOSE_BELOW,**p)
+        blocked=inspect_s7_early_evidence(mode=r.mode,**dict(p,candidate_epsilon=None))
+        self.assertTrue(blocked.reason.startswith("BASE_"))
+        self.assertIsNone(blocked.early_preview_id)
+        for key in ("action_eligible","detector_approved","source_independently_attested"):
+            for value in (True,0,None):
+                with self.assertRaises(ValueError):
+                    replace(r,**{key:value})
+        with self.assertRaises(ValueError):
+            replace(r,witness_known_at_utc=AS_OF+timedelta(seconds=1))
+
 
 if __name__ == "__main__":
     unittest.main()
