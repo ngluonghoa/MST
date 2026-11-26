@@ -59,7 +59,7 @@ these require separate consumer, migration and rollback evidence.
 | provider_rights_review | evidence_and_rights | 197 | 17 | 58 | 2 | KEEP | none |
 | provider_signed_event_chain | evidence_and_rights | 306 | 26 | 81 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | quality_audit | domain_and_reference | 181 | 14 | 27 | 1 | KEEP | none |
-| range_baseline_preview385 | domain_and_reference | 158 | 8 | 17 | 1 | KEEP | none |
+| range_baseline_preview385 | domain_and_reference | 158 | 10 | 17 | 1 | KEEP | none |
 | reference_checkpoint_mac | evidence_and_rights | 168 | 11 | 22 | 0 | KEEP | none |
 | reference_checkpoint_signature | evidence_and_rights | 176 | 15 | 35 | 1 | KEEP | none |
 | reference_host_dryrun | evidence_and_rights | 154 | 8 | 29 | 0 | KEEP | none |
