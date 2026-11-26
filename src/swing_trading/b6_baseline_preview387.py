@@ -35,9 +35,17 @@ class B6RFPlan388:
 
 
 @dataclass(frozen=True)
+class B6H1VolumePlan394:
+    comparison_policy_version: str
+    session_classes: tuple[VolumeSessionClass, ...]
+    witnesses: tuple[VolumeBasisWitness, ...]
+
+
+@dataclass(frozen=True)
 class B6H1RFPlan393:
     breakout_index: int
     candidate_epsilon: Decimal
+    volume: B6H1VolumePlan394 | None = None
 
 
 @dataclass(frozen=True)
@@ -347,11 +355,43 @@ def _rf_h1393(inputs, history, atr_rows, plan, early):
     return _h1_cross393(inputs, history, atr_rows, plan, pair)
 
 
+
+def _check_h1_volume394(plan):
+    if (type(plan) is not B6H1VolumePlan394
+            or type(plan.comparison_policy_version) is not str
+            or not plan.comparison_policy_version.strip()
+            or type(plan.session_classes) is not tuple or len(plan.session_classes) != 21
+            or any(type(c) is not VolumeSessionClass for c in plan.session_classes)
+            or type(plan.witnesses) is not tuple or len(plan.witnesses) != 21
+            or any(type(w) is not VolumeBasisWitness for w in plan.witnesses)):
+        raise ValueError("MST_394_EXPLICIT_H1_VOLUME_PLAN")
+
+
+def _h1_volume394(inputs, rf, geometry):
+    if rf.volume is None:
+        return replace(geometry, volume_state="H1_VOLUME_SPEC_PENDING")
+    plan = rf.volume
+    _check_h1_volume394(plan)
+    rows = inputs.snapshots_for(Timeframe.H1)
+    index = rf.breakout_index
+    if index < 20 or index >= len(rows):
+        return replace(geometry, volume_state="EXACT_TARGET_OR_PRIOR20_MISSING")
+    tagged = tuple(VolumeComparisonBar(row, session, plan.comparison_policy_version)
+                   for row, session in zip(rows[index-20:index+1], plan.session_classes))
+    rvol = calculate_rvol_tf20_raw_matched(
+        tagged[-1], tagged[:-1], target_witness=plan.witnesses[-1],
+        prior_witnesses=plan.witnesses[:-1], as_of_utc=inputs.as_of_utc,
+    )
+    state = ("RVOL_COMPUTED_UNCALIBRATED" if rvol.state is IndicatorState.COMPUTED_UNCALIBRATED
+             else "RVOL_BLOCKED")
+    return replace(geometry, volume_state=state, rvol=rvol)
+
+
 def _routed_rf393(inputs, history, atr_rows, plan, early, scope):
     if type(plan.rf) is B6H1RFPlan393:
         route = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.H1, **scope)
         result = _rf_h1393(inputs, history, atr_rows, plan, early)
-        return route, replace(result, volume_state="H1_VOLUME_SPEC_PENDING")
+        return route, _h1_volume394(inputs, plan.rf, result)
     route = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.D1, **scope)
     geometry = _rf388(inputs, history, atr_rows, plan, early)
     return route, _volume389(inputs, plan.rf, geometry)
