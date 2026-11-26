@@ -1,0 +1,3 @@
+# §381 — D1 signed SMA50 end-point delta candidate
+
+Original source-locked spec trend draft describes MA50 slope over N=10 D1 and confirmed HH/HL or LH/LL; exact MA/slope policy and fallback remain unapproved (§24.4/24.10). New explicit SMA50 end-point delta (and delta per supplied D1 bar), exact 50+N immutable snapshots, no default N, same-cutoff causal validation, positive/negative/flat arithmetic only. Does not prove contiguous trading sessions, historical earlier-as-known signals, EMA, regression slope, actual trend or actionability. Six fictional regression methods. No source qualification, trade, publication or automatic parameter choice. Rollback: revert atomic PR.
