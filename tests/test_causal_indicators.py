@@ -333,5 +333,74 @@ class CausalRVOLTF20Tests(unittest.TestCase):
             calculate_rvol_tf20(target,prior,as_of_utc=AS_OF.replace(tzinfo=None))
 
 
-if __name__ == "__main__":
-    unittest.main()
+
+
+class RawMatchedRVOL356Tests(unittest.TestCase):
+    def setUp(self):
+        from swing_trading.causal_indicators import VolumeBasis, VolumeBasisWitness
+        self.target, self.prior = tf20()
+        self.basis = VolumeBasis
+        self.witness = VolumeBasisWitness
+        self.tw = self.claim(self.target)
+        self.pw = tuple(self.claim(x) for x in self.prior)
+
+    def claim(self, item):
+        row = item.snapshot.selected
+        return self.witness(row, self.basis.RAW_MATCHED_SHARES,
+                            "fixture-share-regime", "fixture-evidence",
+                            row.verified_at_utc)
+
+    def assess(self, target=None, prior=None, tw=None, pw=None):
+        from swing_trading.causal_indicators import calculate_rvol_tf20_raw_matched
+        return calculate_rvol_tf20_raw_matched(
+            self.target if target is None else target,
+            self.prior if prior is None else prior,
+            target_witness=self.tw if tw is None else tw,
+            prior_witnesses=self.pw if pw is None else pw,
+            as_of_utc=AS_OF,
+        )
+
+    def test_verified_raw_share_fixture_reuses_rvol_math(self):
+        result = self.assess()
+        self.assertEqual(result.value, Decimal("1"))
+        self.assertEqual(result.used_bar_count, 21)
+        self.assertFalse(result.actionable)
+        self.assertFalse(result.data_certified)
+
+    def test_same_numbers_adjusted_unknown_and_all_trades_denied(self):
+        for basis in (self.basis.ADJUSTED_SHARES, self.basis.UNKNOWN,
+                      self.basis.ALL_TRADES_SHARES):
+            with self.subTest(basis=basis):
+                self.assertIsNone(self.assess(tw=replace(self.tw, basis=basis)).value)
+                self.assertIsNone(self.assess(pw=(replace(self.pw[0], basis=basis),
+                                                  *self.pw[1:])).value)
+
+    def test_witness_cannot_move_to_another_candle_or_corrected_volume(self):
+        self.assertIsNone(self.assess(pw=(self.pw[1], *self.pw[1:])).value)
+        altered = replace(self.target, snapshot=snap(
+            replace(self.target.snapshot.selected, volume=200)))
+        self.assertIsNone(self.assess(target=altered).value)
+
+    def test_prior_evidence_must_be_known_before_target_start(self):
+        late = self.target.snapshot.selected.market_bar_key.bar_start_utc + timedelta(seconds=1)
+        self.assertIsNone(self.assess(pw=(replace(self.pw[0], verified_at_utc=late),
+                                          *self.pw[1:])).value)
+
+    def test_future_or_preretrieval_witness_denied(self):
+        for time in (AS_OF + timedelta(seconds=1),
+                     self.target.snapshot.selected.retrieved_at_utc - timedelta(seconds=1)):
+            self.assertIsNone(self.assess(tw=replace(self.tw, verified_at_utc=time)).value)
+
+    def test_share_regime_mismatch_even_if_raw_numbers_equal(self):
+        result = self.assess(pw=(replace(self.pw[0], share_regime_id="other"),
+                                 *self.pw[1:]))
+        self.assertEqual(result.reason, "SHARE_REGIME_CHANGED_WITHIN_RVOL_WINDOW")
+
+    def test_missing_or_mutable_witness_collection_denied(self):
+        for witnesses in ((), list(self.pw), self.pw[:-1]):
+            self.assertIsNone(self.assess(pw=witnesses).value)
+
+    def test_existing_session_gate_not_bypassed(self):
+        target = replace(self.target, comparison_policy_version="other")
+        self.assertIsNone(self.assess(target=target).value)
+
