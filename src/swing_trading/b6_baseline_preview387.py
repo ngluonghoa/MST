@@ -4,6 +4,7 @@ from decimal import Decimal
 from enum import Enum
 
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
+from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_indicators import (
     CausalIndicatorResult, IndicatorState, VolumeBasisWitness, VolumeComparisonBar,
     VolumeSessionClass, calculate_rvol_tf20_raw_matched, calculate_wilder_atr14,
@@ -34,6 +35,12 @@ class B6RFPlan388:
 
 
 @dataclass(frozen=True)
+class B6H1RFPlan393:
+    breakout_index: int
+    candidate_epsilon: Decimal
+
+
+@dataclass(frozen=True)
 class B6TrendPlan390:
     lookback: int
     high_indices: tuple[int, ...]
@@ -52,7 +59,7 @@ class B6EnginePlan387:
     atr_stop: int
     target_index: int
     candidate_k_near: Decimal
-    rf: B6RFPlan388 | None = None
+    rf: B6RFPlan388 | B6H1RFPlan393 | None = None
     r0: B6TrendPlan390 | None = None
 
 
@@ -302,6 +309,54 @@ def _r0390(rows, history, plan, rc):
     return B6Ingredient387(B6State387.BLOCKED, "PRIOR_D1_DIRECTION_UNRESOLVED")
 
 
+
+def _h1_pair393(inputs, rf):
+    if type(rf.breakout_index) is not int or rf.breakout_index < 1:
+        raise ValueError("MST_393_EXPLICIT_H1_BREAKOUT_INDEX")
+    eps = rf.candidate_epsilon
+    if type(eps) is not Decimal or not eps.is_finite() or eps < 0:
+        raise ValueError("MST_393_EXPLICIT_H1_EPSILON")
+    rows = inputs.snapshots_for(Timeframe.H1)
+    if rf.breakout_index >= len(rows):
+        return None
+    return rows[rf.breakout_index-1], rows[rf.breakout_index]
+
+
+def _h1_cross393(inputs, history, atr_rows, plan, pair):
+    p = plan.contraction
+    geom = inspect_h1_cross_of_d1_upper_pivot(
+        history, pivot_index=p.swings[-1][0], left_count=p.left_count,
+        right_count=p.right_count, tie_policy=p.tie_policy,
+        previous=pair[0], breakout=pair[1], atr_d1_history=atr_rows,
+        candidate_epsilon=plan.rf.candidate_epsilon, as_of_utc=inputs.as_of_utc,
+    )
+    if geom.state is GeometryState.BLOCKED:
+        return B6Ingredient387(B6State387.BLOCKED, "H1_CLOSED_CROSS_" + geom.reason)
+    state = B6State387.MATCH if geom.candidate_cross else B6State387.NONMATCH
+    return B6Ingredient387(state, "SAME_PIVOT_H1_CROSS_ONLY_VOLUME_RISK_PENDING")
+
+
+def _rf_h1393(inputs, history, atr_rows, plan, early):
+    pair = _h1_pair393(inputs, plan.rf)
+    if pair is None:
+        return B6Ingredient387(B6State387.MISSING, "H1_BREAKOUT_OR_PREVIOUS_MISSING")
+    if early.state is not B6State387.DISTANCE or early.approach is not True:
+        return B6Ingredient387(B6State387.BLOCKED, "M15_APPROACH_GEOMETRY_MISSING")
+    if not _rf_order388(inputs, pair, plan):
+        return B6Ingredient387(B6State387.BLOCKED, "M15_APPROACH_NOT_KNOWN_BEFORE_BREAKOUT")
+    return _h1_cross393(inputs, history, atr_rows, plan, pair)
+
+
+def _routed_rf393(inputs, history, atr_rows, plan, early, scope):
+    if type(plan.rf) is B6H1RFPlan393:
+        route = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.H1, **scope)
+        result = _rf_h1393(inputs, history, atr_rows, plan, early)
+        return route, replace(result, volume_state="H1_VOLUME_SPEC_PENDING")
+    route = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.D1, **scope)
+    geometry = _rf388(inputs, history, atr_rows, plan, early)
+    return route, _volume389(inputs, plan.rf, geometry)
+
+
 def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     """Only explicit two-contraction branch; not an approved R0 or R_F.
 
@@ -326,7 +381,5 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
         r0 = route_phase_inputs(inputs, phase="R0", selected_frame=Timeframe.D1, **scope)
         assessments = ((r0, _r0390(rows, history, plan, contraction)),) + assessments
     if plan.rf is not None:
-        rf = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.D1, **scope)
-        geometry = _rf388(inputs, history, atr_rows, plan, early)
-        assessments += ((rf, _volume389(inputs, plan.rf, geometry)),)
+        assessments += (_routed_rf393(inputs, history, atr_rows, plan, early, scope),)
     return B6EnginePreview387(assessments)
