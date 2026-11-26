@@ -65,10 +65,10 @@ these require separate consumer, migration and rollback evidence.
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | replay | domain_and_reference | 26 | 3 | 5 | 42 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
-| rvol_tod_contract | domain_and_reference | 191 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| rvol_tod_contract | domain_and_reference | 353 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | s7_retest_evidence | domain_and_reference | 398 | 21 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
-| session_calendar | domain_and_reference | 128 | 14 | 21 | 1 | KEEP | none |
+| session_calendar | domain_and_reference | 128 | 14 | 21 | 2 | KEEP | none |
 | source_capability_evidence | domain_and_reference | 231 | 32 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | source_quality | domain_and_reference | 296 | 39 | 58 | 13 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | ssi_historical_availability | source_adapter_and_quality | 95 | 12 | 45 | 0 | KEEP | none |
@@ -82,7 +82,7 @@ these require separate consumer, migration and rollback evidence.
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
 | vn_release_rollback | engineering_governance | 345 | 35 | 97 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| vwap_contract343 | domain_and_reference | 184 | 33 | 72 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| vwap_contract343 | domain_and_reference | 184 | 33 | 72 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 3 | KEEP | none |
 
 ## Review gates
