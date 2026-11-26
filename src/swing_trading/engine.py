@@ -14,6 +14,7 @@ from .contracts import (
 from .private_multitf_readiness import BaselineResolvedInputs
 from .market_data import Timeframe
 from .causal_structure_geometry import TiePolicy
+from .causal_trend_candidate382 import inspect_d1_paired_trend_candidate
 from .structural_phase_evidence import ROUTES, inspect_routed_phase_bos
 from .b2s2_swing_evidence215 import (
     B2S2BaselinePreview371, B2S2PreviewPlan371, inspect_b2s2_baseline_preview,
@@ -331,3 +332,65 @@ def evaluate_baseline_preview(inputs, *, requests=()):
                       for d in evaluate_unimplemented_zones(strategy, inputs.as_of_utc))
     rows = tuple(_row375(inputs, d, indexed.get((d.zone_id, d.strategy))) for d in decisions)
     return BaselineEnginePreview375(inputs.as_of_utc, rows)
+
+@dataclass(frozen=True)
+class D1ContextPlan383:
+    lookback: int
+    high_indices: tuple[int, ...]
+    low_indices: tuple[int, ...]
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+
+
+# Source §24.4: explicit CURRENT D1 trend requirements only.
+# Historical decline/uptrend, alternate bases and continuation are separate.
+_D1_CONTEXT_PHASES383 = (
+    ("B2", "R0", "UP"), ("B2", "R_F", "UP"),
+    ("B7", "R0", "DOWN"), ("B7", "R_F", "DOWN"),
+    ("S2", "R0", "DOWN"), ("S2", "R_F", "DOWN"),
+    ("S3", "R0", "UP"),
+)
+
+
+def _current_d1_context383(inputs, plan):
+    if type(plan) is not D1ContextPlan383:
+        raise TypeError("MST_383_EXPLICIT_D1_CONTEXT_PLAN")
+    if type(plan.lookback) is not int or not 1 <= plan.lookback <= 462:
+        raise ValueError("MST_383_BOUNDED_LOOKBACK")
+    # Never search backward for a more convenient old, complete window.
+    rows = inputs.snapshots_for(Timeframe.D1)[-(50 + plan.lookback):]
+    return inspect_d1_paired_trend_candidate(
+        rows, as_of_utc=inputs.as_of_utc, **asdict(plan),
+    )
+
+
+def _context_phase_rows383(context):
+    relation = context["relation"]
+    direction = {"HH_HL_GEOMETRY": "UP", "LH_LL_GEOMETRY": "DOWN"}.get(context["structure"])
+    return tuple(_context_phase383(z, p, expected, relation, direction)
+                 for z, p, expected in _D1_CONTEXT_PHASES383)
+
+
+def _context_phase383(zone, phase, expected, relation, direction):
+    observation = "CONTEXT_UNRESOLVED"
+    if relation == "ALIGNED_GEOMETRY_ONLY":
+        observation = "DIRECTION_ALIGNED_ONLY" if direction == expected else "OPPOSITE_DIRECTION_ONLY"
+    return {"zone_id": zone, "phase": phase, "expected_direction": expected,
+            "observation": observation, "phase_verified": False,
+            "historical_trend_preserved": False, "action_eligible": False}
+
+
+def evaluate_baseline_context_preview(inputs, *, trend_plan, requests=()):
+    """Run actual engine and one shared current D1 context on identical input.
+
+    Separate redacted contract: no detached feature, no phase promotion and
+    no duplicate evidence count per zone or strategy. R_F continuity is not
+    established by a same-cutoff context snapshot.
+    """
+    result = evaluate_baseline_preview(inputs, requests=requests).safe_phase_summary()
+    context = _current_d1_context383(inputs, trend_plan)
+    result["schema"] = "mst.private.baseline_engine_context_preview.v0.1"
+    result["shared_d1_context"] = context
+    result["d1_context_phase_references"] = _context_phase_rows383(context)
+    return result
