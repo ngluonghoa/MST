@@ -42,7 +42,7 @@ these require separate consumer, migration and rollback evidence.
 | incremental_cache | cache_and_persistence | 441 | 23 | 83 | 9 | IMPROVE | HIGH_BRANCH_SCORE |
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| locked_ui10_renderer | domain_and_reference | 352 | 9 | 129 | 1 | IMPROVE | FUNCTION_90_PLUS |
+| locked_ui10_renderer | domain_and_reference | 352 | 10 | 129 | 1 | IMPROVE | FUNCTION_90_PLUS |
 | market_data | domain_and_reference | 162 | 23 | 29 | 28 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
