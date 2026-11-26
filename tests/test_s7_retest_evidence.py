@@ -9,6 +9,7 @@ from swing_trading.causal_structure_geometry import TiePolicy
 from swing_trading.market_data import Timeframe
 from swing_trading.s7_retest_evidence import (
     inspect_s7_retest_evidence, inspect_s7_early_evidence, S7EarlyMode,
+    inspect_s7_confirmation_evidence,
 )
 from test_causal_indicators import AS_OF, START, make_bar, snap, d1
 
@@ -180,6 +181,99 @@ class S7EarlyEvidenceTests(unittest.TestCase):
                     replace(r,**{key:value})
         with self.assertRaises(ValueError):
             replace(r,witness_known_at_utc=AS_OF+timedelta(seconds=1))
+
+
+
+class S7ConfirmationEvidenceTests(unittest.TestCase):
+    def chain(self):
+        p=inputs()
+        p["retest"]=snap(replace(p["retest"].selected,close=D("2.5")))
+        hist=tuple(snap(make_bar(i+32,low=D(low),close=D(close),
+                                 open_price=D(close)))
+                   for i,(low,close) in enumerate(
+                       [("2","3"),("1.5","2"),("2","3"),
+                        ("2","2"),(".4",".5")]))
+        return dict(p, variant_id="S7/F_MICRO_BREAK",
+                    mode=S7EarlyMode.TOUCH_CLOSE_BELOW,
+                    confirmation=hist[4],micro_history=hist[:3],
+                    micro_index=1,micro_left=1,micro_right=1,
+                    micro_previous=hist[3],micro_atr_history=d1(),
+                    micro_tie_policy=TiePolicy.STRICT_V1,micro_epsilon=D(".1"))
+
+    def test_chain_reuses_early_and_micro_break_both_strategies(self):
+        for strategy in (Strategy.SHORT,Strategy.SWING):
+            p=dict(self.chain(),strategy=strategy)
+            r=inspect_s7_confirmation_evidence(**p)
+            self.assertEqual(r.reason,"RF_CHAIN_GEOMETRY_UNCALIBRATED")
+            early=inspect_s7_early_evidence(**{
+                k:v for k,v in p.items() if not k.startswith("micro_")
+                and k not in ("variant_id","confirmation")})
+            self.assertEqual(r.early_preview_id,early.early_preview_id)
+            self.assertEqual(r.origin_preview_id,early.origin_preview_id)
+            self.assertEqual(r.retest_preview_id,early.retest_preview_id)
+            self.assertTrue(r.micro_bos_preview_id.startswith("MST_BOS_PREVIEW_V1:"))
+            self.assertIs(r.status,DecisionStatus.UNVERIFIED)
+            self.assertFalse(r.action_eligible)
+            self.assertEqual(r,inspect_s7_confirmation_evidence(**p))
+
+    def test_missing_or_false_early_blocks(self):
+        p=self.chain()
+        p["retest"]=inputs()["retest"]
+        self.assertEqual(inspect_s7_confirmation_evidence(**p).reason,
+                         "RF_EARLY_SHAPE_NOT_CAUSALLY_PRESENT")
+
+    def test_old_support_equality_blocks(self):
+        p=self.chain()
+        p["confirmation"]=snap(replace(p["confirmation"].selected,close=D("3")))
+        self.assertEqual(inspect_s7_confirmation_evidence(**p).reason,
+                         "RF_CLOSE_NOT_BELOW_ORIGINAL_SUPPORT")
+
+    def test_below_support_but_no_micro_cross_blocks(self):
+        p=self.chain()
+        p["confirmation"]=snap(replace(p["confirmation"].selected,close=D("2")))
+        self.assertEqual(inspect_s7_confirmation_evidence(**p).reason,
+                         "RF_MICRO_CROSS_NOT_PRESENT")
+
+    def test_early_verified_after_target_start_blocks(self):
+        p=self.chain()
+        raw=p["retest"].selected
+        p["retest"]=snap(replace(raw,verified_at_utc=p["confirmation"].selected.bar_end_utc))
+        self.assertEqual(inspect_s7_confirmation_evidence(**p).reason,
+                         "RF_EARLY_SHAPE_NOT_CAUSALLY_PRESENT")
+
+    def test_wrong_target_timeframe_and_future_block(self):
+        p=self.chain()
+        for target,as_of in ((p["retest"],AS_OF),
+                              (p["confirmation"],p["confirmation"].selected.bar_end_utc)):
+            r=inspect_s7_confirmation_evidence(**dict(p,confirmation=target,as_of_utc=as_of))
+            self.assertEqual(r.reason,"RF_TARGET_NOT_CLOSED_H1_D1")
+
+    def test_pre_early_micro_anchor_and_mixed_tf_block(self):
+        p=self.chain()
+        r=inspect_s7_confirmation_evidence(**dict(p,micro_history=p["pivot_history"],micro_index=2))
+        self.assertEqual(r.reason,"RF_MICRO_PIVOT_SOURCE_OR_SEQUENCE_MISMATCH")
+        r=inspect_s7_confirmation_evidence(**dict(p,micro_history=(p["retest"],)+p["micro_history"][1:]))
+        self.assertEqual(r.reason,"RF_MICRO_PIVOT_SOURCE_OR_SEQUENCE_MISMATCH")
+
+    def test_variant_and_forged_authority_block(self):
+        p=self.chain()
+        with self.assertRaises(ValueError):
+            inspect_s7_confirmation_evidence(**dict(p,variant_id="S7/F_CONTINUATION"))
+        r=inspect_s7_confirmation_evidence(**p)
+        for key in ("action_eligible","detector_approved","parameter_approved","source_independently_attested"):
+            for value in (True,0,None):
+                with self.assertRaises(ValueError):
+                    replace(r,**{key:value})
+        with self.assertRaises(ValueError):
+            replace(r,witness_known_at_utc=AS_OF+timedelta(seconds=1))
+
+    def test_revision_changes_chain_not_origin(self):
+        p=self.chain()
+        a=inspect_s7_confirmation_evidence(**p)
+        p["confirmation"]=snap(replace(p["confirmation"].selected,close=D(".6")))
+        b=inspect_s7_confirmation_evidence(**p)
+        self.assertEqual(a.origin_preview_id,b.origin_preview_id)
+        self.assertNotEqual(a.confirmation_preview_id,b.confirmation_preview_id)
 
 
 if __name__ == "__main__":

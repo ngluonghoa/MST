@@ -15,7 +15,9 @@ from .causal_structure_geometry import (
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .replay import require_utc
-from .structural_phase_evidence import _bar_identity, _digest
+from .structural_phase_evidence import (
+    _bar_identity, _digest, PhaseEvidenceState, inspect_phase_bos_evidence,
+)
 
 
 @dataclass(frozen=True)
@@ -236,4 +238,121 @@ def inspect_s7_early_evidence(
     return S7EarlyEvidence(
         strategy, as_of, mode, "M15_SHAPE_ONLY_UNCALIBRATED",
         base.origin_preview_id, base.retest_preview_id, digest, shape, known,
+    )
+
+
+@dataclass(frozen=True)
+class S7ConfirmationEvidence:
+    strategy: Strategy
+    as_of_utc: datetime
+    reason: str
+    origin_preview_id: str | None = None
+    retest_preview_id: str | None = None
+    early_preview_id: str | None = None
+    micro_bos_preview_id: str | None = None
+    confirmation_preview_id: str | None = None
+    witness_known_at_utc: datetime | None = None
+    variant_id: str = "S7/F_MICRO_BREAK"
+    status: DecisionStatus = DecisionStatus.UNVERIFIED
+    action_eligible: bool = False
+    detector_approved: bool = False
+    parameter_approved: bool = False
+    source_independently_attested: bool = False
+
+    def __post_init__(self):
+        require_utc(self.as_of_utc)
+        if (not isinstance(self.strategy, Strategy)
+                or type(self.reason) is not str or not self.reason
+                or self.variant_id != "S7/F_MICRO_BREAK"
+                or self.status is not DecisionStatus.UNVERIFIED
+                or self.action_eligible is not False
+                or self.detector_approved is not False
+                or self.parameter_approved is not False
+                or self.source_independently_attested is not False):
+            raise ValueError("S7_RF_AUTHORITY_FORBIDDEN")
+        ids = (self.origin_preview_id, self.retest_preview_id,
+               self.early_preview_id, self.confirmation_preview_id)
+        fields = (*ids, self.micro_bos_preview_id, self.witness_known_at_utc)
+        if self.reason == "RF_CHAIN_GEOMETRY_UNCALIBRATED":
+            if any(type(x) is not str or len(x) != 64
+                   or any(c not in "0123456789abcdef" for c in x) for x in ids):
+                raise ValueError("S7_RF_INVALID_CHAIN_ID")
+            prefix = "MST_BOS_PREVIEW_V1:"
+            micro = self.micro_bos_preview_id
+            if (type(micro) is not str or not micro.startswith(prefix)
+                    or len(micro) != len(prefix)+64
+                    or any(c not in "0123456789abcdef" for c in micro[len(prefix):])):
+                raise ValueError("S7_RF_INVALID_MICRO_BOS_ID")
+            require_utc(self.witness_known_at_utc)
+            if self.witness_known_at_utc > self.as_of_utc:
+                raise ValueError("S7_RF_FUTURE_WITNESS")
+        elif any(x is not None for x in fields):
+            raise ValueError("S7_RF_BLOCKED_HAS_OUTPUT")
+
+
+def inspect_s7_confirmation_evidence(
+    *, variant_id, mode, followup=None, confirmation, micro_history,
+    micro_index, micro_left, micro_right, micro_previous, micro_atr_history,
+    micro_tie_policy, micro_epsilon, **base_inputs,
+) -> S7ConfirmationEvidence:
+    """Bind only the existing S7/F_MICRO_BREAK descriptive branch.
+
+    Recompute R_E before target START. Require closed H1/D1 below original
+    support and a distinct subsequent same-TF causal LOW crossing. The
+    candidate micro pivot starts after the early witness (conservative
+    research subset, not an approved definition of a retest swing).
+    No continuity, expiry, volume, risk, holding or alternative F_CONTINUATION
+    certification; no caller-supplied IDs or inferred strategy approval.
+    """
+    if variant_id != "S7/F_MICRO_BREAK":
+        raise ValueError("S7_RF_EXPLICIT_MICRO_BREAK_ONLY")
+    as_of = base_inputs["as_of_utc"]
+    strategy = base_inputs["strategy"]
+    require_utc(as_of)
+
+    def blocked(reason):
+        return S7ConfirmationEvidence(strategy, as_of, reason)
+
+    target = _eligible(confirmation, cutoff=as_of)
+    if target is None or target.market_bar_key.timeframe not in (Timeframe.H1, Timeframe.D1):
+        return blocked("RF_TARGET_NOT_CLOSED_H1_D1")
+    cutoff = target.market_bar_key.bar_start_utc
+    early_inputs = dict(base_inputs, as_of_utc=cutoff)
+    early = inspect_s7_early_evidence(mode=mode, followup=followup, **early_inputs)
+    if early.shape_observed is not True or early.witness_known_at_utc is None:
+        return blocked("RF_EARLY_SHAPE_NOT_CAUSALLY_PRESENT")
+    retest = base_inputs["retest"].selected
+    if _cross_tf_identity(target) != _cross_tf_identity(retest):
+        return blocked("RF_TARGET_SOURCE_MISMATCH")
+    old_support = base_inputs["pivot_history"][base_inputs["pivot_index"]].selected.low
+    if target.close >= old_support:
+        return blocked("RF_CLOSE_NOT_BELOW_ORIGINAL_SUPPORT")
+    if (type(micro_history) is not tuple or len(micro_history) > 512
+            or type(micro_index) is not int or not 0 <= micro_index < len(micro_history)):
+        return blocked("RF_MICRO_HISTORY_INVALID")
+    rows = tuple(_eligible(item, cutoff=cutoff) for item in micro_history)
+    if (any(row is None or row.market_bar_key.timeframe is not target.market_bar_key.timeframe
+            or _source_identity(row) != _source_identity(target) for row in rows)
+            or rows[micro_index].market_bar_key.bar_start_utc < early.witness_known_at_utc):
+        return blocked("RF_MICRO_PIVOT_SOURCE_OR_SEQUENCE_MISMATCH")
+    phase = inspect_phase_bos_evidence(
+        zone_id="S7", strategy=strategy, variant_id=variant_id, phase="R_F",
+        pivot_history=micro_history, pivot_index=micro_index,
+        left_count=micro_left, right_count=micro_right,
+        previous=micro_previous, breakout=confirmation,
+        atr_d1_history=micro_atr_history, tie_policy=micro_tie_policy,
+        candidate_epsilon=micro_epsilon, as_of_utc=as_of,
+    )
+    if phase.state is not PhaseEvidenceState.CROSS_GEOMETRY_UNVERIFIED:
+        return blocked("RF_MICRO_CROSS_NOT_PRESENT")
+    digest = _digest({
+        "version": "S7_RF_CHAIN_PREVIEW_267", "variant": variant_id,
+        "origin": early.origin_preview_id, "retest": early.retest_preview_id,
+        "early": early.early_preview_id, "micro_bos": phase.bos_preview_id,
+        "target": _bar_identity(confirmation),
+    })
+    return S7ConfirmationEvidence(
+        strategy, as_of, "RF_CHAIN_GEOMETRY_UNCALIBRATED",
+        early.origin_preview_id, early.retest_preview_id, early.early_preview_id,
+        phase.bos_preview_id, digest, phase.witness_known_at_utc,
     )
