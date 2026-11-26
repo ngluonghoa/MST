@@ -30,6 +30,8 @@ from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .contracts import DecisionStatus, Strategy, ZONE_IDS
 from .engine import evaluate_unimplemented_zones
 from .market_data import Timeframe
+from .private_multitf_readiness import BaselineResolvedInputs
+from .phase_input_routing369 import route_phase_inputs
 from .replay import require_utc
 from .source_quality import ResolvedBarSnapshotV12
 from .zone_manifest_v03 import MANIFESTS, inspect_near_zone_arithmetic
@@ -554,3 +556,57 @@ def inspect_b2s2_rc_causal_near214(
         arithmetic.in_candidate_band,
         "MST_B2S2_RC_PREVIEW_V1:" + digest,
     )
+
+
+def inspect_routed_phase_bos(
+    inputs: BaselineResolvedInputs, *, zone_id: str, strategy: Strategy,
+    variant_id: str, phase: str, timeframe: Timeframe,
+    breakout_index: int, pivot_index: int, left_count: int, right_count: int,
+    atr_start: int, atr_stop: int, tie_policy: TiePolicy,
+    candidate_epsilon: Decimal | None,
+):
+    """Execute the existing structural ingredient on the exact input partition.
+
+    Only index-based contiguous slices are accepted, never external candles or
+    a separate decision clock. ATR slice bounds are explicit unapproved
+    research configuration, not an approved history/continuity policy.
+    Missing phase dependencies remain visible separately from the ingredient.
+    """
+    if type(inputs) is not BaselineResolvedInputs:
+        raise PhaseEvidenceDenied("MST_370_REQUIRE_BASELINE_INPUTS")
+    route = ROUTES.get((zone_id, variant_id, phase))
+    if (route is None or type(timeframe) is not Timeframe
+            or timeframe not in route[1]):
+        raise PhaseEvidenceDenied("MST_370_EXPLICIT_STRUCTURAL_ROUTE")
+    scope = dict(zone_id=zone_id, strategy=strategy, variant_id=variant_id, phase=phase)
+    routed = route_phase_inputs(inputs, **scope)
+    if timeframe in routed.choice_frames:
+        routed = route_phase_inputs(inputs, selected_frame=timeframe, **scope)
+    if any(type(i) is not int or i < 0 for i in (
+            breakout_index, pivot_index, left_count, right_count, atr_start, atr_stop)):
+        raise PhaseEvidenceDenied("MST_370_INVALID_INDEX")
+    if (breakout_index < 2 or min(left_count, right_count) < 1
+            or atr_start >= atr_stop or pivot_index < left_count
+            or pivot_index + right_count >= breakout_index - 1):
+        raise PhaseEvidenceDenied("MST_370_INVALID_SLICE_GEOMETRY")
+    bars = inputs.snapshots_for(timeframe)
+    atr = inputs.snapshots_for(Timeframe.D1)
+    if not bars or not atr:
+        evidence = PhaseStructureEvidence(
+            zone_id, strategy, variant_id, phase, routed.predicate_ref,
+            route[0], timeframe, inputs.as_of_utc, PhaseEvidenceState.BLOCKED,
+            "MST_370_STRUCTURAL_OR_ATR_INPUT_MISSING",
+        )
+        return routed, evidence
+    if breakout_index >= len(bars) or atr_stop > len(atr):
+        raise PhaseEvidenceDenied("MST_370_INDEX_OUTSIDE_INPUT_SCOPE")
+    # Keep every row in the selected prefix. An unresolved or conflicting
+    # row cannot be removed or substituted by a newer/other-source row.
+    evidence = inspect_phase_bos_evidence(
+        **scope, pivot_history=bars[:breakout_index - 1],
+        pivot_index=pivot_index, left_count=left_count, right_count=right_count,
+        previous=bars[breakout_index - 1], breakout=bars[breakout_index],
+        atr_d1_history=atr[atr_start:atr_stop], tie_policy=tie_policy,
+        candidate_epsilon=candidate_epsilon, as_of_utc=inputs.as_of_utc,
+    )
+    return routed, evidence
