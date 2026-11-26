@@ -125,6 +125,6 @@ class PrivateM1Impact306(unittest.TestCase):
         for g in r["groups"]:
             self.assertIn(g["clock"], ("MINUTE_START_UNVERIFIED", "MINUTE_END_UNVERIFIED"))
             for w in g["windows"]:
-                self.assertIn(w["session"], ("AM", "PM"))
+                self.assertIn(w["session"], ("MORNING", "AFTERNOON"))
                 self.assertLess(w["start_minute"], w["end_minute"])
                 self.assertNotEqual(w["start_minute"], 885)
