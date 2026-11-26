@@ -163,3 +163,102 @@ def compare_private_connected_m1(old_response, new_response, *, symbol, trading_
               "production_cache_eligible": False}
     result["comparison_sha256"] = _digest(result)
     return result
+
+
+IMPACT_SCHEMA = "mst.private.ssi_connected_m1_impact_plan.v0.1"
+IMPACT_STATES = (
+    "NUMERIC_REPLAY_CANDIDATE",
+    "EVIDENCE_REFRESH_CANDIDATE",
+    "INCOMPLETE_CHANGED_REVIEW",
+    "INCOMPLETE_UNCHANGED_REVIEW",
+    "UNCHANGED_OBSERVED_ONLY",
+)
+
+
+def plan_private_connected_m1_impact(old_response, new_response, *, symbol,
+                                     trading_day, old_started, old_finished,
+                                     new_started, new_finished):
+    """Recompute private evidence; do not accept a caller-supplied receipt.
+
+    These are hypothetical, session-local candidate boundaries, NOT an
+    operational cache invalidation or numerical reuse authorization.
+    Missing observations remain unclassified under both clock hypotheses.
+    """
+    comparison = compare_private_connected_m1(
+        old_response, new_response, symbol=symbol, trading_day=trading_day,
+        old_started=old_started, old_finished=old_finished,
+        new_started=new_started, new_finished=new_finished,
+    )
+    groups = []
+    for meaning in MinuteLabelMeaning211:
+        for tf, _ in TFS:
+            items = []
+            for window in comparison["windows"]:
+                if window["clock"] != meaning.value or window["tf"] != tf:
+                    continue
+                changed = window["input_changed"]
+                full = window["both_full_labels"]
+                numeric = window["aggregate_changed"]
+                if not full:
+                    state = ("INCOMPLETE_CHANGED_REVIEW" if changed else
+                             "INCOMPLETE_UNCHANGED_REVIEW")
+                elif numeric is True:
+                    state = "NUMERIC_REPLAY_CANDIDATE"
+                elif changed:
+                    state = "EVIDENCE_REFRESH_CANDIDATE"
+                else:
+                    state = "UNCHANGED_OBSERVED_ONLY"
+                items.append({
+                    "session": window["session"],
+                    "start_minute": window["start_minute"],
+                    "end_minute": window["end_minute"],
+                    "state": state,
+                    "input_changed": changed,
+                    "aggregate_changed": numeric,
+                    "old_observed": window["old_observed"],
+                    "new_observed": window["new_observed"],
+                    "old_input_sha256": window["old_input_sha256"],
+                    "new_input_sha256": window["new_input_sha256"],
+                })
+
+            def earliest(states):
+                return min((item["start_minute"] for item in items
+                            if item["state"] in states), default=None)
+
+            groups.append({
+                "clock": meaning.value, "tf": tf,
+                "window_count": len(items),
+                "counts": {state: sum(item["state"] == state for item in items)
+                           for state in IMPACT_STATES},
+                "earliest_numeric_candidate_minute": earliest(
+                    {"NUMERIC_REPLAY_CANDIDATE"}),
+                "earliest_evidence_dirty_candidate_minute": earliest(
+                    {"NUMERIC_REPLAY_CANDIDATE", "EVIDENCE_REFRESH_CANDIDATE",
+                     "INCOMPLETE_CHANGED_REVIEW"}),
+                "earliest_incomplete_review_minute": earliest(
+                    {"INCOMPLETE_CHANGED_REVIEW", "INCOMPLETE_UNCHANGED_REVIEW"}),
+                "windows": items,
+            })
+    result = {
+        "schema": IMPACT_SCHEMA,
+        "comparison_sha256": comparison["comparison_sha256"],
+        "old_capture_sha256": comparison["old_capture"]["capture_sha256"],
+        "new_capture_sha256": comparison["new_capture"]["capture_sha256"],
+        "scope": comparison["old_capture"]["scope"],
+        "payload_changed": comparison["payload_changed"],
+        "groups": groups,
+        "clock_selected": None,
+        "source_first_known_attested": False,
+        "source_coverage_attested": False,
+        "price_basis_attested": False,
+        "source_rights_attested": False,
+        "source_revision_cause_attested": False,
+        "cache_reuse_authorized": False,
+        "cache_invalidation_authorized": False,
+        "cross_session_replay_authorized": False,
+        "absence_is_deletion": False,
+        "production_cache_eligible": False,
+        "signal_eligible": False,
+    }
+    result["impact_plan_sha256"] = _digest(result)
+    return result
