@@ -1,5 +1,6 @@
 """§390 B6 pre-contraction D1 rising context, fictional only."""
 from dataclasses import replace
+from datetime import timedelta
 from decimal import Decimal as D
 import json
 import unittest
@@ -12,13 +13,16 @@ from swing_trading.private_multitf_readiness import BaselineResolvedInputs
 from swing_trading.source_quality import ResolvedBarSnapshotV12
 from test_b6_baseline_preview387 import model, config, evaluate
 from test_causal_trend_candidate382 import fixture
-from test_causal_indicators import snap
+from test_causal_indicators import make_bar, snap
 
 
 def data(direction=1, *, late=False, conflict=False, missing=False):
     original=model()
-    prefix=fixture(direction)
     tail=original.snapshots_for(Timeframe.D1)
+    begin=tail[0].market_bar_key.bar_start_utc-timedelta(days=60)
+    prefix=tuple(snap(make_bar(200+i,start=begin+timedelta(days=i),
+        open_price=s.selected.open,high=s.selected.high,low=s.selected.low,
+        close=s.selected.close)) for i,s in enumerate(fixture(direction)))
     if late:
         prefix=prefix[:-1]+(snap(replace(prefix[-1].selected,
                      verified_at_utc=tail[0].selected.bar_end_utc)),)
