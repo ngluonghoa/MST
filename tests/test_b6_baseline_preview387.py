@@ -24,8 +24,10 @@ def model(*, missing=False, early=False, mixed=False, far=False, declining=False
     a=make_bar(100,timeframe=Timeframe.M15,start=start,open_price=prev,close=prev,high=prev+1,low=prev-1)
     b=make_bar(101,timeframe=Timeframe.M15,start=start+timedelta(minutes=30),open_price=price,close=price,high=price+1,low=price-1)
     if mixed:
-        obs=replace(b.observation_key,origin=ObservationOrigin.IMPORT)
-        b=replace(b,observation_key=obs,observation_revision=replace(b.observation_revision,observation_key=obs))
+        def imported(row):
+            obs=replace(row.observation_key,origin=ObservationOrigin.IMPORT)
+            return replace(row,observation_key=obs,observation_revision=replace(row.observation_revision,observation_key=obs))
+        a,b=imported(a),imported(b)
     k=fixture()[0].market_bar_key
     frames={Timeframe.D1:d1,Timeframe.M15:() if missing else (snap(a),snap(b))}
     return BaselineResolvedInputs(k.instrument_id,k.exchange,AS_OF,False,
@@ -62,7 +64,7 @@ class B6Preview387Tests(unittest.TestCase):
         self.assertEqual([p["ingredient_state"] for p in safe["phases"]][1:3],
                          ["GEOMETRY_MATCH_ONLY","MISSING_INPUT"])
 
-    def test_future_contraction_and_mixed_pair_are_blocked(self):
+    def test_future_contraction_and_cross_tf_origin_mismatch_are_blocked(self):
         for inputs in (model(early=True),model(mixed=True)):
             row,safe=evaluate(inputs)
             self.assertEqual(safe["phases"][1]["ingredient_state"],"GEOMETRY_MATCH_ONLY")
