@@ -82,7 +82,7 @@ these require separate consumer, migration and rollback evidence.
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
 | vn_release_rollback | engineering_governance | 345 | 35 | 97 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| vwap_contract343 | domain_and_reference | 184 | 33 | 72 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
+| vwap_contract343 | domain_and_reference | 224 | 33 | 72 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 3 | KEEP | none |
 
 ## Review gates

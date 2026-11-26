@@ -5,10 +5,12 @@ from decimal import Decimal
 import unittest
 
 from swing_trading.market_data import Timeframe, PriceBasis
+from swing_trading.causal_indicators import VolumeBasis, VolumeBasisWitness
 from swing_trading.session_calendar import CalendarSnapshot, SessionType, TradingSession
 from swing_trading.source_quality import resolve_as_known
 from swing_trading.vwap_contract343 import (
     TurnoverMeaning, TurnoverObservation, VwapAnchor, calculate_continuous_vwap,
+    calculate_continuous_vwap_raw_matched,
 )
 from test_source_quality import candle
 
@@ -146,3 +148,68 @@ class VwapContract343(unittest.TestCase):
         fractional = replace(cal.sessions[0], start_utc=minute(0)+timedelta(seconds=1),
                              end_utc=minute(2)+timedelta(seconds=1))
         self.assertIsNone(calc(sample(), calendar=replace(cal, sessions=(fractional,))).value)
+
+
+def volume_witnesses(items):
+    return tuple(VolumeBasisWitness(x.snapshot.selected, VolumeBasis.RAW_MATCHED_SHARES,
+                                   "fictional-regime", f"volume-{i}", x.verified_at_utc)
+                 for i, x in enumerate(items))
+
+
+def strict_calc(items, witnesses=None, **kw):
+    args = dict(calendar=calendar(), through_utc=minute(102), as_of_utc=END)
+    args.update(kw)
+    return calculate_continuous_vwap_raw_matched(
+        items, witnesses=volume_witnesses(items) if witnesses is None else witnesses, **args)
+
+
+class RawMatchedVwap359(unittest.TestCase):
+    def test_session_and_anchor_preserve_arithmetic_only(self):
+        a = sample()
+        result = strict_calc(a)
+        self.assertEqual(result.value, D("11"))
+        self.assertFalse(result.data_certified)
+        self.assertFalse(result.actionable)
+        anchor = VwapAnchor("event-1", "rev-1", minute(1), minute(2), minute(3))
+        self.assertEqual(strict_calc(a[1:], anchor=anchor).value, D(335)/D(30))
+
+    def test_raw_price_does_not_establish_raw_volume(self):
+        a = sample()
+        w = volume_witnesses(a)
+        for basis in (VolumeBasis.ADJUSTED_SHARES, VolumeBasis.ALL_TRADES_SHARES,
+                      VolumeBasis.UNKNOWN):
+            changed = (replace(w[0], basis=basis), *w[1:])
+            self.assertEqual(strict_calc(a, changed).reason,
+                             "RAW_MATCHED_VOLUME_WITNESS_UNVERIFIED")
+
+    def test_missing_mutable_and_wrong_revision_witness(self):
+        a = sample()
+        w = volume_witnesses(a)
+        for witnesses in (w[1:], list(w), (w[1], *w[1:])):
+            self.assertIsNone(strict_calc(a, witnesses).value)
+
+    def test_future_or_premature_witness(self):
+        a = sample()
+        w = volume_witnesses(a)
+        for when in (END+timedelta(minutes=1), minute(0)):
+            self.assertIsNone(strict_calc(a, (replace(w[0], verified_at_utc=when),
+                                              *w[1:])).value)
+
+    def test_share_regime_discontinuity(self):
+        a = sample()
+        w = volume_witnesses(a)
+        self.assertEqual(strict_calc(a, (replace(w[0], share_regime_id="other"),
+                                         *w[1:])).reason,
+                         "SHARE_REGIME_CHANGED_WITHIN_VWAP_WINDOW")
+
+    def test_legacy_turnover_gate_still_enforced(self):
+        a = (item(0, meaning=TurnoverMeaning.CLOSE_TIMES_VOLUME), *sample()[1:])
+        self.assertEqual(strict_calc(a).reason, "TURNOVER_NOT_EXACT_MATCHED")
+
+    def test_overlap_in_source_event_union(self):
+        a = sample()
+        row = a[1].snapshot.selected
+        row = replace(row, source_event_ids=(*row.source_event_ids, a[0].source_event_id))
+        changed = (a[0], replace(a[1], snapshot=resolve_as_known(
+            row.market_bar_key, (row,), END)), *a[2:])
+        self.assertEqual(strict_calc(changed).reason, "DUPLICATE_SOURCE_EVENT")

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 
-from .causal_indicators import _qualified, _source_context
+from .causal_indicators import _qualified, _source_context, VolumeBasis, VolumeBasisWitness
 from .market_data import InstrumentClass, PriceBasis, Timeframe
 from .replay import require_utc
 from .session_calendar import CalendarSnapshot, SessionType
@@ -182,3 +182,43 @@ def calculate_continuous_vwap(observations, *, calendar, through_utc,
         return finish("ZERO_VOLUME_DENOMINATOR")
     value = sum((row.matched_value for row in rows), Decimal(0)) / Decimal(volume)
     return finish("MATCHED_TURNOVER_MATH_ONLY_NO_SOURCE_CERTIFICATION", value, len(rows))
+
+
+def calculate_continuous_vwap_raw_matched(
+    observations, *, witnesses, calendar, through_utc, as_of_utc, anchor=None,
+):
+    """Require exact raw matched-share evidence as well as matched VND.
+
+    No adjustment-factor inversion, implied share basis, source certification
+    or runtime authorization. The legacy arithmetic API is unchanged.
+    """
+    result = calculate_continuous_vwap(
+        observations, calendar=calendar, through_utc=through_utc,
+        as_of_utc=as_of_utc, anchor=anchor,
+    )
+    if result.value is None:
+        return result
+
+    def blocked(reason):
+        return VwapResult(result.indicator_id, reason, None, 0,
+                          result.anchor_event_id, result.anchor_revision)
+
+    if not isinstance(witnesses, tuple) or len(witnesses) != len(observations):
+        return blocked("REQUIRE_EXACT_IMMUTABLE_VOLUME_WITNESSES")
+    regime = None
+    events = set()
+    for item, witness in zip(observations, witnesses):
+        row = item.snapshot.selected
+        if (not isinstance(witness, VolumeBasisWitness)
+                or witness.candle != row
+                or witness.basis is not VolumeBasis.RAW_MATCHED_SHARES
+                or not row.verified_at_utc <= witness.verified_at_utc <= as_of_utc):
+            return blocked("RAW_MATCHED_VOLUME_WITNESS_UNVERIFIED")
+        if regime is not None and witness.share_regime_id != regime:
+            return blocked("SHARE_REGIME_CHANGED_WITHIN_VWAP_WINDOW")
+        regime = witness.share_regime_id
+        ids = set(row.source_event_ids)
+        if len(ids) != len(row.source_event_ids) or events.intersection(ids):
+            return blocked("DUPLICATE_SOURCE_EVENT")
+        events.update(ids)
+    return result
