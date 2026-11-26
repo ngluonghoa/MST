@@ -11,7 +11,7 @@ from swing_trading.s7_retest_evidence import (
     inspect_s7_baseline_preview, inspect_s7_confirmation_evidence,
 )
 from swing_trading.source_quality import ResolvedBarSnapshotV12
-from test_s7_retest_evidence import S7ConfirmationEvidenceTests, S7EarlyEvidenceTests
+import test_s7_retest_evidence as legacy_fixture
 from test_causal_indicators import snap
 
 MICRO = "S7/F_MICRO_BREAK"
@@ -19,10 +19,10 @@ CONT = "S7/F_CONTINUATION"
 
 
 def fixture(later=False, *, conflict=False):
-    p = S7ConfirmationEvidenceTests().chain()
+    p = legacy_fixture.S7ConfirmationEvidenceTests().chain()
     m15 = (p["prior_retest"], p["retest"])
     if later:
-        e, follow = S7EarlyEvidenceTests().later()
+        e, follow = legacy_fixture.S7EarlyEvidenceTests().later()
         p["retest"] = e["retest"]
         p["mode"] = S7EarlyMode.LATER_CLOSE_BELOW
         p["followup"] = follow
