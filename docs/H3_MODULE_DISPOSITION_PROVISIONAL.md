@@ -16,6 +16,7 @@ these require separate consumer, migration and rollback evidence.
 | b5_phase_contract | domain_and_reference | 261 | 46 | 117 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_temporal_split_audit | domain_and_reference | 235 | 35 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
+| baseline_ui10_runtime379 | domain_and_reference | 54 | 2 | 26 | 0 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | c2_session_probe_readiness | source_adapter_and_quality | 285 | 40 | 56 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | c2_source_capability_audit | source_adapter_and_quality | 371 | 47 | 76 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -25,13 +26,13 @@ these require separate consumer, migration and rollback evidence.
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
 | causal_indicators | domain_and_reference | 315 | 18 | 58 | 7 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
-| contracts | domain_and_reference | 70 | 5 | 7 | 15 | KEEP | HIGH_FAN_IN |
+| contracts | domain_and_reference | 70 | 5 | 7 | 16 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 333 | 10 | 19 | 1 | KEEP | none |
+| engine | domain_and_reference | 333 | 10 | 19 | 2 | KEEP | none |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
@@ -40,7 +41,7 @@ these require separate consumer, migration and rollback evidence.
 | hose_session_geometry210 | domain_and_reference | 494 | 28 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | incremental_cache | cache_and_persistence | 441 | 23 | 83 | 9 | IMPROVE | HIGH_BRANCH_SCORE |
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_renderer | domain_and_reference | 290 | 16 | 169 | 1 | IMPROVE | FUNCTION_90_PLUS |
 | market_data | domain_and_reference | 162 | 23 | 29 | 28 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -49,7 +50,7 @@ these require separate consumer, migration and rollback evidence.
 | phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 4 | KEEP | none |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 7 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 8 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_review_packet | evidence_and_rights | 264 | 37 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
