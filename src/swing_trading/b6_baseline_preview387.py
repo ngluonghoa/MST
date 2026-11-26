@@ -1,10 +1,13 @@
 """§387 B6 causal contraction and M15 upper-pivot approach ingredients."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from enum import Enum
 
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
-from .causal_indicators import IndicatorState, calculate_wilder_atr14
+from .causal_indicators import (
+    CausalIndicatorResult, IndicatorState, VolumeBasisWitness, VolumeComparisonBar,
+    VolumeSessionClass, calculate_rvol_tf20_raw_matched, calculate_wilder_atr14,
+)
 from .causal_structure_geometry import (
     GeometryState, StructureSide, _cross_tf_identity, _source_identity,
     inspect_closed_bos_geometry,
@@ -17,9 +20,16 @@ from .source_quality import CoverageState
 
 
 @dataclass(frozen=True)
+class B6RFVolumePlan389:
+    comparison_policy_version: str
+    witnesses: tuple[VolumeBasisWitness, ...]
+
+
+@dataclass(frozen=True)
 class B6RFPlan388:
     breakout_index: int
     candidate_epsilon: Decimal
+    volume: B6RFVolumePlan389 | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +59,8 @@ class B6Ingredient387:
     contraction: object | None = None
     distance: Decimal | None = None
     approach: bool | None = None
+    volume_state: str = "NOT_REQUESTED"
+    rvol: CausalIndicatorResult | None = None
 
     @property
     def status(self):
@@ -62,6 +74,13 @@ class B6Ingredient387:
 @dataclass(frozen=True)
 class B6EnginePreview387:
     assessments: tuple
+
+    def safe_rf_volume_summary(self):
+        rf = next((e for r,e in self.assessments if r.phase == "R_F"), None)
+        return {"schema": "mst.private.b6_rf_volume.v0.1",
+                "volume_state": "NOT_REQUESTED" if rf is None else rf.volume_state,
+                "volume_approved": False, "source_qualified": False,
+                "risk_approved": False, "action_eligible": False}
 
     @property
     def status(self):
@@ -209,6 +228,37 @@ def _rf388(inputs, history, atr_rows, plan, early):
     return B6Ingredient387(state, "SAME_PIVOT_D1_CROSS_ONLY_VOLUME_RISK_PENDING")
 
 
+
+def _check_volume389(plan):
+    if (type(plan) is not B6RFVolumePlan389
+            or type(plan.comparison_policy_version) is not str
+            or not plan.comparison_policy_version.strip()
+            or type(plan.witnesses) is not tuple or len(plan.witnesses) != 21
+            or any(type(w) is not VolumeBasisWitness for w in plan.witnesses)):
+        raise ValueError("MST_389_EXACT_RAW_MATCHED_WITNESS_PLAN")
+
+
+def _volume389(inputs, rf, geometry):
+    if rf.volume is None:
+        return replace(geometry, volume_state="RAW_MATCHED_WITNESS_MISSING")
+    plan = rf.volume
+    _check_volume389(plan)
+    rows = inputs.snapshots_for(Timeframe.D1)
+    index = rf.breakout_index
+    if index < 20 or index >= len(rows):
+        return replace(geometry, volume_state="EXACT_TARGET_OR_PRIOR20_MISSING")
+    tagged = tuple(VolumeComparisonBar(row, VolumeSessionClass.DAILY,
+                                      plan.comparison_policy_version)
+                   for row in rows[index-20:index+1])
+    rvol = calculate_rvol_tf20_raw_matched(
+        tagged[-1], tagged[:-1], target_witness=plan.witnesses[-1],
+        prior_witnesses=plan.witnesses[:-1], as_of_utc=inputs.as_of_utc,
+    )
+    state = ("RVOL_COMPUTED_UNCALIBRATED" if rvol.state is IndicatorState.COMPUTED_UNCALIBRATED
+             else "RVOL_BLOCKED")
+    return replace(geometry, volume_state=state, rvol=rvol)
+
+
 def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     """Only explicit two-contraction branch; not an approved R0 or R_F.
 
@@ -230,5 +280,6 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     assessments = ((rc, _rc387(history, plan, inputs.as_of_utc)), (re, early))
     if plan.rf is not None:
         rf = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.D1, **scope)
-        assessments += ((rf, _rf388(inputs, history, atr_rows, plan, early)),)
+        geometry = _rf388(inputs, history, atr_rows, plan, early)
+        assessments += ((rf, _volume389(inputs, plan.rf, geometry)),)
     return B6EnginePreview387(assessments)
