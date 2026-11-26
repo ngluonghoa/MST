@@ -25,7 +25,7 @@ these require separate consumer, migration and rollback evidence.
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
 | causal_indicators | domain_and_reference | 315 | 18 | 58 | 6 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
-| contracts | domain_and_reference | 59 | 5 | 6 | 14 | KEEP | HIGH_FAN_IN |
+| contracts | domain_and_reference | 59 | 5 | 6 | 15 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -42,13 +42,14 @@ these require separate consumer, migration and rollback evidence.
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_renderer | domain_and_reference | 290 | 16 | 169 | 1 | IMPROVE | FUNCTION_90_PLUS |
-| market_data | domain_and_reference | 162 | 23 | 29 | 26 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| market_data | domain_and_reference | 162 | 23 | 29 | 27 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
+| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 0 | KEEP | none |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_review_packet | evidence_and_rights | 264 | 37 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -83,7 +84,7 @@ these require separate consumer, migration and rollback evidence.
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
 | vn_release_rollback | engineering_governance | 345 | 35 | 97 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | vwap_contract343 | domain_and_reference | 224 | 33 | 72 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
-| zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 3 | KEEP | none |
+| zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 4 | KEEP | none |
 
 ## Review gates
 Any proposed change must freeze current fixture behavior, assess direct
