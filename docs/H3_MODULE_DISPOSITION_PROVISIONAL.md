@@ -48,7 +48,7 @@ these require separate consumer, migration and rollback evidence.
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_multitf_readiness | domain_and_reference | 177 | 35 | 91 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_review_packet | evidence_and_rights | 264 | 37 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -70,7 +70,7 @@ these require separate consumer, migration and rollback evidence.
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 2 | KEEP | none |
 | source_capability_evidence | domain_and_reference | 231 | 32 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
-| source_quality | domain_and_reference | 296 | 39 | 58 | 13 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| source_quality | domain_and_reference | 296 | 39 | 58 | 14 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | ssi_historical_availability | source_adapter_and_quality | 95 | 12 | 45 | 0 | KEEP | none |
 | ssi_intraday_label_diagnostics | source_adapter_and_quality | 181 | 17 | 87 | 0 | KEEP | none |
 | ssi_intraday_session_probe209 | domain_and_reference | 202 | 38 | 104 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
