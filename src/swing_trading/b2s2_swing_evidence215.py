@@ -12,8 +12,9 @@ lookbacks/near and trigger evidence. The result MUST remain UNVERIFIED.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from hashlib import sha256
 import json
@@ -23,6 +24,11 @@ from .causal_structure_geometry import (
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
+from .private_multitf_readiness import BaselineResolvedInputs
+from .phase_input_routing369 import route_phase_inputs
+from .structural_phase_evidence import (
+    inspect_b2s2_rc_causal_near214, inspect_routed_phase_bos,
+)
 from .replay import require_utc
 from .source_quality import ResolvedBarSnapshotV12
 from .zone_manifest_v03 import MANIFESTS
@@ -227,3 +233,147 @@ def inspect_b2s2_two_pivot215(
         first.witness_known_at_utc,
         second.witness_known_at_utc,
     )
+
+
+@dataclass(frozen=True)
+class PairSlice371:
+    start: int
+    stop: int
+    first_index: int
+    second_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+
+
+@dataclass(frozen=True)
+class NearSlice371:
+    target_index: int
+    pivot_tf: Timeframe
+    pivot_start: int
+    pivot_stop: int
+    candidate_index: int
+    left_count: int
+    right_count: int
+    atr_start: int
+    atr_stop: int
+    tie_policy: TiePolicy
+    candidate_k_near: Decimal | None
+
+
+@dataclass(frozen=True)
+class BosSlice371:
+    timeframe: Timeframe
+    breakout_index: int
+    pivot_index: int
+    left_count: int
+    right_count: int
+    atr_start: int
+    atr_stop: int
+    tie_policy: TiePolicy
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class B2S2PreviewPlan371:
+    r0: PairSlice371
+    rc: NearSlice371
+    re: PairSlice371
+    rf: BosSlice371
+
+
+@dataclass(frozen=True)
+class B2S2BaselinePreview371:
+    """Four independent ingredient results, not an accepted phase sequence."""
+    zone_id: str
+    strategy: Strategy
+    as_of_utc: datetime
+    assessments: tuple
+
+    @property
+    def status(self):
+        return DecisionStatus.UNVERIFIED
+
+    @property
+    def phase_sequence_verified(self):
+        return False
+
+    @property
+    def action_eligible(self):
+        return False
+
+
+def _slice371(rows, start, stop):
+    if type(start) is not int or type(stop) is not int or not 0 <= start < stop:
+        raise B2S2PivotDenied215("MST_371_INVALID_SLICE")
+    if rows and stop > len(rows):
+        raise B2S2PivotDenied215("MST_371_SLICE_OUTSIDE_SCOPE")
+    return rows[start:stop]
+
+
+def _pair371(inputs, zone, strategy, phase, plan):
+    side, tf, variant = _SOURCE_PHASES[(zone, phase)]
+    routed = route_phase_inputs(inputs, zone_id=zone, strategy=strategy,
+                                variant_id=variant, phase=phase)
+    history = _slice371(inputs.snapshots_for(tf), plan.start, plan.stop)
+    if not history:
+        return routed, B2S2PivotPair215(
+            zone, strategy, phase, routed.predicate_ref, side, tf,
+            inputs.as_of_utc, PivotPairState215.BLOCKED,
+            "MST_371_PIVOT_HISTORY_MISSING", None, None, None,
+        )
+    proof = inspect_b2s2_two_pivot215(
+        zone_id=zone, strategy=strategy, phase=phase, history=history,
+        first_index=plan.first_index, second_index=plan.second_index,
+        left_count=plan.left_count, right_count=plan.right_count,
+        tie_policy=plan.tie_policy, as_of_utc=inputs.as_of_utc,
+    )
+    return routed, proof
+
+
+def _near371(inputs, zone, strategy, plan):
+    if plan.pivot_tf not in (Timeframe.H1, Timeframe.D1) or type(plan.pivot_tf) is not Timeframe:
+        raise B2S2PivotDenied215("MST_371_NEAR_PIVOT_TF")
+    if type(plan.target_index) is not int or plan.target_index < 0:
+        raise B2S2PivotDenied215("MST_371_INVALID_TARGET_INDEX")
+    rows = inputs.snapshots_for(Timeframe.M15)
+    if rows and plan.target_index >= len(rows):
+        raise B2S2PivotDenied215("MST_371_TARGET_OUTSIDE_SCOPE")
+    routed = route_phase_inputs(inputs, zone_id=zone, strategy=strategy,
+                                variant_id=zone + "/BASE", phase="R_C")
+    proof = inspect_b2s2_rc_causal_near214(
+        zone_id=zone, strategy=strategy,
+        pullback_m15=rows[plan.target_index] if rows else None,
+        pivot_history=_slice371(inputs.snapshots_for(plan.pivot_tf),
+                               plan.pivot_start, plan.pivot_stop),
+        candidate_index=plan.candidate_index, left_count=plan.left_count,
+        right_count=plan.right_count, tie_policy=plan.tie_policy,
+        atr_d1_history=_slice371(inputs.snapshots_for(Timeframe.D1),
+                                plan.atr_start, plan.atr_stop),
+        candidate_k_near=plan.candidate_k_near, as_of_utc=inputs.as_of_utc,
+    )
+    return routed, proof
+
+
+def inspect_b2s2_baseline_preview(inputs, *, zone_id, strategy, plan):
+    """Run B2/S2's four existing mathematical ingredients on a single cutoff.
+
+    No phase result is treated as a previous-phase pass; windows, risk,
+    market/position context, event sequencing and thresholds remain pending.
+    No row or clock can be injected outside the immutable baseline input.
+    """
+    if (type(inputs) is not BaselineResolvedInputs or zone_id not in ("B2", "S2")
+            or type(strategy) is not Strategy or type(plan) is not B2S2PreviewPlan371
+            or type(plan.r0) is not PairSlice371 or type(plan.rc) is not NearSlice371
+            or type(plan.re) is not PairSlice371 or type(plan.rf) is not BosSlice371):
+        raise B2S2PivotDenied215("MST_371_EXPLICIT_PLAN_REQUIRED")
+    assessments = (
+        _pair371(inputs, zone_id, strategy, "R0", plan.r0),
+        _near371(inputs, zone_id, strategy, plan.rc),
+        _pair371(inputs, zone_id, strategy, "R_E", plan.re),
+        inspect_routed_phase_bos(
+            inputs, zone_id=zone_id, strategy=strategy, variant_id=zone_id + "/BASE",
+            phase="R_F", **asdict(plan.rf),
+        ),
+    )
+    return B2S2BaselinePreview371(zone_id, strategy, inputs.as_of_utc, assessments)

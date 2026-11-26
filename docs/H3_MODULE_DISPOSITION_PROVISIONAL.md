@@ -9,7 +9,7 @@ these require separate consumer, migration and rollback evidence.
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | __init__ | domain_and_reference | 3 | 0 | 0 | 0 | KEEP | none |
 | adaptive_source_router | source_adapter_and_quality | 289 | 27 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
-| b2s2_swing_evidence215 | domain_and_reference | 229 | 33 | 98 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
 | b5_feature_pack | domain_and_reference | 149 | 28 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | b5_formula_geometry | domain_and_reference | 211 | 24 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -46,10 +46,10 @@ these require separate consumer, migration and rollback evidence.
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 1 | KEEP | none |
+| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 2 | KEEP | none |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 4 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_review_packet | evidence_and_rights | 264 | 37 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -78,7 +78,7 @@ these require separate consumer, migration and rollback evidence.
 | ssi_multivenue_review | source_adapter_and_quality | 129 | 11 | 59 | 0 | KEEP | none |
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 2 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| structural_phase_evidence | domain_and_reference | 612 | 34 | 110 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| structural_phase_evidence | domain_and_reference | 612 | 34 | 110 | 4 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
