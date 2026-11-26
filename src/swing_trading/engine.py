@@ -4,13 +4,17 @@ The existing legacy API stays available and all actual SignalDecision values
 remain UNVERIFIED. The new path is private, deterministic and does not call
 providers, cache, UI publisher, broker, or an approved detector.
 """
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from decimal import Decimal
 
 from .contracts import (
     DecisionStatus, Strategy, SignalDecision, ZONE_IDS, evaluate_unimplemented_zones,
 )
 from .private_multitf_readiness import BaselineResolvedInputs
+from .market_data import Timeframe
+from .causal_structure_geometry import TiePolicy
+from .structural_phase_evidence import ROUTES, inspect_routed_phase_bos
 from .b2s2_swing_evidence215 import B2S2PreviewPlan371, inspect_b2s2_baseline_preview
 from .b5_formula_geometry import (
     B5RetestPlan372, B5RFPlan373, B5RFVolumePlan373, inspect_b5_baseline_confirmation,
@@ -19,6 +23,7 @@ from .s7_retest_evidence import S7OriginPlan374, S7MicroPlan374, inspect_s7_base
 from .zone_manifest_v03 import MANIFESTS
 
 PREVIEW_ZONES = ("B2", "B5", "S2", "S7")
+STRUCTURAL_PREVIEW_ZONES = tuple(z for z in ZONE_IDS if any(k[0] == z for k in ROUTES))
 
 
 @dataclass(frozen=True)
@@ -35,11 +40,47 @@ class S7EnginePlan375:
 
 
 @dataclass(frozen=True)
+class StructuralPhasePlan376:
+    phase: str
+    timeframe: Timeframe
+    breakout_index: int
+    pivot_index: int
+    left_count: int
+    right_count: int
+    atr_start: int
+    atr_stop: int
+    tie_policy: TiePolicy
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class StructuralEnginePlan376:
+    phases: tuple[StructuralPhasePlan376, ...]
+
+
+@dataclass(frozen=True)
+class StructuralEnginePreview376:
+    zone_id: str
+    strategy: Strategy
+    variant_id: str
+    as_of_utc: datetime
+    assessments: tuple
+
+    @property
+    def status(self):
+        return DecisionStatus.UNVERIFIED
+
+    @property
+    def action_eligible(self):
+        return False
+
+
+@dataclass(frozen=True)
 class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376
 
 
 @dataclass(frozen=True)
@@ -72,20 +113,30 @@ class BaselineEnginePreview375:
                 "zone_id": r.decision.zone_id, "strategy": r.decision.strategy.value,
                 "status": r.decision.status.value, "variant_id": r.variant_id,
                 "reason": r.reason, "preview_present": r.private_preview is not None,
+                "structural_preview_supported": r.decision.zone_id in STRUCTURAL_PREVIEW_ZONES,
             } for r in self.rows],
             "publication_state": self.publication_state, "decision": self.decision,
             "source_released": False, "detector_parity_verified": False, "trade_orders": 0,
         }
 
 
+def _request_supported376(request):
+    if type(request) is not BaselinePreviewRequest375:
+        return False
+    if type(request.zone_id) is not str or type(request.strategy) is not Strategy:
+        return False
+    if request.zone_id in PREVIEW_ZONES:
+        return True
+    return (type(request.plan) is StructuralEnginePlan376
+            and request.zone_id in STRUCTURAL_PREVIEW_ZONES)
+
+
 def _request_index375(requests):
-    if type(requests) is not tuple or len(requests) > 8:
+    if type(requests) is not tuple or len(requests) > 32:
         raise ValueError("MST_375_BOUNDED_REQUEST_TUPLE")
     indexed = {}
     for request in requests:
-        if (type(request) is not BaselinePreviewRequest375
-                or type(request.zone_id) is not str or request.zone_id not in PREVIEW_ZONES
-                or type(request.strategy) is not Strategy):
+        if not _request_supported376(request):
             raise ValueError("MST_375_UNSUPPORTED_REQUEST")
         key = (request.zone_id, request.strategy)
         if key in indexed:
@@ -94,11 +145,33 @@ def _request_index375(requests):
     return indexed
 
 
+def _structural376(inputs, request):
+    phases = request.plan.phases
+    if (type(phases) is not tuple or not 1 <= len(phases) <= 2
+            or any(type(p) is not StructuralPhasePlan376 for p in phases)):
+        raise ValueError("MST_376_EXPLICIT_PHASE_TUPLE")
+    names = tuple(p.phase for p in phases)
+    if names not in (("R_E",), ("R_F",), ("R_E", "R_F")):
+        raise ValueError("MST_376_DUPLICATE_OR_UNORDERED_PHASE")
+    scope = dict(zone_id=request.zone_id, strategy=request.strategy,
+                 variant_id=request.variant_id)
+    for plan in phases:
+        route = ROUTES.get((request.zone_id, request.variant_id, plan.phase))
+        if route is None or type(plan.timeframe) is not Timeframe or plan.timeframe not in route[1]:
+            raise ValueError("MST_376_EXACT_STRUCTURAL_ROUTE_REQUIRED")
+    assessments = tuple(inspect_routed_phase_bos(inputs, **scope, **asdict(plan))
+                        for plan in phases)
+    return StructuralEnginePreview376(request.zone_id, request.strategy,
+                                      request.variant_id, inputs.as_of_utc, assessments)
+
+
 def _dispatch375(inputs, request):
     zone, strategy, variant, plan = (
         request.zone_id, request.strategy, request.variant_id, request.plan)
     if type(variant) is not str or variant not in MANIFESTS[zone].variants:
         raise ValueError("MST_375_VARIANT_INVALID")
+    if type(plan) is StructuralEnginePlan376:
+        return _structural376(inputs, request)
     if zone in ("B2", "S2") and type(plan) is B2S2PreviewPlan371:
         return inspect_b2s2_baseline_preview(
             inputs, zone_id=zone, strategy=strategy, plan=plan)
