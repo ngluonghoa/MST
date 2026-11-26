@@ -1,0 +1,3 @@
+# §377 — Redacted engine phase projection
+
+A separate versioned safe_phase_summary keeps the §375 safe_summary wire unchanged. All 32 zone-strategy rows expose four ordered phase slots. Ingredient observation is independent of routed required input readiness; missing, blocked, nonmatch, uncalibrated distance, combined chain, explicit continuation pending and absent/rejected configuration remain distinct. B5 and S7 combined retest geometry is not independent phase proof. No raw rows, prices, preview identifiers, parameters or reason strings from private evidence cross the boundary. Every phase and zone remains unverified, no trade or release. Seven fictional regression methods. Rollback: revert atomic PR.
