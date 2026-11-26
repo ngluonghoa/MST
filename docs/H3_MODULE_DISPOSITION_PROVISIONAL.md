@@ -15,7 +15,7 @@ these require separate consumer, migration and rollback evidence.
 | b5_formula_geometry | domain_and_reference | 624 | 24 | 76 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | b5_phase_contract | domain_and_reference | 261 | 46 | 117 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_temporal_split_audit | domain_and_reference | 235 | 35 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| b6_baseline_preview387 | domain_and_reference | 385 | 8 | 26 | 2 | KEEP | none |
+| b6_baseline_preview387 | domain_and_reference | 425 | 11 | 26 | 2 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 105 | 3 | 22 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
