@@ -11,6 +11,7 @@ from __future__ import annotations
 from html import escape
 from typing import Any
 
+from .baseline_ui10_runtime379 import build_baseline_ui10_runtime
 from .locked_ui10_binding import (
     LockedUi10Denied, LockedUi10DiagnosticViewModel,
     SECTION_IDS, ZONE_LEGEND, PIPELINE_STEPS, AUDIT_TOPICS,
@@ -162,6 +163,11 @@ def render_ui10_incomplete_html(model: LockedUi10DiagnosticViewModel) -> str:
         + " · SHA256 nguồn (kiểm tra nội bộ): <code>" + source_hash[:12]
         + '…</code></p><p class="muted">Run ID: <code>' + run + "</code></p>"
     )
+    return _render_shared_ui10(d, sections)
+
+
+def _render_shared_ui10(d: dict, sections: dict) -> str:
+    """Internal locked layout shared by the two independently bound inputs."""
     sections["B"]=(
         '<p class="warn">Chưa xác minh VN-Index, ngành, xu hướng W1/D1/H1'
         ', nguồn M15/M5, thanh khoản và corporate actions.</p>'
@@ -247,14 +253,15 @@ def render_ui10_incomplete_html(model: LockedUi10DiagnosticViewModel) -> str:
         ("Mục","Nội dung","Trạng thái","Lý do"),
         audit_rows,caption="8 mục kiểm toán · 0/8 PASS",
     )
-    sections["H"]=(
-        '<p>Cache nghiên cứu riêng tư, chưa phải Cache phát hành bằng '
-        'atomic signed CAS.</p>'
-        '<p>Hit rate: <strong>Chưa đo</strong>. Delta / lần chạy trước, '
-        'invalidations, publisher highwater: Chưa xác minh.</p>'
-        '<p class="muted">Không suy ra Cache hit, freshness hoặc '
-        'first-known từ SHA256 nguồn.</p>'
-    )
+    if "H" not in sections:
+        sections["H"]=(
+            '<p>Cache nghiên cứu riêng tư, chưa phải Cache phát hành bằng '
+            'atomic signed CAS.</p>'
+            '<p>Hit rate: <strong>Chưa đo</strong>. Delta / lần chạy trước, '
+            'invalidations, publisher highwater: Chưa xác minh.</p>'
+            '<p class="muted">Không suy ra Cache hit, freshness hoặc '
+            'first-known từ SHA256 nguồn.</p>'
+        )
     sections["I"]=(
         '<div class="diagnostic" role="status">'
         '<strong>INCOMPLETE_REPORT · NO_TRADE</strong>'
@@ -288,3 +295,58 @@ def render_ui10_incomplete_html(model: LockedUi10DiagnosticViewModel) -> str:
         '<main aria-label="MST UI-1.0 báo cáo chẩn đoán chưa hoàn tất">'
         + body + '</main></body></html>'
     )
+
+
+def _baseline_phase_reason380(row):
+    branches = []
+    for diagnostic in row["phase_diagnostics"]:
+        slots = ", ".join(p["phase"] + "=" + p["ingredient_state"] + "/" + p["input_state"]
+                          for p in diagnostic["phases"])
+        branches.append(diagnostic["strategy"] + ": " + slots)
+    return " · ".join(branches)
+
+
+def _baseline_rows380(runtime):
+    return [dict(row, reason=_baseline_phase_reason380(row))
+            for row in runtime["zone_rows"]]
+
+
+def render_baseline_ui10_incomplete_html(inputs, *, requests=()) -> str:
+    """Render only a freshly executed baseline runtime, not detached evidence.
+
+    This is private diagnostic HTML, with no source qualification or publish
+    authority. It deliberately displays no instrument or raw source identity.
+    The D1-only public renderer continues to enforce its own typed boundary.
+    """
+    runtime = build_baseline_ui10_runtime(inputs, requests=requests)
+    branch = {"state": "BLOCKED", "decision": "NO_TRADE", "confirmed": False}
+    d = {
+        "strategies": {"SHORT": dict(branch), "SWING": dict(branch)},
+        "zone_rows": _baseline_rows380(runtime),
+        "pipeline_steps": [
+            {"step_id": n, "step_name": label, "status": status,
+             "reason": "SOURCE_OR_ORIGINAL_ENGINE_NOT_VERIFIED"}
+            for n, label, status in runtime["pipeline_steps"]
+        ],
+        "audit_topics": [
+            {"audit_id": n, "topic": label, "status": status,
+             "reason": "MANDATORY_DATA_OR_SIGNAL_EVIDENCE_UNVERIFIED"}
+            for n, label, status in runtime["audit_topics"]
+        ],
+    }
+    coverage = " · ".join(_t(row["timeframe"]) + ": " + _t(row["status"])
+                          for row in runtime["timeframes"])
+    sections = {
+        "A": ('<h1>Baseline đa khung · INCOMPLETE_REPORT</h1>'
+              '<p class="muted">UI-1.0 · ' + _t(runtime["as_of_utc"]) + '</p>'
+              '<div class="diagnostic" role="alert"><strong>CHƯA ĐỦ DỮ LIỆU XÁC MINH'
+              '</strong><p>Pipeline 0/8 VERIFIED · B 0/8, S 0/8 VERIFIED. '
+              '16 vùng đã được liệt kê nhưng đều UNVERIFIED. '
+              'Hình học theo pha chỉ là chẩn đoán, không phải tín hiệu.</p></div>'
+              '<p class="note">Nguồn: baseline đầu vào v1.2 riêng tư, chưa xác minh. '
+              'Không phải tham chiếu D1 đã đối chiếu.</p><p>' + coverage + '</p>'),
+        "H": ('<p>Đầu vào baseline trong bộ nhớ; chưa xác minh Cache phát hành.</p>'
+              '<p>Hit rate: <strong>Chưa đo</strong>. Delta / lần chạy trước, '
+              'invalidations, publisher highwater: Chưa xác minh.</p>'),
+    }
+    return _render_shared_ui10(d, sections)
