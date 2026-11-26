@@ -57,3 +57,33 @@ class RetrievalProvenance289(TestCase):
             with self.assertRaises(stage.SsiStageDenied):
                 stage.run_private_ssi_stage(object(), FakeDiscovery(), env)
             put.assert_not_called()
+
+    def test_actual_adapter_records_two_page_capture_and_redacts_readonly(self):
+        from datetime import datetime, timezone
+        from scripts import mst_mfx_ssi_readonly as adapter
+        from test_mst_mfx_ssi_readonly import FakeSsiApi, settings
+        env = settings(MST_MFX_SOURCE_MODE="ssi-native-quarantine-stage")
+        api = FakeSsiApi()
+        before = datetime.now(timezone.utc)
+        receipt, native = adapter._fetch_ssi_native_once(api, env)
+        after = datetime.now(timezone.utc)
+        p = receipt["private_retrieval_provenance"]
+        self.assertEqual(len(native), 3)
+        self.assertEqual(len(api.calls), 3)
+        self.assertLessEqual(before, datetime.fromisoformat(p["retrieval_started_utc"]))
+        self.assertLessEqual(datetime.fromisoformat(p["retrieval_started_utc"]), datetime.fromisoformat(p["retrieval_finished_utc"]))
+        self.assertLessEqual(datetime.fromisoformat(p["retrieval_finished_utc"]), after)
+        self.assertEqual(p["native_rows_sha256"], native_rows_digest(native))
+        self.assertNotIn("private_retrieval_provenance", adapter.read_ssi_native_once(FakeSsiApi(), env))
+
+    def test_clock_reversal_fails_closed(self):
+        from datetime import datetime, timezone
+        from scripts import mst_mfx_ssi_readonly as adapter
+        from test_mst_mfx_ssi_readonly import FakeSsiApi, settings
+        with patch.object(adapter, "datetime", wraps=datetime) as clock:
+            clock.now.side_effect = [
+                datetime(2026, 11, 19, 2, tzinfo=timezone.utc),
+                datetime(2026, 11, 19, 1, tzinfo=timezone.utc),
+            ]
+            with self.assertRaisesRegex(adapter.SsiSourceDenied, "RETRIEVAL_PROVENANCE_DENIED"):
+                adapter._fetch_ssi_native_once(FakeSsiApi(), settings())

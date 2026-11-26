@@ -321,6 +321,7 @@ def _fetch_ssi_native_once(session: Any, env: Mapping[str,str]) -> tuple[dict[st
 def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
     """Compatibility read-only entrypoint: no source rows in stdout/receipt."""
     report, _ = _fetch_ssi_native_once(session, env)
+    report.pop("private_retrieval_provenance", None)
     return report
 
 
