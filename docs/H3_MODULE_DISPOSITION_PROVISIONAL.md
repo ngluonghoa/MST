@@ -12,7 +12,7 @@ these require separate consumer, migration and rollback evidence.
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
 | b5_feature_pack | domain_and_reference | 149 | 28 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| b5_formula_geometry | domain_and_reference | 408 | 24 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
+| b5_formula_geometry | domain_and_reference | 624 | 24 | 76 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | b5_phase_contract | domain_and_reference | 261 | 46 | 117 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_temporal_split_audit | domain_and_reference | 235 | 35 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |

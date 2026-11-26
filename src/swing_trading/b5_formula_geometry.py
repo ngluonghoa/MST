@@ -14,7 +14,10 @@ from .b5_phase_contract import (
     B5PhaseReceipt,
 )
 from .contracts import DecisionStatus, Strategy
-from .causal_indicators import IndicatorState, calculate_wilder_atr14
+from .causal_indicators import (
+    IndicatorState, calculate_wilder_atr14, VolumeComparisonBar, VolumeSessionClass,
+    VolumeBasisWitness, CausalIndicatorResult, calculate_rvol_tf20_raw_matched,
+)
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, inspect_causal_pivot,
     inspect_closed_bos_geometry,
@@ -406,3 +409,216 @@ def inspect_b5_baseline_retest(inputs, *, strategy, variant_id, plan):
     )
     return finish(B5RetestState372.RAW_RETEST_UNCALIBRATED,
                   "R0_RC_RE_GEOMETRY_ONLY_RF_AND_CALIBRATION_PENDING", metrics)
+
+
+@dataclass(frozen=True)
+class B5RFPlan373:
+    support_tf: Timeframe
+    support_index: int
+    micro_pivot_index: int
+    micro_break_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class B5RFVolumePlan373:
+    """External witness claims, never constructed from price/volume equality."""
+    session_classes: tuple[VolumeSessionClass, ...]
+    comparison_policy_version: str
+    witnesses: tuple[VolumeBasisWitness, ...]
+
+
+class B5RFState373(str, Enum):
+    BLOCKED = "BLOCKED"
+    NONCROSS_GEOMETRY_ONLY = "NONCROSS_GEOMETRY_ONLY"
+    RAW_CONFIRMATION_UNCALIBRATED = "RAW_CONFIRMATION_UNCALIBRATED"
+
+
+@dataclass(frozen=True)
+class B5RFMetrics373:
+    support_close_minus_former_pivot_atr: Decimal
+    micro_high_price: Decimal
+    micro_break_close_minus_micro_high_atr: Decimal
+    confirmation_preview_id: str
+
+
+@dataclass(frozen=True)
+class B5RFPreview373:
+    retest: B5BaselineRetestPreview372
+    routed_rf: object
+    state: B5RFState373
+    reason: str
+    metrics: B5RFMetrics373 | None
+    rvol: CausalIndicatorResult | None
+    volume_reason: str
+
+    @property
+    def status(self):
+        return DecisionStatus.UNVERIFIED
+
+    @property
+    def risk_policy_verified(self):
+        return False
+
+    @property
+    def action_eligible(self):
+        return False
+
+
+def _validate_rf373(plan, retest_plan):
+    if (type(plan) is not B5RFPlan373 or type(plan.support_tf) is not Timeframe
+            or plan.support_tf not in (Timeframe.H1, Timeframe.D1)
+            or type(plan.tie_policy) is not TiePolicy):
+        raise ValueError("MST_373_EXPLICIT_RF_PLAN_REQUIRED")
+    nums = (plan.support_index, plan.micro_pivot_index, plan.micro_break_index,
+            plan.left_count, plan.right_count)
+    if any(type(i) is not int or i < 0 for i in nums):
+        raise ValueError("MST_373_INVALID_INDEX")
+    if (min(plan.left_count, plan.right_count) < 1
+            or plan.micro_pivot_index < retest_plan.retest_index
+            or plan.micro_pivot_index < plan.left_count
+            or plan.micro_pivot_index + plan.right_count >= plan.micro_break_index - 1):
+        raise ValueError("MST_373_MICRO_PIVOT_SLICE_OR_RETEST_ORDER")
+
+
+def _validate_volume373(plan):
+    if plan is None:
+        return
+    if (type(plan) is not B5RFVolumePlan373
+            or type(plan.session_classes) is not tuple or len(plan.session_classes) != 21
+            or any(type(x) is not VolumeSessionClass for x in plan.session_classes)
+            or type(plan.witnesses) is not tuple or len(plan.witnesses) != 21
+            or any(type(x) is not VolumeBasisWitness for x in plan.witnesses)
+            or type(plan.comparison_policy_version) is not str
+            or not plan.comparison_policy_version.strip()):
+        raise ValueError("MST_373_EXPLICIT_VOLUME_WITNESS_PLAN")
+
+
+def _bound_rvol373(rows, index, plan, cutoff):
+    if plan is None:
+        return None, "RAW_MATCHED_VOLUME_WITNESS_MISSING"
+    if index < 20:
+        return None, "INSUFFICIENT_PRIOR_VOLUME_BARS"
+    # Use exactly the twenty preceding entries, never search for a favorable
+    # subset or substitute a different source/volume regime.
+    tagged = tuple(VolumeComparisonBar(row, session_class, plan.comparison_policy_version)
+                   for row, session_class in zip(rows[index - 20:index + 1],
+                                                  plan.session_classes))
+    result = calculate_rvol_tf20_raw_matched(
+        tagged[-1], tagged[:-1], target_witness=plan.witnesses[-1],
+        prior_witnesses=plan.witnesses[:-1], as_of_utc=cutoff,
+    )
+    return result, result.reason
+
+
+def _support_order373(support, retest, micro, cutoff):
+    if not _known_before372(support, cutoff):
+        return "RF_SUPPORT_NOT_CLOSED_OR_KNOWN"
+    when = retest.selected.verified_at_utc
+    if support.market_bar_key.bar_start_utc < when:
+        return "RF_SUPPORT_STARTED_BEFORE_RETEST_VERIFIED"
+    if micro.market_bar_key.bar_start_utc < when:
+        return "RF_MICRO_BREAK_STARTED_BEFORE_RETEST_VERIFIED"
+    return None
+
+
+def _micro_geometry373(rows, atr, plan, cutoff):
+    history = rows[:plan.micro_break_index - 1]
+    previous, target = rows[plan.micro_break_index - 1:plan.micro_break_index + 1]
+    result = inspect_closed_bos_geometry(
+        history, pivot_index=plan.micro_pivot_index, left_count=plan.left_count,
+        right_count=plan.right_count, previous=previous, breakout=target,
+        atr_d1_history=atr, side=StructureSide.HIGH, tie_policy=plan.tie_policy,
+        candidate_epsilon=plan.candidate_epsilon, as_of_utc=cutoff,
+    )
+    if result.state is not GeometryState.DESCRIPTIVE_ONLY or not result.candidate_cross:
+        return result, None
+    pivot = inspect_causal_pivot(
+        history, candidate_index=plan.micro_pivot_index, left_count=plan.left_count,
+        right_count=plan.right_count, side=StructureSide.HIGH,
+        tie_policy=plan.tie_policy, as_of_utc=target.market_bar_key.bar_start_utc,
+    )
+    if pivot.state is not GeometryState.DESCRIPTIVE_ONLY or not pivot.geometric_extremum:
+        raise ValueError("MST_373_MICRO_PIVOT_CHANGED_BETWEEN_CHECKS")
+    return result, pivot.pivot_price
+
+
+def _rf_metrics373(base, support, m15, atr, plan, cutoff, micro_high):
+    scale = calculate_wilder_atr14(
+        atr, as_of_utc=cutoff,
+        known_before_utc=m15[plan.micro_break_index].market_bar_key.bar_start_utc,
+    )
+    if scale.state is not IndicatorState.COMPUTED_UNCALIBRATED or scale.value is None:
+        return None, "RF_ATR_" + scale.reason
+    target = m15[plan.micro_break_index]
+    fingerprint = _digest({
+        "schema": "mst.b5.baseline_rf373.v0.1",
+        "retest": base.metrics.retest_preview_id,
+        "support": _bar_identity(support),
+        "micro_pivot": plan.micro_pivot_index, "left": plan.left_count,
+        "right": plan.right_count, "tie": plan.tie_policy.value,
+        "epsilon": str(plan.candidate_epsilon),
+        "micro_prefix": [_bar_identity(r) for r in m15[:plan.micro_break_index + 1]],
+        "atr": [_bar_identity(r) for r in atr],
+    })
+    return B5RFMetrics373(
+        (support.selected.close - base.metrics.pivot_price) / scale.value,
+        micro_high, (target.selected.close - micro_high) / scale.value,
+        "MST_B5_RF_PREVIEW373:" + fingerprint,
+    ), None
+
+
+def inspect_b5_baseline_confirmation(inputs, *, strategy, variant_id, retest_plan,
+                                     rf_plan, volume_plan=None):
+    """One bound R0/RC/RE/RF geometry path; never an executable B5 detector.
+
+    Support must be explicitly chosen and start after retest verification.
+    RVOL is optional to this *preview*, NOT optional to the approved R_F rule.
+    No numeric risk, volume, expiry or window policy is supplied or inferred.
+    """
+    base = inspect_b5_baseline_retest(
+        inputs, strategy=strategy, variant_id=variant_id, plan=retest_plan)
+    _validate_rf373(rf_plan, retest_plan)
+    _validate_volume373(volume_plan)
+    route = route_phase_inputs(inputs, zone_id="B5", strategy=strategy, variant_id=variant_id,
+                               phase="R_F", selected_frame=rf_plan.support_tf)
+
+    def finish(state, reason, metrics=None, rvol=None, volume_reason="VOLUME_NOT_EVALUATED"):
+        return B5RFPreview373(base, route, state, reason, metrics, rvol, volume_reason)
+
+    if base.state is not B5RetestState372.RAW_RETEST_UNCALIBRATED:
+        return finish(B5RFState373.BLOCKED, "BASE_" + base.reason)
+    support_rows = inputs.snapshots_for(rf_plan.support_tf)
+    m15 = inputs.snapshots_for(Timeframe.M15)
+    if not support_rows:
+        return finish(B5RFState373.BLOCKED, "RF_SUPPORT_INPUT_MISSING")
+    if rf_plan.support_index >= len(support_rows) or rf_plan.micro_break_index >= len(m15):
+        raise ValueError("MST_373_INDEX_OUTSIDE_BASELINE")
+    support = support_rows[rf_plan.support_index]
+    retest = m15[retest_plan.retest_index]
+    micro = m15[rf_plan.micro_break_index]
+    reason = _support_order373(support, retest, micro, inputs.as_of_utc)
+    if reason is not None:
+        return finish(B5RFState373.BLOCKED, reason)
+    atr = inputs.snapshots_for(Timeframe.D1)[retest_plan.atr_start:retest_plan.atr_stop]
+    geom, micro_high = _micro_geometry373(m15, atr, rf_plan, inputs.as_of_utc)
+    if geom.state is not GeometryState.DESCRIPTIVE_ONLY:
+        return finish(B5RFState373.BLOCKED, "RF_MICRO_" + geom.reason)
+    if not geom.candidate_cross:
+        return finish(B5RFState373.NONCROSS_GEOMETRY_ONLY, "RF_NO_CLOSED_MICRO_CROSS_GEOMETRY")
+    # Fingerprint only fully resolved prefix; never drop an intervening row.
+    if any(not _known_before372(r, inputs.as_of_utc)
+           for r in m15[:rf_plan.micro_break_index + 1]):
+        return finish(B5RFState373.BLOCKED, "RF_MICRO_PREFIX_UNRESOLVED")
+    metrics, reason = _rf_metrics373(base, support, m15, atr, rf_plan,
+                                      inputs.as_of_utc, micro_high)
+    if reason is not None:
+        return finish(B5RFState373.BLOCKED, reason)
+    rvol, volume_reason = _bound_rvol373(support_rows, rf_plan.support_index,
+                                         volume_plan, inputs.as_of_utc)
+    return finish(B5RFState373.RAW_CONFIRMATION_UNCALIBRATED,
+                  "RF_GEOMETRY_ONLY_RISK_VOLUME_WINDOW_CALIBRATION_PENDING",
+                  metrics, rvol, volume_reason)
