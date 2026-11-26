@@ -1,5 +1,5 @@
 """§387 B6 causal contraction and M15 upper-pivot approach ingredients."""
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from decimal import Decimal
 from enum import Enum
 
@@ -9,9 +9,10 @@ from .causal_indicators import (
     VolumeSessionClass, calculate_rvol_tf20_raw_matched, calculate_wilder_atr14,
 )
 from .causal_structure_geometry import (
-    GeometryState, StructureSide, _cross_tf_identity, _source_identity,
+    GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _source_identity,
     inspect_closed_bos_geometry,
 )
+from .causal_trend_candidate382 import inspect_d1_paired_trend_candidate
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
@@ -33,6 +34,16 @@ class B6RFPlan388:
 
 
 @dataclass(frozen=True)
+class B6TrendPlan390:
+    lookback: int
+    high_indices: tuple[int, ...]
+    low_indices: tuple[int, ...]
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+
+
+@dataclass(frozen=True)
 class B6EnginePlan387:
     d1_start: int
     d1_stop: int
@@ -42,6 +53,7 @@ class B6EnginePlan387:
     target_index: int
     candidate_k_near: Decimal
     rf: B6RFPlan388 | None = None
+    r0: B6TrendPlan390 | None = None
 
 
 class B6State387(str, Enum):
@@ -259,6 +271,37 @@ def _volume389(inputs, rf, geometry):
     return replace(geometry, volume_state=state, rvol=rvol)
 
 
+
+def _trend390(rows, history, plan):
+    trend = plan.r0
+    if type(trend) is not B6TrendPlan390:
+        raise ValueError("MST_390_EXPLICIT_TREND_PLAN")
+    if type(trend.lookback) is not int or not 1 <= trend.lookback <= 462:
+        raise ValueError("MST_390_BOUNDED_LOOKBACK")
+    if not history or plan.d1_start < 50 + trend.lookback:
+        return None
+    prefix = rows[plan.d1_start - 50 - trend.lookback:plan.d1_start]
+    # Exact preceding window, no skipping unresolved rows, no later trend.
+    return inspect_d1_paired_trend_candidate(
+        prefix, as_of_utc=history[0].market_bar_key.bar_start_utc, **asdict(trend))
+
+
+def _r0390(rows, history, plan, rc):
+    trend = _trend390(rows, history, plan)
+    if trend is None:
+        return B6Ingredient387(B6State387.MISSING, "PRIOR_D1_TREND_WINDOW_MISSING")
+    if trend["relation"] == "BLOCKED_INPUT" or trend["structure"] in (
+            "MISSING_PAIR", "BLOCKED_PIVOT", "INCONSISTENT_ORDER", "NON_EXTREMUM"):
+        return B6Ingredient387(B6State387.BLOCKED, "PRIOR_D1_TREND_GEOMETRY_UNRESOLVED")
+    if rc.contraction is None or rc.contraction.reason != "PULLBACK_DEPTH_GEOMETRY_ONLY":
+        return B6Ingredient387(B6State387.BLOCKED, "CONTRACTION_PIVOTS_UNRESOLVED")
+    if trend["relation"] == "ALIGNED_GEOMETRY_ONLY":
+        if trend["structure"] == "HH_HL_GEOMETRY":
+            return B6Ingredient387(B6State387.MATCH, "PRIOR_D1_RISE_AND_CONTRACTION_PIVOTS_ONLY")
+        return B6Ingredient387(B6State387.NONMATCH, "PRIOR_D1_OPPOSITE_GEOMETRY_ONLY")
+    return B6Ingredient387(B6State387.BLOCKED, "PRIOR_D1_DIRECTION_UNRESOLVED")
+
+
 def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     """Only explicit two-contraction branch; not an approved R0 or R_F.
 
@@ -277,7 +320,11 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     rc = route_phase_inputs(inputs, phase="R_C", **scope)
     re = route_phase_inputs(inputs, phase="R_E", **scope)
     early = _re387(inputs, history, atr_rows, plan)
-    assessments = ((rc, _rc387(history, plan, inputs.as_of_utc)), (re, early))
+    contraction = _rc387(history, plan, inputs.as_of_utc)
+    assessments = ((rc, contraction), (re, early))
+    if plan.r0 is not None:
+        r0 = route_phase_inputs(inputs, phase="R0", selected_frame=Timeframe.D1, **scope)
+        assessments = ((r0, _r0390(rows, history, plan, contraction)),) + assessments
     if plan.rf is not None:
         rf = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.D1, **scope)
         geometry = _rf388(inputs, history, atr_rows, plan, early)
