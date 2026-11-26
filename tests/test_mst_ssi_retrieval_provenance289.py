@@ -87,3 +87,18 @@ class RetrievalProvenance289(TestCase):
             ]
             with self.assertRaisesRegex(adapter.SsiSourceDenied, "RETRIEVAL_PROVENANCE_DENIED"):
                 adapter._fetch_ssi_native_once(FakeSsiApi(), settings())
+
+    def test_rehashed_invalid_rows_still_denied_by_custody_reader(self):
+        env = owner_env()
+        for changed in (
+            [{**rows()[0], "symbol": "HPG"}],
+            [{**rows()[0], "tradingDate": "2026-11-16"}],
+            [{**rows()[0], "high": 1}],
+            [{**rows()[0], "token": "fictional"}],
+            rows() + rows(),
+        ):
+            v = json.loads(stage.source_envelope(report(), rows(), env))
+            v["raw_native"] = changed
+            v["retrieval_provenance"]["native_rows_sha256"] = native_rows_digest(changed)
+            with self.assertRaises(chunk.ChunkDenied):
+                chunk._validate_owner_source(env, json.dumps(v).encode())

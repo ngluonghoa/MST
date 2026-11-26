@@ -12,6 +12,8 @@ An upload error may leave an orphan; never delete/overwrite/promote it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
+from scripts.mst_mfx_ssi_readonly import _native_source_row, SsiSourceDenied, MAX_ROWS
 from hashlib import md5, sha256
 import json
 import re
@@ -196,8 +198,25 @@ def _validate_owner_source(
         raise ChunkDenied("MST_240_SOURCE_CONTEXT_MISMATCH")
     if version == SSI_PROVENANCE_SCHEMA:
         try:
-            validate_provenance(payload["retrieval_provenance"], payload["raw_native"], env)
-        except RetrievalDenied:
+            provenance = payload["retrieval_provenance"]
+            rows = payload["raw_native"]
+            validate_provenance(provenance, rows, env)
+            first = date.fromisoformat(provenance["requested_from_date"])
+            last = date.fromisoformat(provenance["requested_to_date"])
+            if len(rows) > MAX_ROWS:
+                raise RetrievalDenied("MST_SSI_RETRIEVAL_ROWS_DENIED")
+            labels = set()
+            for row in rows:
+                if type(row) is not dict or set(row) != {
+                    "symbol", "tradingDate", "open", "high", "low", "close", "volume"
+                }:
+                    raise RetrievalDenied("MST_SSI_RETRIEVAL_ROWS_DENIED")
+                label = _native_source_row(row, symbol=symbol, first=first,
+                                           last=last, timeframe=tf)
+                if label in labels:
+                    raise RetrievalDenied("MST_SSI_RETRIEVAL_ROWS_DENIED")
+                labels.add(label)
+        except (RetrievalDenied, SsiSourceDenied):
             raise ChunkDenied("MST_240_SSI_RETRIEVAL_PROVENANCE_DENIED") from None
     digest = sha256(raw).hexdigest()
     return provider, symbol, tf, run, digest
