@@ -12,10 +12,15 @@ An upload error may leave an orphan; never delete/overwrite/promote it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
+from scripts.mst_mfx_ssi_readonly import _native_source_row, SsiSourceDenied, MAX_ROWS
 from hashlib import md5, sha256
 import json
 import re
 import secrets
+from scripts.mst_ssi_retrieval_provenance import (
+    SSI_PROVENANCE_SCHEMA, RetrievalDenied, validate_provenance,
+)
 from typing import Any, Mapping
 
 FILES = "https://www.googleapis.com/drive/v3/files"
@@ -162,12 +167,19 @@ def _validate_owner_source(
         raise
     except (UnicodeError, ValueError, TypeError, OverflowError, RecursionError):
         raise ChunkDenied("MST_240_SOURCE_JSON_INVALID") from None
-    if (type(payload) is not dict
-        or set(payload) != {
-            "schema", "project", "provider", "symbol", "native_tf",
-            "raw_native", "eligible_for_signals"
-        }
-        or payload.get("schema") != SCHEMA or payload.get("project") != "MST"
+    base_fields = {
+        "schema", "project", "provider", "symbol", "native_tf",
+        "raw_native", "eligible_for_signals"
+    }
+    if type(payload) is not dict:
+        raise ChunkDenied("MST_240_SOURCE_ENVELOPE_UNQUALIFIED")
+    version = payload.get("schema")
+    valid_shape = (
+        version == SCHEMA and set(payload) == base_fields
+        or version == SSI_PROVENANCE_SCHEMA and payload.get("provider") == "SSI"
+        and set(payload) == base_fields | {"retrieval_provenance"}
+    )
+    if (not valid_shape or payload.get("project") != "MST"
         or payload.get("provider") not in PROVIDERS
         or payload.get("symbol") not in SYMBOLS
         or payload.get("native_tf") not in TFS
@@ -184,6 +196,28 @@ def _validate_owner_source(
         or env.get("MST_SOURCE_SYMBOL") != symbol
         or env.get("MST_SOURCE_PROVIDER") != provider):
         raise ChunkDenied("MST_240_SOURCE_CONTEXT_MISMATCH")
+    if version == SSI_PROVENANCE_SCHEMA:
+        try:
+            provenance = payload["retrieval_provenance"]
+            rows = payload["raw_native"]
+            validate_provenance(provenance, rows, env)
+            first = date.fromisoformat(provenance["requested_from_date"])
+            last = date.fromisoformat(provenance["requested_to_date"])
+            if len(rows) > MAX_ROWS:
+                raise RetrievalDenied("MST_SSI_RETRIEVAL_ROWS_DENIED")
+            labels = set()
+            for row in rows:
+                if type(row) is not dict or set(row) != {
+                    "symbol", "tradingDate", "open", "high", "low", "close", "volume"
+                }:
+                    raise RetrievalDenied("MST_SSI_RETRIEVAL_ROWS_DENIED")
+                label = _native_source_row(row, symbol=symbol, first=first,
+                                           last=last, timeframe=tf)
+                if label in labels:
+                    raise RetrievalDenied("MST_SSI_RETRIEVAL_ROWS_DENIED")
+                labels.add(label)
+        except (RetrievalDenied, SsiSourceDenied):
+            raise ChunkDenied("MST_240_SSI_RETRIEVAL_PROVENANCE_DENIED") from None
     digest = sha256(raw).hexdigest()
     return provider, symbol, tf, run, digest
 

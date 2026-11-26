@@ -17,7 +17,10 @@ from typing import Any, Mapping
 
 from scripts.mst_private_chunk_readback240 import (
     CONTEXT as CHUNK_CONTEXT, ChunkDenied, _get_json,
-    upload_private_unpublished_chunk, SCHEMA,
+    upload_private_unpublished_chunk,
+)
+from scripts.mst_ssi_retrieval_provenance import (
+    SSI_PROVENANCE_SCHEMA as SCHEMA, RetrievalDenied, validate_provenance,
 )
 from scripts.mst_private_unpublished_manifest242 import (
     ManifestDenied, stage_unpublished_manifest,
@@ -144,7 +147,7 @@ def discover_private_manifests_folder(drive: Any) -> str:
 def source_envelope(
     report: Mapping[str, Any], captured: Any, env: Mapping[str, str],
 ) -> bytes:
-    """No log output; only exactly seven fields in provider-source envelope."""
+    """No log output; versioned private source envelope, never a first-known claim."""
     tf, symbol = env["MST_SOURCE_TF"], env["MST_SOURCE_SYMBOL"]
     if (type(report) is not dict
         or report.get("provider") != "SSI_FASTCONNECT_V3_MARKET_DATA"
@@ -166,8 +169,14 @@ def source_envelope(
         if (type(row) is not dict or set(row) != allowed
             or row.get("symbol") != symbol):
             raise SsiStageDenied("MST_SSI_CLOUD_STAGE_SOURCE_ROWS_OR_STATUS_INVALID")
+    provenance = report.get("private_retrieval_provenance")
+    try:
+        validate_provenance(provenance, captured, env)
+    except RetrievalDenied:
+        raise SsiStageDenied("MST_SSI_CLOUD_STAGE_SOURCE_JSON_OR_TRANSPORT_FAILURE") from None
     value = {
         "schema": SCHEMA,
+        "retrieval_provenance": provenance,
         "project": "MST",
         "provider": "SSI",
         "symbol": symbol,

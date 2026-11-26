@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date, datetime, timezone
+from scripts.mst_ssi_retrieval_provenance import make_provenance
 import json
 from unittest import TestCase
 from unittest.mock import patch
@@ -46,6 +48,11 @@ def rows():
 def report():
     return {
         "provider": "SSI_FASTCONNECT_V3_MARKET_DATA",
+        "private_retrieval_provenance": make_provenance(
+            datetime(2026, 11, 19, 1, tzinfo=timezone.utc),
+            datetime(2026, 11, 19, 1, 1, tzinfo=timezone.utc),
+            symbol="FPT", tf="D1", first=date(2026, 11, 17),
+            last=date(2026, 11, 18), rows=rows()),
         "source_native_tf": "D1",
         "native_source_rows_observed": 1,
         "source_ohlcv_invariants_verified": True,
@@ -123,7 +130,7 @@ class SsiManualSourceCloud241(TestCase):
             self.assertIs(raw["eligible_for_signals"], False)
             self.assertEqual(set(raw), {
                 "schema", "project", "provider", "symbol", "native_tf",
-                "raw_native", "eligible_for_signals",
+                "raw_native", "eligible_for_signals", "retrieval_provenance",
             })
             staged.append(payload)
             return saved_candidate(payload)

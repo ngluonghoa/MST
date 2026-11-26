@@ -7,7 +7,8 @@ No OTP, refresh-token persistence, trading client or broker/order endpoint.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from scripts.mst_ssi_retrieval_provenance import make_provenance, RetrievalDenied
 from decimal import Decimal, InvalidOperation
 import re
 from typing import Any, Mapping
@@ -175,6 +176,7 @@ def _fetch_ssi_native_once(session: Any, env: Mapping[str,str]) -> tuple[dict[st
     expected_items_field: bool | None = None
     expected_page_count_field: bool | None = None
     pages = 0
+    retrieval_started = datetime.now(timezone.utc)
     for page in range(1, MAX_PAGES+1):
         # SSI FastConnect V3 requires YYYY/MM/DD for 1d, but
         # YYYY/MM/DD HH:mm:ss for intraday OHLCV. The time-of-day
@@ -288,6 +290,13 @@ def _fetch_ssi_native_once(session: Any, env: Mapping[str,str]) -> tuple[dict[st
         raise SsiSourceDenied("MST_SSI_EMPTY_OR_EXCESSIVE_SOURCE_SCOPE")
     if expected_items is not None and len(seen) != expected_items:
         raise SsiSourceDenied("MST_SSI_SOURCE_ITEMS_COUNT_MISMATCH")
+    retrieval_finished = datetime.now(timezone.utc)
+    try:
+        provenance = make_provenance(retrieval_started, retrieval_finished,
+                                     symbol=symbol, tf=tf, first=first,
+                                     last=last, rows=captured)
+    except RetrievalDenied:
+        raise SsiSourceDenied("MST_SSI_RETRIEVAL_PROVENANCE_DENIED") from None
     report = {
         "provider":"SSI_FASTCONNECT_V3_MARKET_DATA",
         **source_tf_metadata("SSI",tf),
@@ -304,12 +313,15 @@ def _fetch_ssi_native_once(session: Any, env: Mapping[str,str]) -> tuple[dict[st
         "signal_eligible":False,
         "trading_or_broker_calls":0,
     }
+    if env.get("MST_MFX_SOURCE_MODE") == "ssi-native-quarantine-stage":
+        report["private_retrieval_provenance"] = provenance
     return report, captured
 
 
 def read_ssi_native_once(session: Any, env: Mapping[str,str]) -> dict[str, Any]:
     """Compatibility read-only entrypoint: no source rows in stdout/receipt."""
     report, _ = _fetch_ssi_native_once(session, env)
+    report.pop("private_retrieval_provenance", None)
     return report
 
 
