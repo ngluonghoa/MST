@@ -234,3 +234,82 @@ def calculate_rvol_tf20(
     value = Decimal(target_bar.volume) * Decimal(20) / Decimal(volume_total)
     return finish(IndicatorState.COMPUTED_UNCALIBRATED,
                   "SAME_TF_RVOL_MATH_ONLY_NO_TOD_OR_ACTION_APPROVAL", value, 21)
+
+
+class VolumeBasis(str, Enum):
+    RAW_MATCHED_SHARES = "RAW_MATCHED_SHARES"
+    ADJUSTED_SHARES = "ADJUSTED_SHARES"
+    ALL_TRADES_SHARES = "ALL_TRADES_SHARES"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclass(frozen=True)
+class VolumeBasisWitness:
+    """External claim scoped to one exact immutable selected candle.
+
+    The caller must independently verify the source record and share regime.
+    A matched-only scope or a raw price does not establish raw shares.
+    """
+    candle: object
+    basis: VolumeBasis
+    share_regime_id: str
+    evidence_id: str
+    verified_at_utc: datetime
+
+    def __post_init__(self):
+        require_utc(self.verified_at_utc)
+        if not isinstance(self.basis, VolumeBasis):
+            raise TypeError("Explicit volume basis required")
+        for value in (self.share_regime_id, self.evidence_id):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("Explicit volume evidence identity required")
+
+
+def _raw_volume_witness_ok(item, witness, cutoff):
+    if not isinstance(item, VolumeComparisonBar):
+        return False
+    if not isinstance(witness, VolumeBasisWitness):
+        return False
+    row = item.snapshot.selected
+    if row is None or witness.candle != row:
+        return False
+    if witness.basis is not VolumeBasis.RAW_MATCHED_SHARES:
+        return False
+    return row.retrieved_at_utc <= witness.verified_at_utc <= cutoff
+
+
+def calculate_rvol_tf20_raw_matched(
+    target: VolumeComparisonBar,
+    prior: tuple[VolumeComparisonBar, ...],
+    *,
+    target_witness: VolumeBasisWitness,
+    prior_witnesses: tuple[VolumeBasisWitness, ...],
+    as_of_utc: datetime,
+) -> CausalIndicatorResult:
+    """Opt-in raw matched-volume gate; legacy arithmetic remains unchanged."""
+    require_utc(as_of_utc)
+
+    def blocked(reason):
+        return CausalIndicatorResult(
+            "RVOL_TF20", as_of_utc, IndicatorState.BLOCKED, reason, None, 0,
+            "RVOL_TF_RAW_MATCHED_WITNESS_V0_1",
+        )
+
+    if not _raw_volume_witness_ok(target, target_witness, as_of_utc):
+        return blocked("TARGET_VOLUME_BASIS_OR_WITNESS_UNVERIFIED")
+    if not isinstance(prior, tuple) or not isinstance(prior_witnesses, tuple):
+        return blocked("VOLUME_WITNESSES_REQUIRE_IMMUTABLE_TUPLES")
+    if len(prior) != 20 or len(prior_witnesses) != 20:
+        return blocked("REQUIRE_EXACTLY_20_PRIOR_VOLUME_WITNESSES")
+    cutoff = target.snapshot.selected.market_bar_key.bar_start_utc
+    if not all(_raw_volume_witness_ok(item, witness, cutoff)
+               for item, witness in zip(prior, prior_witnesses)):
+        return blocked("PRIOR_VOLUME_BASIS_OR_WITNESS_UNVERIFIED")
+    if any(w.share_regime_id != target_witness.share_regime_id
+           for w in prior_witnesses):
+        return blocked("SHARE_REGIME_CHANGED_WITHIN_RVOL_WINDOW")
+    result = calculate_rvol_tf20(target, prior, as_of_utc=as_of_utc)
+    return CausalIndicatorResult(
+        result.indicator_id, result.as_of_utc, result.state, result.reason,
+        result.value, result.used_bar_count, "RVOL_TF_RAW_MATCHED_WITNESS_V0_1",
+    )

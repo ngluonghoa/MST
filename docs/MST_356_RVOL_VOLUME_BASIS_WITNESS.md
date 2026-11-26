@@ -1,0 +1,5 @@
+# §356 — RVOL independent volume basis witness
+
+Frozen source baseline 05 Smart Cache, 06 M15/M5, 09 independent QA: comparable volume units and corporate-action regimes are mandatory. Price basis and matched trade scope alone do not prove raw shares. §354–355 private observations expose a historical adjustment risk. No market data in this PR.
+
+Opt-in calculate_rvol_tf20_raw_matched requires a witness for each of 21 exact selected immutable candles, explicit raw matched-share semantics, same share-regime identity, evidence timestamps no earlier than retrieval and no later than the causal cutoff (prior bars: target start). It delegates to existing RVOL_TF20 math and source/quality/session checks. Adjusted, unknown and all-trades volume, late evidence, mismatched witness or mixed share regime are blocked. Witness inputs are external claims, not independent provider certification. Legacy API remains unchanged; no runtime wiring, production or signal promotion. No reconstruction by inverse price factor. Rollback: revert scoped PR.
