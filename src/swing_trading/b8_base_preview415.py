@@ -17,6 +17,8 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+from .rvol_tod_contract import (TODCumulativeObservation, TODRawPrefix,
+                                calculate_rvol_tod20_from_raw_prefixes)
 
 
 @dataclass(frozen=True)
@@ -25,8 +27,17 @@ class B8NearPlan416:
 
 
 @dataclass(frozen=True)
+class B8TODPlan420:
+    target: TODCumulativeObservation
+    prior_sessions: tuple[TODCumulativeObservation, ...]
+    target_prefix: TODRawPrefix
+    prior_prefixes: tuple[TODRawPrefix, ...]
+
+
+@dataclass(frozen=True)
 class B8EarlyPlan417:
     candidate_epsilon: Decimal
+    tod: B8TODPlan420 | None = None
 
 
 @dataclass(frozen=True)
@@ -218,6 +229,41 @@ def _early417(inputs, p, base, near):
     return B8Ingredient415(state, "SAME_RESISTANCE_CLOSED_CROSS_ONLY")
 
 
+def _validate_tod420(p, variant_id):
+    if p is None:
+        return
+    if variant_id != "B8/INTRADAY_RVOL_TOD_PENDING" or type(p) is not B8TODPlan420:
+        raise ValueError("MST_420_EXPLICIT_TOD_VARIANT")
+    if (type(p.target) is not TODCumulativeObservation or type(p.target_prefix) is not TODRawPrefix
+            or type(p.prior_sessions) is not tuple or len(p.prior_sessions) != 20
+            or any(type(x) is not TODCumulativeObservation for x in p.prior_sessions)
+            or type(p.prior_prefixes) is not tuple or len(p.prior_prefixes) != 20
+            or any(type(x) is not TODRawPrefix for x in p.prior_prefixes)):
+        raise ValueError("MST_420_EXACT_TOD_PLAN")
+
+
+def _early_tod420(inputs, p, geometry):
+    tod = p.early.tod
+    if tod is None or geometry.state is not B8State415.MATCH:
+        return geometry
+    rows = inputs.snapshots_for(Timeframe.M15)
+    index = p.target_index + 2
+    if tod.target.snapshot != rows[index]:
+        return replace(geometry, state=B8State415.BLOCKED, reason="TOD_TARGET_NOT_BOUND",
+                       volume_state="TOD_BLOCKED")
+    if any(x.snapshot not in rows[:index] for x in tod.prior_sessions):
+        return replace(geometry, state=B8State415.BLOCKED, reason="TOD_PRIOR_NOT_BOUND",
+                       volume_state="TOD_BLOCKED")
+    result = calculate_rvol_tod20_from_raw_prefixes(tod.target, tod.prior_sessions,
+        target_prefix=tod.target_prefix, prior_prefixes=tod.prior_prefixes,
+        as_of_utc=inputs.as_of_utc)
+    if result.state is not IndicatorState.COMPUTED_UNCALIBRATED:
+        return replace(geometry, state=B8State415.BLOCKED, reason="TOD_RAW_PREFIX_BLOCKED",
+                       volume_state="TOD_BLOCKED", rvol=result)
+    return replace(geometry, reason="RE_CROSS_AND_RAW_TOD_ARITHMETIC_ONLY",
+                   volume_state="TOD_COMPUTED_UNCALIBRATED", rvol=result)
+
+
 def _validate_rf418(p):
     if type(p) is not B8ConfirmPlan418 or type(p.timeframe) is not Timeframe:
         raise ValueError("MST_418_EXPLICIT_RF_PLAN")
@@ -249,6 +295,8 @@ def _rf_pair418(inputs, p, rows, m15):
             or _cross_tf_identity(early) != _cross_tf_identity(target)):
         return None
     if prior.market_bar_key == target.market_bar_key:
+        return None
+    if p.early.tod is not None and p.early.tod.target.cumulative_verified_utc > cutoff:
         return None
     return prior, target
 
@@ -302,9 +350,10 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         assessments += ((rc, near),)
     if plan.early is not None:
         _validate_early417(plan.early)
+        _validate_tod420(plan.early.tod, variant_id)
         re = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
                                 variant_id=variant_id, phase="R_E")
-        early = _early417(inputs, plan, base, near)
+        early = _early_tod420(inputs, plan, _early417(inputs, plan, base, near))
         assessments += ((re, early),)
     if plan.rf is not None:
         _validate_rf418(plan.rf)
