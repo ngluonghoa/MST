@@ -17,15 +17,12 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
-from .b8_portfolio429 import (B8PortfolioPlan429, B8PortfolioResult429,
-                              inspect_portfolio429, validate_portfolio429)
-from .b8_liquidity428 import (B8LiquidityPlan428, B8LiquidityResult428,
-                               inspect_liquidity428, validate_liquidity428)
-from .b8_settlement427 import (B8SettlementPlan427, B8SettlementResult427,
-                                inspect_settlement427, validate_settlement427)
-from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426, inspect_band426, validate_band426
-from .b8_risk_geometry424 import (B8MeasuredBaseRisk424, B8RiskResult424,
-                                  inspect_b8_risk424, validate_risk424)
+from .b8_portfolio429 import B8PortfolioPlan429, B8PortfolioResult429
+from .b8_execution_preview430 import inspect_b8_execution430
+from .b8_liquidity428 import B8LiquidityPlan428, B8LiquidityResult428
+from .b8_settlement427 import B8SettlementPlan427, B8SettlementResult427
+from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426
+from .b8_risk_geometry424 import B8MeasuredBaseRisk424, B8RiskResult424
 from .relative_strength421 import (RSPlan421, RSResult421, inspect_rs421, validate_rs421,
                                    inspect_rs_confirmation422)
 from .rvol_tod_contract import (TODCumulativeObservation, TODRawPrefix,
@@ -437,110 +434,6 @@ def _rf_extension423(inputs, p, base, geometry):
                    extension_candidate_match=result.in_candidate_band)
 
 
-def _rf_risk424(inputs, p, base, geometry):
-    plan=p.rf.risk
-    if plan is None:
-        return geometry
-    validate_risk424(plan)
-    if geometry.state is not B8State415.MATCH and geometry.extension_candidate_match is not False:
-        return geometry
-    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
-    rows=inputs.snapshots_for(p.timeframe)[p.base_start:p.base_stop]
-    result=inspect_b8_risk424(rows,target=target,resistance=base.private_resistance,
-                             atr=base.private_atr,plan=plan,
-                             extension_k=p.rf.extension.candidate_max_extension_atr if p.rf.extension else None)
-    return _rf_risk_result424(geometry,result)
-
-
-def _rf_risk_result424(geometry,result):
-    if geometry.extension_candidate_match is False:
-        return replace(geometry,risk=result)
-    if result.state=="BLOCKED":
-        return replace(geometry,state=B8State415.BLOCKED,reason=result.reason,risk=result)
-    if result.state=="NONMATCH" or result.candidate_match is False:
-        return replace(geometry,state=B8State415.NONMATCH,reason="RF_NET_RR_NONMATCH",risk=result)
-    if result.candidate_match is None:
-        return replace(geometry,state=B8State415.DISTANCE,reason="RF_NET_RR_UNCALIBRATED",risk=result)
-    return replace(geometry,reason="RF_MEASURED_BASE_NET_RR_CANDIDATE_ONLY",risk=result)
-
-
-def _rf_band426(inputs,p,geometry):
-    if p.rf.band is None:
-        return geometry
-    validate_band426(p.rf.band)
-    if geometry.state not in (B8State415.MATCH,B8State415.NONMATCH):
-        return geometry
-    if geometry.risk is None and geometry.state is B8State415.NONMATCH:
-        return geometry
-    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
-    result=inspect_band426(target,p.rf.band,
-                          max_entry=geometry.risk.max_entry if geometry.risk else None)
-    if result.state=="BLOCKED":
-        return replace(geometry,state=B8State415.BLOCKED,reason=result.reason,band=result)
-    if result.state=="NONMATCH" or result.candidate_match is False:
-        return replace(geometry,state=B8State415.NONMATCH,reason="RF_RAW_GRID_NONMATCH",band=result)
-    return replace(geometry,band=result)
-
-
-def _rf_settlement427(inputs,p,geometry,strategy):
-    plan=p.rf.settlement
-    if plan is None:
-        return geometry
-    validate_settlement427(plan)
-    if geometry.state is not B8State415.MATCH:
-        return geometry
-    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
-    result=inspect_settlement427(target,plan,strategy=strategy)
-    if result.state=="BLOCKED":
-        return replace(geometry,state=B8State415.BLOCKED,reason=result.reason,settlement=result)
-    if result.candidate_match is False:
-        return replace(geometry,state=B8State415.NONMATCH,reason=result.reason,settlement=result)
-    return replace(geometry,settlement=result)
-
-
-def _rf_liquidity428(inputs,p,geometry,strategy):
-    plan=p.rf.liquidity
-    if plan is None:
-        return geometry
-    validate_liquidity428(plan)
-    if geometry.state is not B8State415.MATCH:
-        return geometry
-    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
-    result=inspect_liquidity428(inputs.snapshots_for(Timeframe.D1),target,plan,strategy=strategy)
-    state=geometry.state
-    if result.state=="BLOCKED":
-        state=B8State415.BLOCKED
-    elif result.state=="MISSING_INPUT":
-        state=B8State415.MISSING
-    elif result.candidate_match is False:
-        state=B8State415.NONMATCH
-    elif result.candidate_match is None:
-        state=B8State415.DISTANCE
-    return replace(geometry,state=state,reason=result.reason,liquidity=result)
-
-
-def _rf_portfolio429(inputs,p,geometry,strategy):
-    plan=p.rf.portfolio
-    if plan is None:
-        return geometry
-    validate_portfolio429(plan)
-    if geometry.state is not B8State415.MATCH:
-        return geometry
-    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
-    result=inspect_portfolio429(target,plan,strategy=strategy,
-        shares=p.rf.liquidity.order_shares if geometry.liquidity else None,
-        net_risk=geometry.risk.net_risk if geometry.risk else None,
-        buy_fee_rate=p.rf.risk.buy_fee_rate if geometry.risk else None)
-    state=geometry.state
-    if result.state=="BLOCKED":
-        state=B8State415.BLOCKED
-    elif result.state=="MISSING_INPUT":
-        state=B8State415.MISSING
-    elif result.candidate_match is False:
-        state=B8State415.NONMATCH
-    return replace(geometry,state=state,reason=result.reason,portfolio=result)
-
-
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -574,9 +467,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         volume = _rf_volume419(inputs, plan, geometry)
         rs = _rf_rs422(inputs, plan, base, volume)
         extension = _rf_extension423(inputs, plan, base, rs)
-        risk = _rf_risk424(inputs, plan, base, extension)
-        band = _rf_band426(inputs, plan, risk)
-        settlement = _rf_settlement427(inputs, plan, band, strategy)
-        liquidity = _rf_liquidity428(inputs, plan, settlement, strategy)
-        assessments += ((rf, _rf_portfolio429(inputs, plan, liquidity, strategy)),)
+        execution = inspect_b8_execution430(inputs, plan, base, extension, strategy,
+                                            states=B8State415)
+        assessments += ((rf, execution),)
     return B8Preview415(assessments)
