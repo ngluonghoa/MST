@@ -21,7 +21,7 @@ from .b8_portfolio429 import B8PortfolioPlan429, B8PortfolioResult429
 from .b8_execution_preview430 import inspect_b8_execution430
 from .b8_liquidity428 import B8LiquidityPlan428, B8LiquidityResult428
 from .b8_settlement427 import B8SettlementPlan427, B8SettlementResult427
-from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426
+from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426, inspect_band426, validate_band426
 from .b8_risk_geometry424 import B8MeasuredBaseRisk424, B8RiskResult424
 from .relative_strength421 import (RSPlan421, RSResult421, inspect_rs421, validate_rs421,
                                    inspect_rs_confirmation422)
@@ -87,6 +87,7 @@ class B8BasePlan415:
     early: B8EarlyPlan417 | None = None
     rf: B8ConfirmPlan418 | None = None
     rs: RSPlan421 | None = None
+    r0_band: B8PriceBand426 | None = None
 
 
 class B8State415(str, Enum):
@@ -369,6 +370,19 @@ def _r0_rs421(inputs, p, base):
     return replace(base,reason="BASE_AND_LOG_RS_CANDIDATE_ONLY",rs=result)
 
 
+def _r0_band433(inputs,p,base):
+    if p.r0_band is None:
+        return base
+    validate_band426(p.r0_band)
+    if base.state is not B8State415.MATCH:
+        return base
+    target=inputs.snapshots_for(Timeframe.M15)[p.target_index].selected
+    result=inspect_band426(target,p.r0_band)
+    if result.state=="BLOCKED":
+        return replace(base,state=B8State415.BLOCKED,reason=result.reason,band=result)
+    return replace(base,band=result)
+
+
 def _rf_rs422(inputs, p, base, geometry):
     if p.rf.rs is None:
         return geometry
@@ -436,6 +450,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     route = route_phase_inputs(inputs, zone_id="B8", strategy=strategy, variant_id=variant_id,
                                phase="R0", selected_frame=plan.timeframe)
     base = _r0_rs421(inputs, plan, _r0415(inputs, plan))
+    base = _r0_band433(inputs, plan, base)
     assessments = ((route, base),)
     near = early = None
     if plan.near is not None:
