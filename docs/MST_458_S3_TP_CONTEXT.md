@@ -1,0 +1,3 @@
+# §458 S3 hypothetical pre-existing TP scenario R0/RC
+
+A separate explicit S3/E_TP or S3/F_TP plan type; never fallback from a structural or micro branch. R0: causal D1 HH/HL and explicitly provided hypothetical target with exact instrument, strategy, plan ID/version, UTC known time before anchor and expiry after verification. A valid fictional scenario is not proof of actual approved TP, ownership or execution authority. RC: current D1 context, later same-stream M15 near target and explicit ATR extension from D1 HL. No implied default threshold, no retroactive target, no expiry bypass. Candidate geometry only, all outputs UNVERIFIED. Six fictional tests. Next §459 objective closed target event with exact event ID and subsequent RF; real approval remains pending.
