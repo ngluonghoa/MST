@@ -10,6 +10,7 @@ from .causal_indicators import (
     CausalIndicatorResult, IndicatorState, VolumeBasisWitness, VolumeComparisonBar,
     VolumeSessionClass, calculate_rvol_tf20_raw_matched, calculate_wilder_atr14,
 )
+from .causal_range_percentile397 import RangePercentilePlan397, inspect_range_percentile_candidate
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _source_identity,
     inspect_closed_bos_geometry,
@@ -62,7 +63,7 @@ class B6TrendPlan390:
 @dataclass(frozen=True)
 class B6CompressionPlan396:
     target_index: int
-    percentile: AtrPercentilePlan395
+    percentile: AtrPercentilePlan395 | RangePercentilePlan397
 
 
 @dataclass(frozen=True)
@@ -433,6 +434,14 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     return B6EnginePreview387(assessments)
 
 
+def _compression_method398(p):
+    if type(p) is AtrPercentilePlan395:
+        return inspect_atr_percentile_candidate, 14, "EXACT_ATR_WINDOW_MISSING"
+    if type(p) is RangePercentilePlan397:
+        return inspect_range_percentile_candidate, 0, "EXACT_RANGE_WINDOW_MISSING"
+    raise ValueError("MST_398_EXPLICIT_COMPRESSION_METHOD")
+
+
 def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
     """Explicit alternate R_C candidate only; never infer R0/RE/RF."""
     if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
@@ -443,13 +452,14 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         raise ValueError("MST_396_EXPLICIT_TARGET_INDEX")
     p = plan.percentile
     # Validate the explicit parameters even if the exact window is missing.
-    inspect_atr_percentile_candidate((), plan=p, as_of_utc=inputs.as_of_utc)
+    method, warmup, missing = _compression_method398(p)
+    method((), plan=p, as_of_utc=inputs.as_of_utc)
     rows = inputs.snapshots_for(Timeframe.D1)
-    start = plan.target_index - (14 + p.reference_count)
+    start = plan.target_index - (warmup + p.reference_count)
     if start < 0 or plan.target_index >= len(rows):
-        result = B6Ingredient387(B6State387.MISSING, "EXACT_ATR_WINDOW_MISSING")
+        result = B6Ingredient387(B6State387.MISSING, missing)
     else:
-        proof = inspect_atr_percentile_candidate(
+        proof = method(
             rows[start:plan.target_index+1], plan=p, as_of_utc=inputs.as_of_utc)
         state = B6State387.BLOCKED
         if proof.at_or_below is not None:

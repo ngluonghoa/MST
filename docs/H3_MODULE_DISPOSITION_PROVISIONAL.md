@@ -15,7 +15,7 @@ these require separate consumer, migration and rollback evidence.
 | b5_formula_geometry | domain_and_reference | 624 | 24 | 76 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | b5_phase_contract | domain_and_reference | 261 | 46 | 117 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_temporal_split_audit | domain_and_reference | 235 | 35 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| b6_baseline_preview387 | domain_and_reference | 460 | 11 | 26 | 2 | KEEP | none |
+| b6_baseline_preview387 | domain_and_reference | 470 | 11 | 26 | 2 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 105 | 3 | 22 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -30,7 +30,7 @@ these require separate consumer, migration and rollback evidence.
 | causal_cross_tf_candidate392 | domain_and_reference | 97 | 10 | 33 | 1 | KEEP | none |
 | causal_indicators | domain_and_reference | 404 | 18 | 58 | 13 | KEEP | HIGH_FAN_IN |
 | causal_range_candidate384 | domain_and_reference | 129 | 8 | 37 | 1 | KEEP | none |
-| causal_range_percentile397 | domain_and_reference | 75 | 7 | 27 | 0 | KEEP | none |
+| causal_range_percentile397 | domain_and_reference | 75 | 7 | 27 | 1 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 11 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | causal_trend_candidate382 | domain_and_reference | 88 | 11 | 19 | 2 | KEEP | none |
 | contracts | domain_and_reference | 70 | 5 | 7 | 18 | KEEP | HIGH_FAN_IN |
