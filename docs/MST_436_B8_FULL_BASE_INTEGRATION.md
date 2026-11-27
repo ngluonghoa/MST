@@ -1,0 +1,5 @@
+# §436 B8 strict BASE integration (fictional only)
+
+One immutable resolved input and explicit plan across all four phases, rather than assembling proof objects from separate evaluations. D1 base, H1/D1 confirmation, SHORT/SWING. Prefix rows extend RF to exact prior-20 plus target; D1 indices and independent adjusted stock series shift together, and raw volume witnesses are built only after liquidity and target rows are finalized. R0 dual-basis RS and raw grid, RC approach, RE close-cross, RF raw RVOL, aligned RS, extension, net RR and max-entry, grid, settlement, liquidity, and same-size hypothetical portfolio are exercised through the public preview engine. Explicit synthetic thresholds and costs are not calibrated defaults.
+
+Six regression methods cover positive combinations, missing portfolio, RVOL rejection, mismatched raw witness, absence of selected TOD, and deterministic private preview/redacted public output. No provider data, approved rule, action eligibility, production, cache or automation. Selected TOD positive integration remains a separate checkpoint. Rollback: revert squash commit.
