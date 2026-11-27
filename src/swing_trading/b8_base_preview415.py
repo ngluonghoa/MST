@@ -17,6 +17,7 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+from .relative_strength421 import RSPlan421, RSResult421, inspect_rs421, validate_rs421
 from .rvol_tod_contract import (TODCumulativeObservation, TODRawPrefix,
                                 calculate_rvol_tod20_from_raw_prefixes)
 
@@ -64,6 +65,7 @@ class B8BasePlan415:
     near: B8NearPlan416 | None = None
     early: B8EarlyPlan417 | None = None
     rf: B8ConfirmPlan418 | None = None
+    rs: RSPlan421 | None = None
 
 
 class B8State415(str, Enum):
@@ -84,6 +86,7 @@ class B8Ingredient415:
     distance_atr: Decimal | None = None
     volume_state: str = "NOT_REQUESTED"
     rvol: CausalIndicatorResult | None = None
+    rs: RSResult421 | None = None
 
 
 @dataclass(frozen=True)
@@ -330,6 +333,24 @@ def _rf_volume419(inputs, p, geometry):
     return replace(bound, reason="RF_CROSS_AND_RAW_RVOL_ARITHMETIC_ONLY")
 
 
+def _r0_rs421(inputs, p, base):
+    if p.rs is None:
+        return base
+    validate_rs421(p.rs)
+    if base.state is not B8State415.MATCH:
+        return base
+    target = inputs.snapshots_for(Timeframe.M15)[p.target_index].selected
+    result = inspect_rs421(inputs.snapshots_for(Timeframe.D1), p.rs,
+                           cutoff=target.market_bar_key.bar_start_utc)
+    if result.state == "MISSING_INPUT":
+        return replace(base,state=B8State415.MISSING,reason="RS_HISTORY_MISSING",rs=result)
+    if result.state != "COMPUTED_UNCALIBRATED":
+        return replace(base,state=B8State415.BLOCKED,reason="RS_WINDOW_BLOCKED",rs=result)
+    if result.candidate_match is False:
+        return replace(base,state=B8State415.NONMATCH,reason="RS_SLOPE_CANDIDATE_NONMATCH",rs=result)
+    return replace(base,reason="BASE_AND_LOG_RS_CANDIDATE_ONLY",rs=result)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -339,7 +360,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     _validate415(plan)
     route = route_phase_inputs(inputs, zone_id="B8", strategy=strategy, variant_id=variant_id,
                                phase="R0", selected_frame=plan.timeframe)
-    base = _r0415(inputs, plan)
+    base = _r0_rs421(inputs, plan, _r0415(inputs, plan))
     assessments = ((route, base),)
     near = early = None
     if plan.near is not None:
