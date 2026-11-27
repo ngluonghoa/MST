@@ -1,4 +1,5 @@
 """§460 shared Feature Engine boundary; existing §382 causal D1 computation."""
+from .causal_exhaustion492 import inspect_exhaustion_features492
 from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .causal_structure_geometry import _cross_tf_identity
 from .causal_trend_candidate382 import inspect_d1_paired_trend_candidate
@@ -39,3 +40,11 @@ def inspect_target_d1_atr(inputs,p,target):
         if snap.selected is not None and snap.selected.bar_end_utc<=cutoff:
             return None
     return atr.value
+
+
+def inspect_d1_exhaustion492(inputs,plan):
+    """One shared D1 feature calculation for private research and validation."""
+    if type(inputs) is not BaselineResolvedInputs:
+        raise TypeError("MST_492_BASELINE_INPUT_REQUIRED")
+    return inspect_exhaustion_features492(inputs.snapshots_for(Timeframe.D1),
+        plan=plan,as_of_utc=inputs.as_of_utc)
