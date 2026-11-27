@@ -104,7 +104,7 @@ these require separate consumer, migration and rollback evidence.
 | s1_strict447 | domain_and_reference | 54 | 12 | 17 | 1 | KEEP | none |
 | s2_context448 | domain_and_reference | 456 | 12 | 30 | 1 | KEEP | none |
 | s2_strict453 | domain_and_reference | 71 | 10 | 19 | 1 | KEEP | none |
-| s3_context454 | domain_and_reference | 348 | 13 | 31 | 1 | KEEP | none |
+| s3_context454 | domain_and_reference | 348 | 15 | 31 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
