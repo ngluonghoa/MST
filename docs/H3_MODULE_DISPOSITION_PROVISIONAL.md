@@ -18,7 +18,7 @@ these require separate consumer, migration and rollback evidence.
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 2 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
-| b8_base_preview415 | domain_and_reference | 141 | 12 | 17 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 189 | 12 | 23 | 1 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 159 | 7 | 20 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -100,7 +100,7 @@ these require separate consumer, migration and rollback evidence.
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
 | vn_release_rollback | engineering_governance | 345 | 35 | 97 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | vwap_contract343 | domain_and_reference | 224 | 33 | 72 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
-| zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 6 | KEEP | none |
+| zone_manifest_v03 | domain_and_reference | 269 | 18 | 31 | 7 | KEEP | none |
 
 ## Review gates
 Any proposed change must freeze current fixture behavior, assess direct

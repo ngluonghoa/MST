@@ -6,12 +6,18 @@ from enum import Enum
 from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
-    _sequence, inspect_causal_pivot,
+    _sequence, inspect_causal_pivot, _source_identity,
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
+from .zone_manifest_v03 import inspect_near_zone_arithmetic
+
+
+@dataclass(frozen=True)
+class B8NearPlan416:
+    candidate_k_near: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -27,6 +33,7 @@ class B8BasePlan415:
     atr_start: int
     atr_stop: int
     candidate_max_width_atr: Decimal | None
+    near: B8NearPlan416 | None = None
 
 
 class B8State415(str, Enum):
@@ -44,6 +51,7 @@ class B8Ingredient415:
     width_atr: Decimal | None = None
     private_resistance: Decimal | None = None
     private_atr: Decimal | None = None
+    distance_atr: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -129,6 +137,39 @@ def _r0415(inputs, p):
     return _base_geometry415(rows[p.base_start:p.base_stop], d1[p.atr_start:p.atr_stop], target, p)
 
 
+def _validate_near416(p):
+    if type(p) is not B8NearPlan416:
+        raise ValueError("MST_416_EXPLICIT_NEAR_PLAN")
+    k = p.candidate_k_near
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k < 0):
+        raise ValueError("MST_416_EXPLICIT_NEAR_THRESHOLD")
+
+
+def _near416(inputs, p, base):
+    rows = inputs.snapshots_for(Timeframe.M15)
+    index = p.target_index
+    if index+1 >= len(rows) or base.state is B8State415.MISSING:
+        return B8Ingredient415(B8State415.MISSING, "BASE_OR_APPROACH_PAIR_MISSING")
+    if base.state is not B8State415.MATCH:
+        return B8Ingredient415(B8State415.BLOCKED, "BASE_WIDTH_CANDIDATE_NOT_MATCHED")
+    target = _eligible(rows[index+1], cutoff=inputs.as_of_utc)
+    if target is None:
+        return B8Ingredient415(B8State415.BLOCKED, "APPROACH_TARGET_NOT_ELIGIBLE")
+    prior = _eligible(rows[index], cutoff=target.market_bar_key.bar_start_utc)
+    if prior is None or _source_identity(prior) != _source_identity(target):
+        return B8Ingredient415(B8State415.BLOCKED, "APPROACH_PRIOR_NOT_KNOWN")
+    near = inspect_near_zone_arithmetic(price=target.close,
+        zone_lower=base.private_resistance, zone_upper=base.private_resistance,
+        atr_d1=base.private_atr, candidate_k_near=p.near.candidate_k_near)
+    if near.in_candidate_band is None:
+        return B8Ingredient415(B8State415.DISTANCE, "NEAR_DISTANCE_UNCALIBRATED",
+                               distance_atr=near.normalized_by_atr)
+    match = prior.close < target.close <= base.private_resistance and near.in_candidate_band
+    state = B8State415.MATCH if match else B8State415.NONMATCH
+    return B8Ingredient415(state, "SAME_RESISTANCE_CLOSED_APPROACH_ONLY",
+                           distance_atr=near.normalized_by_atr)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -138,4 +179,11 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     _validate415(plan)
     route = route_phase_inputs(inputs, zone_id="B8", strategy=strategy, variant_id=variant_id,
                                phase="R0", selected_frame=plan.timeframe)
-    return B8Preview415(((route, _r0415(inputs, plan)),))
+    base = _r0415(inputs, plan)
+    assessments = ((route, base),)
+    if plan.near is not None:
+        _validate_near416(plan.near)
+        rc = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
+                                variant_id=variant_id, phase="R_C")
+        assessments += ((rc, _near416(inputs, plan, base)),)
+    return B8Preview415(assessments)
