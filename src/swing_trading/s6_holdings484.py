@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from .causal_structure_geometry import _eligible
+from .causal_indicators import CausalIndicatorResult,IndicatorState
 from .contracts import Strategy
 from .s1_context_preview439 import S1State439
 from .replay import require_utc
@@ -96,3 +97,56 @@ def inspect_s6_holdings_preview(inputs,*,strategy,variant_id,plan):
     else:
         result=_apply484(plan,proof,anchor,target,strategy,variant_id)
     return S6Preview479(preview.assessments[:-1]+((route,result),))
+
+@dataclass(frozen=True)
+class S6StrictPlan485:
+    scenario: S6HoldingsPlan484
+
+
+@dataclass(frozen=True)
+class S6StrictIngredient485:
+    state: S1State439
+    reason: str
+    private_ingredient: object | None = None
+    candidate_evidence_complete: bool = False
+    mandatory_gaps: tuple[str,...] = ()
+
+
+def _strict485(proof,phase,previous):
+    if proof is None:
+        return S6StrictIngredient485(S1State439.MISSING,"EXPLICIT_PHASE_PLAN_MISSING",
+                                     mandatory_gaps=("PLAN_"+phase,))
+    if proof.state is not S1State439.MATCH:
+        return S6StrictIngredient485(proof.state,proof.reason,proof)
+    if not previous:
+        return S6StrictIngredient485(S1State439.BLOCKED,"PRIOR_STRICT_CANDIDATE_INCOMPLETE",
+                                     proof,mandatory_gaps=("PRIOR_PHASE",))
+    if phase=="R_F" and (type(proof) is not S6HoldingsIngredient484
+            or type(proof.private_holdings) is not S1HoldingsResult445
+            or proof.private_holdings.candidate_match is not True):
+        return S6StrictIngredient485(S1State439.MISSING,"RF_HOLDINGS_SCENARIO_MISSING",
+                                     proof,mandatory_gaps=("RF_SETTLED_HOLDINGS_SCENARIO",))
+    if phase=="R_F" and (type(proof.private_geometry) is not S6VolumeIngredient483
+            or proof.private_geometry.state is not S1State439.MATCH
+            or type(proof.private_geometry.private_rvol) is not CausalIndicatorResult
+            or proof.private_geometry.private_rvol.state is not IndicatorState.COMPUTED_UNCALIBRATED
+            or proof.private_geometry.private_rvol.value is None):
+        return S6StrictIngredient485(S1State439.MISSING,"RF_RAW_MATCHED_RVOL_MISSING",
+                                     proof,mandatory_gaps=("RF_INDEPENDENT_VOLUME",))
+    return S6StrictIngredient485(proof.state,proof.reason,proof,True)
+
+
+def inspect_s6_strict_preview(inputs,*,strategy,variant_id,plan):
+    if type(plan) is not S6StrictPlan485 or type(plan.scenario) is not S6HoldingsPlan484:
+        raise ValueError("MST_485_EXACT_STRICT_SCENARIO")
+    preview=inspect_s6_holdings_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.scenario)
+    phases=("R0","R_C","R_E","R_F")
+    if tuple(route.phase for route,_ in preview.assessments)!=phases:
+        raise ValueError("MST_485_EXACT_PHASE_CHAIN")
+    out=[]
+    previous=True
+    for route,proof in preview.assessments:
+        result=_strict485(proof,route.phase,previous)
+        previous=result.candidate_evidence_complete
+        out.append((route,result))
+    return S6Preview479(tuple(out))
