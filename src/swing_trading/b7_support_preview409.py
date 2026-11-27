@@ -33,6 +33,19 @@ class B7ChochPlan411:
 
 
 @dataclass(frozen=True)
+class B7ConfirmPlan412:
+    timeframe: Timeframe
+    breakout_index: int
+    history_start: int
+    history_stop: int
+    pivot_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    candidate_epsilon: Decimal
+
+
+@dataclass(frozen=True)
 class B7SupportPlan409:
     target_index: int
     pivot_tf: Timeframe
@@ -47,6 +60,7 @@ class B7SupportPlan409:
     candidate_k_near: Decimal | None
     reclaim: B7ReclaimPlan410 | None = None
     choch: B7ChochPlan411 | None = None
+    rf: B7ConfirmPlan412 | None = None
 
 
 class B7SupportState409(str, Enum):
@@ -224,6 +238,65 @@ def _choch411(inputs, plan):
     return B7SupportIngredient409(state, "PRIOR_LH_LL_AND_CLOSED_MICRO_HIGH_CROSS_ONLY")
 
 
+def _validate_rf412(p):
+    if type(p) is not B7ConfirmPlan412 or type(p.timeframe) is not Timeframe:
+        raise ValueError("MST_412_EXPLICIT_RF_PLAN")
+    if p.timeframe not in (Timeframe.M15, Timeframe.H1):
+        raise ValueError("MST_412_EXPLICIT_RF_FRAME")
+    if (type(p.breakout_index) is not int or not 1 <= p.breakout_index < 512
+            or type(p.history_start) is not int or type(p.history_stop) is not int
+            or not 0 <= p.history_start < p.history_stop < p.breakout_index):
+        raise ValueError("MST_412_EXPLICIT_PRIOR_WINDOW")
+    if type(p.pivot_index) is not int or p.pivot_index < 0:
+        raise ValueError("MST_412_EXPLICIT_PIVOT")
+    _validate_micro_policy411(p)
+
+
+def _early_before_rf412(inputs, plan, prior, target):
+    early_rows = inputs.snapshots_for(Timeframe.M15)
+    index = plan.target_index + 1
+    if index >= len(early_rows):
+        return False
+    early = _eligible(early_rows[index], cutoff=prior.market_bar_key.bar_start_utc)
+    return (early is not None and _cross_tf_identity(early) == _cross_tf_identity(target)
+            and (plan.rf.timeframe is not Timeframe.M15
+                 or _source_identity(early) == _source_identity(target)))
+
+
+def _rf_cross412(inputs, plan, rows, history, daily):
+    p = plan.rf
+    index = p.breakout_index
+    target = _eligible(rows[index], cutoff=inputs.as_of_utc)
+    if target is None:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "RF_TARGET_NOT_ELIGIBLE")
+    prior = _eligible(rows[index-1], cutoff=target.market_bar_key.bar_start_utc)
+    if prior is None or not _early_before_rf412(inputs, plan, prior, target):
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "EARLY_NOT_KNOWN_BEFORE_RF_PRIOR")
+    bos = inspect_closed_bos_geometry(history, pivot_index=p.pivot_index,
+        left_count=p.left_count, right_count=p.right_count, previous=rows[index-1],
+        breakout=rows[index], atr_d1_history=daily, side=StructureSide.HIGH,
+        tie_policy=p.tie_policy, candidate_epsilon=p.candidate_epsilon, as_of_utc=inputs.as_of_utc)
+    if bos.state is GeometryState.BLOCKED:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "RF_MICRO_CROSS_BLOCKED")
+    match = bos.candidate_cross is True and bos.previous_close <= history[p.pivot_index].selected.high
+    state = B7SupportState409.MATCH if match else B7SupportState409.NONMATCH
+    return B7SupportIngredient409(state, "LATER_CLOSED_MICRO_HIGH_CROSS_ONLY")
+
+
+def _rf412(inputs, plan, early):
+    if early is None or early.state is B7SupportState409.MISSING:
+        return B7SupportIngredient409(B7SupportState409.MISSING, "EXPLICIT_EARLY_GEOMETRY_MISSING")
+    if early.state is not B7SupportState409.MATCH:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "EARLY_GEOMETRY_NOT_MATCHED")
+    p = plan.rf
+    rows = inputs.snapshots_for(p.timeframe)
+    history = _window409(rows, p.history_start, p.history_stop)
+    daily = _window409(inputs.snapshots_for(Timeframe.D1), plan.atr_start, plan.atr_stop)
+    if p.breakout_index >= len(rows) or not history or len(daily) < 15:
+        return B7SupportIngredient409(B7SupportState409.MISSING, "RF_PAIR_PIVOT_OR_ATR_MISSING")
+    return _rf_cross412(inputs, plan, rows, history, daily)
+
+
 def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
     """Explicit M15 low and D1/H1 pivot diagnostic; RC timeframe remains pending."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -245,4 +318,10 @@ def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
         early = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
                                    variant_id=variant_id, phase="R_E")
         assessments += ((early, _choch411(inputs, plan)),)
+    if plan.rf is not None:
+        _validate_rf412(plan.rf)
+        route = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
+            variant_id=variant_id, phase="R_F", selected_frame=plan.rf.timeframe)
+        early_proof = assessments[-1][1] if len(assessments) > 1 else None
+        assessments += ((route, _rf412(inputs, plan, early_proof)),)
     return B7SupportPreview409(assessments)
