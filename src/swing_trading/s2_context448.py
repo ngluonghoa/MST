@@ -9,7 +9,7 @@ from .causal_structure_geometry import (
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
-from .s1_failed_break441 import _atr441
+from .s1_failed_break441 import _atr441, _pair441, validate_pair_atr442
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 
@@ -45,12 +45,28 @@ class S2EarlyPlan450:
 
 
 @dataclass(frozen=True)
+class S2ConfirmPlan451:
+    timeframe: Timeframe
+    target_index: int
+    history_start: int
+    low_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    d1: S2Window448
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
 class S2ContextPlan448:
     anchor_index: int
     d1: S2Window448
     h1: S2Window448
     rally: S2RallyPlan449 | None = None
     early: S2EarlyPlan450 | None = None
+    rf: S2ConfirmPlan451 | None = None
 
 
 class S2State448(str,Enum):
@@ -71,6 +87,7 @@ class S2Ingredient448:
     private_atr: Decimal | None=None
     private_distance: Decimal | None=None
     private_micro_lh: Decimal | None=None
+    private_micro_low: Decimal | None=None
 
 
 @dataclass(frozen=True)
@@ -293,6 +310,94 @@ def _early450(inputs,plan,rc):
     return _rejection450(rc,target,lh,atr,p)
 
 
+def _validate_rf451(p,plan):
+    if type(p) is not S2ConfirmPlan451:
+        raise ValueError("MST_451_EXPLICIT_CONFIRM_PLAN")
+    validate_pair_atr442(p)
+    _validate_window448(p.d1,lows=True)
+    if type(p.history_start) is not int or not 0<=p.history_start<p.target_index-1:
+        raise ValueError("MST_451_EXACT_HISTORY")
+    if type(p.low_index) is not int or not 0<=p.low_index<p.target_index-1-p.history_start:
+        raise ValueError("MST_451_EXACT_LOW_INDEX")
+    if any(type(i) is not int or not 1<=i<=40 for i in (p.left_count,p.right_count)):
+        raise ValueError("MST_451_BOUNDED_PIVOT_COUNTS")
+    if type(p.tie_policy) is not TiePolicy or p.d1.stop<plan.d1.stop:
+        raise ValueError("MST_451_EXPLICIT_POLICY_AND_NONREGRESSING_D1")
+
+
+def _trend451(inputs,plan,p,early,target):
+    daily=inputs.snapshots_for(Timeframe.D1)
+    history,state=_history448(daily,p.d1,target)
+    if history is None:
+        return S2Ingredient448(state,"RF_D1_CONTEXT_UNRESOLVED")
+    cutoff=target.market_bar_key.bar_start_utc
+    updated,_=_sequence(daily[plan.d1.stop:p.d1.stop],cutoff=cutoff)
+    if updated is None:
+        return S2Ingredient448(S2State448.BLOCKED,"RF_D1_UPDATE_NOT_CAUSAL")
+    trend=_trend448(history,p.d1,cutoff)
+    if trend.state is not S2State448.MATCH:
+        return trend
+    if (trend.private_d1_lh>early.private_d1_lh or trend.private_d1_ll>early.private_d1_ll
+            or target.close>=early.private_d1_lh
+            or any(x.close>early.private_d1_lh for x in updated)):
+        return S2Ingredient448(S2State448.NONMATCH,"RF_D1_BEARISH_CONTEXT_NOT_PRESERVED")
+    return trend
+
+
+def _micro451(rows,p,prior,early_bar):
+    cutoff=prior.market_bar_key.bar_start_utc
+    history=rows[p.history_start:p.target_index-1]
+    bars,_=_sequence(history,cutoff=cutoff)
+    if (not bars or bars[0].market_bar_key.bar_start_utc<early_bar.verified_at_utc
+            or _source_identity(bars[0])!=_source_identity(prior)):
+        return None,S2State448.BLOCKED
+    pivot=inspect_causal_pivot(history,candidate_index=p.low_index,side=StructureSide.LOW,
+        left_count=p.left_count,right_count=p.right_count,tie_policy=p.tie_policy,as_of_utc=cutoff)
+    if pivot.state is not GeometryState.DESCRIPTIVE_ONLY:
+        return None,S2State448.BLOCKED
+    if pivot.geometric_extremum is not True:
+        return None,S2State448.NONMATCH
+    return pivot.pivot_price,S2State448.MATCH
+
+
+def _cross451(prior,target,low,atr,p,trend,early):
+    if p.candidate_epsilon is None:
+        state=S2State448.DISTANCE
+    else:
+        boundary=low-p.candidate_epsilon*atr
+        match=boundary>=0 and prior.close>=low and target.close<boundary
+        state=S2State448.MATCH if match else S2State448.NONMATCH
+    return S2Ingredient448(state,"MICRO_LOW_CLOSED_CROSS_CANDIDATE_ONLY",
+        trend.private_d1_lh,trend.private_d1_ll,early.private_resistance,atr,
+        private_micro_lh=early.private_micro_lh,private_micro_low=low)
+
+
+def _confirm451(inputs,plan,early):
+    p=plan.rf
+    _validate_rf451(p,plan)
+    if early is None or early.state is not S2State448.MATCH:
+        return S2Ingredient448(S2State448.BLOCKED,"R_E_NOT_MATCHED")
+    rows=inputs.snapshots_for(p.timeframe)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S2Ingredient448(S2State448.MISSING,"EXACT_RF_TARGET_OR_ATR_MISSING")
+    early_bar=inputs.snapshots_for(Timeframe.M15)[plan.early.target_index].selected
+    prior,target=_pair441(inputs,p,early_bar)
+    if prior is None:
+        return S2Ingredient448(S2State448.BLOCKED,"RF_PAIR_NOT_CAUSAL_AFTER_R_E")
+    low,state=_micro451(rows,p,prior,early_bar)
+    if state is not S2State448.MATCH:
+        return S2Ingredient448(state,"RF_MICRO_LOW_UNRESOLVED_OR_NONMATCH")
+    if any(x.selected.close>early.private_resistance for x in rows[p.history_start:p.target_index]):
+        return S2Ingredient448(S2State448.NONMATCH,"RF_RESISTANCE_ALREADY_BROKEN")
+    trend=_trend451(inputs,plan,p,early,target)
+    if trend.state is not S2State448.MATCH:
+        return trend
+    atr=_atr441(inputs,p,target)
+    if atr is None or atr<=0:
+        return S2Ingredient448(S2State448.BLOCKED,"RF_CAUSAL_D1_ATR_UNRESOLVED")
+    return _cross451(prior,target,low,atr,p,trend,early)
+
+
 def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
             or type(plan) is not S2ContextPlan448 or variant_id!="S2/BASE"):
@@ -309,7 +414,14 @@ def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
         rc_route=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R_C")
         rc=_rally449(inputs,plan,base)
         assessments+=((rc_route,rc),)
+    early=None
     if plan.early is not None:
         re=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R_E")
-        assessments+=((re,_early450(inputs,plan,rc)),)
+        early=_early450(inputs,plan,rc)
+        assessments+=((re,early),)
+    if plan.rf is not None:
+        proof=_confirm451(inputs,plan,early)
+        rf=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,
+                              phase="R_F",selected_frame=plan.rf.timeframe)
+        assessments+=((rf,proof),)
     return S2Preview448(assessments)

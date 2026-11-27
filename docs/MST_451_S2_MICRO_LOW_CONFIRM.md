@@ -1,0 +1,3 @@
+# §451 S2 R_F causal micro-low closed-cross candidate
+
+Source: frozen MASTER_SPEC §16.2/§24.4; explicit H1 or M15 (never automatic OR), causal post-R_E pivot with right witness known before prior bar, later CLOSED target below explicit buffered low and prior close at/above original low. Latest explicitly selected D1 LH/LL structure must remain bearish, with no original critical LH reclaim. ATR14 is causal; epsilon is a candidate, not approved/defaulted. No source, calendar, event, parameter, holdings or sell authority; all results UNVERIFIED, no naked short. Fictional tests only. Legacy preview unchanged.
