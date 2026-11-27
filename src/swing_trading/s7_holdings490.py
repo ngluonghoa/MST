@@ -95,3 +95,54 @@ def inspect_s7_holdings490_preview(inputs,*,strategy,variant_id,plan):
     else:
         result=_apply490(plan,proof,anchor,target,strategy,variant_id)
     return S7Preview486(preview.assessments[:-1]+((route,result),))
+
+
+@dataclass(frozen=True)
+class S7StrictPlan491:
+    scenario: S7HoldingsPlan490
+
+
+@dataclass(frozen=True)
+class S7StrictIngredient491:
+    state: S1State439
+    reason: str
+    private_ingredient: object | None = None
+    candidate_evidence_complete: bool = False
+    mandatory_gaps: tuple[str,...] = ()
+
+
+def _strict491(proof,phase,previous):
+    if proof is None:
+        return S7StrictIngredient491(S1State439.MISSING,"EXPLICIT_PHASE_PLAN_MISSING",
+                                     mandatory_gaps=("PLAN_"+phase,))
+    if proof.state is not S1State439.MATCH:
+        return S7StrictIngredient491(proof.state,proof.reason,proof)
+    if not previous:
+        return S7StrictIngredient491(S1State439.BLOCKED,"PRIOR_STRICT_CANDIDATE_INCOMPLETE",
+                                     proof,mandatory_gaps=("PRIOR_PHASE",))
+    if phase=="R_F" and (type(proof) is not S7HoldingsIngredient490
+            or type(proof.private_holdings) is not S1HoldingsResult445
+            or proof.private_holdings.candidate_match is not True):
+        return S7StrictIngredient491(S1State439.MISSING,"RF_HOLDINGS_SCENARIO_MISSING",
+                                     proof,mandatory_gaps=("RF_SETTLED_HOLDINGS_SCENARIO",))
+    if phase=="R_F" and (type(proof.private_geometry) is not S7ConfirmIngredient489
+            or proof.private_geometry.state is not S1State439.MATCH):
+        return S7StrictIngredient491(S1State439.MISSING,"RF_EXACT_MICRO_GEOMETRY_MISSING",
+                                     proof,mandatory_gaps=("RF_MICRO_GEOMETRY",))
+    return S7StrictIngredient491(proof.state,proof.reason,proof,True)
+
+
+def inspect_s7_strict491_preview(inputs,*,strategy,variant_id,plan):
+    if type(plan) is not S7StrictPlan491 or type(plan.scenario) is not S7HoldingsPlan490:
+        raise ValueError("MST_491_EXACT_STRICT_SCENARIO")
+    preview=inspect_s7_holdings490_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.scenario)
+    phases=("R0","R_C","R_E","R_F")
+    if tuple(route.phase for route,_ in preview.assessments)!=phases:
+        raise ValueError("MST_491_EXACT_PHASE_CHAIN")
+    out=[]
+    previous=True
+    for route,proof in preview.assessments:
+        result=_strict491(proof,route.phase,previous)
+        previous=result.candidate_evidence_complete
+        out.append((route,result))
+    return S7Preview486(tuple(out))
