@@ -1,0 +1,3 @@
+# §444 — S1 independent RF D1 raw volume and bearish close candidate
+
+Optional explicit separate RF volume plan; exact later D1 breakout row and prior20 raw matched witnesses, known at target verification, no reuse of RC target evidence. Require bearish body and weak close location plus explicit inclusive RVOL and maximum close-location thresholds. Independent feature group, not independent provider certification. A missing optional legacy plan remains geometry-only, not a complete candidate. Shared volume policy validation preserves §440. Six fictional regressions, no actual volume approval, position, event or sell authority. Rollback by revert.
