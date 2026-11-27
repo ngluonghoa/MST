@@ -1,0 +1,3 @@
+# §427 — B8 strategy-scoped settlement timing scenario
+
+Require explicit instrument, strategy, policy version and policy-known clock no later than RF verification. Hypothetical entry strictly after RF verification, explicit externally supplied release instant, required exit-from instant, continuous typed calendar sessions for both entry and release. Compare release <= required exit-from; reject unavailable/mismatched witnesses. No inference of T+2 from calendar days or session count, no guaranteed protection before release, no actual order/fill or authoritative calendar/settlement approval. Six fictional regressions. Rollback by revert.
