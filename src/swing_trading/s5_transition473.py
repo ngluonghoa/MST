@@ -333,3 +333,113 @@ def inspect_s5_early_preview(inputs,*,strategy,variant_id,plan):
     preview=inspect_s5_rally_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.rally)
     route=route_phase_inputs(inputs,zone_id="S5",strategy=strategy,variant_id=variant_id,phase="R_E")
     return S5Preview473(preview.assessments+((route,_early475(inputs,plan,preview.assessments[1][1])),))
+
+
+@dataclass(frozen=True)
+class S5ConfirmPlan476:
+    early: S5EarlyPlan475
+    target_index: int
+    low_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class S5ConfirmIngredient476:
+    state: S1State439
+    reason: str
+    private_rally_high: Decimal | None = None
+    private_micro_low: Decimal | None = None
+    private_event_id: str | None = None
+    private_distance: Decimal | None = None
+
+
+def _validate476(p):
+    if type(p) is not S5ConfirmPlan476 or type(p.early) is not S5EarlyPlan475:
+        raise ValueError("MST_476_EXACT_CONFIRM_PLAN")
+    _validate475(p.early)
+    if any(type(i) is not int for i in (p.target_index,p.low_index,p.left_count,p.right_count,p.atr_start,p.atr_stop)):
+        raise ValueError("MST_476_EXACT_INDICES")
+    if not 1<=p.left_count<=40 or not 1<=p.right_count<=40 or type(p.tie_policy) is not TiePolicy:
+        raise ValueError("MST_476_EXPLICIT_PIVOT_POLICY")
+    if not p.left_count<=p.low_index or not p.early.target_index+p.low_index+p.right_count<p.target_index-1<511:
+        raise ValueError("MST_476_DISTINCT_LATER_CONFIRMATION")
+    if not 0<=p.atr_start<p.atr_stop<=512 or p.atr_stop-p.atr_start<15:
+        raise ValueError("MST_476_ATR_WINDOW")
+    e=p.candidate_epsilon
+    if e is not None and (type(e) is not Decimal or not e.is_finite() or e<0):
+        raise ValueError("MST_476_EXPLICIT_EPSILON")
+
+
+def _path476(inputs,p,target):
+    rows=inputs.snapshots_for(Timeframe.M15)
+    path,_=_sequence(rows[p.early.target_index:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    if not path or _source_identity(path[0])!=_source_identity(target):
+        return None
+    if path[0].verified_at_utc>path[1].market_bar_key.bar_start_utc:
+        return None
+    return path
+
+
+def _pivot476(inputs,p,prior):
+    rows=inputs.snapshots_for(Timeframe.M15)
+    history=rows[p.early.target_index:p.target_index-1]
+    cutoff=prior.market_bar_key.bar_start_utc
+    bars,_=_sequence(history,cutoff=cutoff)
+    if bars is None:
+        return None,None
+    return _first474(history,p,StructureSide.LOW,p.left_count,p.low_index+1,cutoff)
+
+
+def _shape476(inputs,p,proof,path,target):
+    high=proof.private_rally_high
+    if any(b.high>high for b in (*path,target)):
+        return S5ConfirmIngredient476(S1State439.NONMATCH,"RF_FIRST_LH_INVALIDATED")
+    index,pivot=_pivot476(inputs,p,path[-1])
+    if pivot is None:
+        return S5ConfirmIngredient476(S1State439.BLOCKED,"RF_MICRO_LOW_UNRESOLVED")
+    if index!=p.low_index:
+        return S5ConfirmIngredient476(S1State439.NONMATCH,"RF_EARLIER_MICRO_LOW_EXISTS")
+    low=pivot.pivot_price
+    atr=inspect_target_d1_atr(inputs,p,target)
+    if atr is None or atr<=0:
+        return S5ConfirmIngredient476(S1State439.BLOCKED,"RF_ATR_UNRESOLVED")
+    return _cross476(p,proof,path[-1],target,low,atr)
+
+
+def _cross476(p,proof,prior,target,low,atr):
+    distance=low-target.close
+    if prior.close<low or distance<=0:
+        state=S1State439.NONMATCH
+    elif p.candidate_epsilon is None:
+        state=S1State439.DISTANCE
+    else:
+        state=S1State439.MATCH if distance>p.candidate_epsilon*atr else S1State439.NONMATCH
+    return S5ConfirmIngredient476(state,"FIRST_LH_MICRO_LOW_CLOSED_CROSS_CANDIDATE_ONLY",
+        proof.private_rally_high,low,proof.private_event_id,distance)
+
+
+def _confirm476(inputs,p,proof):
+    if proof.state is not S1State439.MATCH:
+        return S5ConfirmIngredient476(S1State439.BLOCKED,"R_E_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S5ConfirmIngredient476(S1State439.MISSING,"RF_BAR_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S5ConfirmIngredient476(S1State439.BLOCKED,"RF_TARGET_UNQUALIFIED")
+    path=_path476(inputs,p,target)
+    if path is None:
+        return S5ConfirmIngredient476(S1State439.BLOCKED,"RF_PATH_NOT_CAUSAL")
+    return _shape476(inputs,p,proof,path,target)
+
+
+def inspect_s5_confirm_preview(inputs,*,strategy,variant_id,plan):
+    _validate476(plan)
+    preview=inspect_s5_early_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.early)
+    route=route_phase_inputs(inputs,zone_id="S5",strategy=strategy,variant_id=variant_id,phase="R_F")
+    return S5Preview473(preview.assessments+((route,_confirm476(inputs,plan,preview.assessments[2][1])),))
