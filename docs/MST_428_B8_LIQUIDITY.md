@@ -1,0 +1,3 @@
+# §428 — B8 explicit raw D1 liquidity candidate
+
+Exact bounded prior D1 window, latest supplied pre-RF-start rows, same raw stock lineage and complete causal qualification. Actual matched value only, never close×volume proxy. Explicit hypothetical order shares, caller units policy, strategy, optional nonnegative minimum average matched turnover and maximum fraction of average daily share volume. Missing values and zero denominator fail closed; both thresholds required for match, inclusive comparisons. No default P17 threshold or guarantee of fill, order book capacity, currency/volume attestation, contiguous official calendar or trading authority. Six fictional regressions. Rollback by revert.
