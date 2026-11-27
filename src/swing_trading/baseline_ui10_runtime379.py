@@ -4,6 +4,8 @@ Not a D1 reference, rendered report, issuer attestation or signal release.
 The public entry point executes the engine itself; no detached summary input.
 """
 from .b6_baseline_preview387 import B6EnginePreview387
+from .causal_compression_candidate395 import CompressionCandidate395
+from .causal_range_percentile397 import RangePercentileCandidate397
 from .contracts import Strategy
 from .engine import evaluate_baseline_preview
 from .locked_ui10_binding import SECTION_IDS, ZONE_LEGEND, PIPELINE_STEPS, AUDIT_TOPICS
@@ -81,12 +83,52 @@ def _b6_diagnostic391(row, phases):
     }
 
 
-def build_baseline_ui10_b6_diagnostics(inputs, *, requests=()):
-    """Separate opt-in redacted contract; one fresh engine execution.
+def _rc_method401(row, evidence):
+    if row.variant_id == "B6/C_TWO_CONTRACTIONS":
+        return "TWO_CONTRACTIONS"
+    if evidence is None:
+        return "NOT_REQUESTED"
+    if (type(evidence.compression) is CompressionCandidate395
+            or evidence.reason == "EXACT_ATR_WINDOW_MISSING"):
+        return "ATR_PERCENTILE"
+    if (type(evidence.compression) is RangePercentileCandidate397
+            or evidence.reason == "EXACT_RANGE_WINDOW_MISSING"):
+        return "RANGE_PERCENTILE"
+    return "METHOD_UNRESOLVED"
 
-    Existing runtime and renderer stay unchanged. The B6 sidecar is not
-    zone evidence, a second execution, or a trend/volume/risk approval.
-    """
+
+def _rc_dryup401(evidence):
+    if evidence is None or evidence.dryup is None:
+        return "NOT_REQUESTED"
+    proof = evidence.dryup
+    if proof.reason == "EXACT_REFERENCE_BASE_HISTORY_REQUIRED":
+        return "MISSING_INPUT"
+    if proof.at_or_below is None:
+        return "BLOCKED"
+    return "CANDIDATE_MATCH_ONLY" if proof.at_or_below else "CANDIDATE_NONMATCH_ONLY"
+
+
+def _rc_diagnostic401(row, phase):
+    preview = row.private_preview
+    if type(preview) is B6EnginePreview387:
+        evidence = next((e for r,e in preview.assessments if r.phase == "R_C"), None)
+        method = _rc_method401(row, evidence)
+        dryup = _rc_dryup401(evidence)
+    else:
+        method = dryup = ("NOT_SUPPORTED_BY_PREVIEW" if preview is not None
+                          else phase["ingredient_state"])
+    return {"rc_geometry_state": phase["ingredient_state"],
+            "rc_input_state": phase["input_state"],
+            "rc_method": method, "rc_dryup_state": dryup,
+            "compression_approved": False, "dryup_approved": False}
+
+
+def _b6_diagnostic401(row, phases):
+    return {**_b6_diagnostic391(row, phases), **_rc_diagnostic401(row, phases[1])}
+
+
+def _build_b6_diagnostics401(inputs, requests, *, include_rc):
+    """One exact engine evaluation; no detached sidecar input."""
     if type(inputs) is not BaselineResolvedInputs:
         raise TypeError("MST_391_REQUIRE_BASELINE_INPUT")
     evaluation = evaluate_baseline_preview(inputs, requests=requests)
@@ -94,12 +136,24 @@ def build_baseline_ui10_b6_diagnostics(inputs, *, requests=()):
     runtime = _project_runtime379(inputs, phase)
     indexed = {(r["zone_id"], r["strategy"]): r["phases"] for r in phase["zones"]}
     rows = {r.decision.strategy: r for r in evaluation.rows if r.decision.zone_id == "B6"}
-    diagnostics = tuple(_b6_diagnostic391(rows[s], indexed[("B6", s.value)]) for s in Strategy)
+    project = _b6_diagnostic401 if include_rc else _b6_diagnostic391
+    diagnostics = tuple(project(rows[s], indexed[("B6", s.value)]) for s in Strategy)
     return {
-        "schema": "mst.private.baseline_ui10_b6_diagnostics.v0.1",
+        "schema": ("mst.private.baseline_ui10_b6_diagnostics.v0.2" if include_rc
+                   else "mst.private.baseline_ui10_b6_diagnostics.v0.1"),
         "runtime": runtime, "b6_diagnostics": diagnostics,
         "source_relation": "SAME_RESOLVED_INPUT_EXECUTION_ONLY",
         "publication_state": "INCOMPLETE_REPORT", "decision": "NO_TRADE",
         "source_released": False, "report_published": False,
         "step08_committed": False, "action_eligible": False, "trade_orders": 0,
     }
+
+
+def build_baseline_ui10_b6_diagnostics(inputs, *, requests=()):
+    """Legacy v0.1 sidecar; schema and fields unchanged."""
+    return _build_b6_diagnostics401(inputs, requests, include_rc=False)
+
+
+def build_baseline_ui10_b6_rc_diagnostics(inputs, *, requests=()):
+    """Opt-in v0.2 sidecar: independent R_C price and dry-up diagnostics."""
+    return _build_b6_diagnostics401(inputs, requests, include_rc=True)
