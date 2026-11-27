@@ -5,6 +5,7 @@ from datetime import datetime,timedelta
 from .causal_structure_geometry import _eligible
 from .contracts import Strategy
 from .market_data import Timeframe
+from .phase_input_routing369 import route_phase_inputs
 from .replay import require_utc
 from .s1_holdings445 import S1HoldingsPlan445,S1HoldingsResult445,validate_holdings445
 from .s3_context454 import S3ContextPlan454,S3Ingredient454,S3State454,S3Preview454,inspect_s3_preview
@@ -112,3 +113,54 @@ def inspect_s3_holdings_preview(inputs,*,strategy,variant_id,plan):
     else:
         result=_apply465(plan,proof,anchor,target,strategy,variant_id)
     return S3Preview454(preview.assessments[:-1]+((route,result),))
+
+
+@dataclass(frozen=True)
+class S3StrictPlan466:
+    scenario: S3HoldingsPlan465
+
+
+@dataclass(frozen=True)
+class S3StrictIngredient466:
+    state: S3State454
+    reason: str
+    private_ingredient: object | None = None
+    candidate_evidence_complete: bool = False
+    mandatory_gaps: tuple[str,...] = ()
+
+
+def _strict466(proof,phase,previous):
+    if proof is None:
+        return S3StrictIngredient466(S3State454.MISSING,"EXPLICIT_PHASE_PLAN_MISSING",
+                                    mandatory_gaps=("PLAN_"+phase,))
+    if proof.state is not S3State454.MATCH:
+        return S3StrictIngredient466(proof.state,proof.reason,proof)
+    if not previous:
+        return S3StrictIngredient466(S3State454.BLOCKED,"PRIOR_STRICT_CANDIDATE_INCOMPLETE",
+                                    proof,mandatory_gaps=("PRIOR_PHASE",))
+    if phase=="R_F" and (type(proof) is not S3HoldingsIngredient465
+            or proof.private_holdings is None
+            or proof.private_holdings.candidate_match is not True):
+        return S3StrictIngredient466(S3State454.MISSING,"RF_HOLDINGS_SCENARIO_MISSING",
+                                    proof,mandatory_gaps=("RF_SETTLED_HOLDINGS_SCENARIO",))
+    return S3StrictIngredient466(proof.state,proof.reason,proof,True)
+
+
+def inspect_s3_strict_preview(inputs,*,strategy,variant_id,plan):
+    if type(plan) is not S3StrictPlan466 or type(plan.scenario) is not S3HoldingsPlan465:
+        raise ValueError("MST_466_EXPLICIT_STRICT_SCENARIO")
+    preview=inspect_s3_holdings_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.scenario)
+    existing={route.phase:(route,proof) for route,proof in preview.assessments}
+    out=[]
+    previous=True
+    for phase in ("R0","R_C","R_E","R_F"):
+        if phase in existing:
+            route,proof=existing[phase]
+        else:
+            v="S3/E_MICRO_CHOCH" if phase=="R_E" and variant_id=="S3/F_MICRO_BREAK" else variant_id
+            route=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=v,phase=phase)
+            proof=None
+        result=_strict466(proof,phase,previous)
+        previous=result.candidate_evidence_complete
+        out.append((route,result))
+    return S3Preview454(tuple(out))
