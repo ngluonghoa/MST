@@ -11,7 +11,7 @@ from .s1_choch442 import _validate_pivots442
 from .s3_context454 import (
     S3TrendWindow454, S3State454, S3Preview454, _history454, _trend454, _window454,
 )
-from .s3_tp458 import S3TPPlan458, inspect_s3_tp_preview, _scope458
+from .s3_tp458 import S3TPPlan458, inspect_s3_tp_preview, _scope458, _validate458
 
 
 @dataclass(frozen=True)
@@ -137,6 +137,9 @@ def _validate_confirm464(plan,variant):
         raise ValueError("MST_464_EXPLICIT_F_TP_VARIANT")
     if type(plan.event) is not S3TPEventPlan463:
         raise ValueError("MST_464_EXPLICIT_PRIOR_EVENT")
+    if type(plan.event.context) is not S3TPPlan458:
+        raise ValueError("MST_464_EXACT_TP_CONTEXT")
+    _validate458(plan.event.context)
     _validate_event463(plan.event.early,plan.event.context)
     p,early=plan.confirmation,plan.event.early
     _validate_event463(p,plan.event.context)

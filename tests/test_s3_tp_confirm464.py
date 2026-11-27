@@ -68,7 +68,9 @@ class S3TPConfirm464Tests(unittest.TestCase):
         self.assertIs(confirm(inputs,replace(p,event=replace(p.event,early=late)))[0].state,S3State454.BLOCKED)
         wrong=replace(p.event.early,revision_digest="wrong")
         self.assertIs(confirm(inputs,replace(p,event=replace(p.event,early=wrong)))[0].state,S3State454.BLOCKED)
-        for changed,variant in ((replace(p,confirmation=p.event.early),"S3/F_TP"),(p,"S3/E_TP")):
+        for changed,variant in ((replace(p,confirmation=p.event.early),"S3/F_TP"),(p,"S3/E_TP"),
+                                (replace(p,event=replace(p.event,context=None)),"S3/F_TP"),
+                                (replace(p,event=replace(p.event,context=replace(p.event.context,near=True))),"S3/F_TP")):
             _,s=run(inputs,changed,variant=variant)
             self.assertTrue(all(x["ingredient_state"]=="CONFIG_REJECTED" for x in s["phases"]))
 
