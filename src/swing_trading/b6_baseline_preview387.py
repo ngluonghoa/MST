@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass, replace
 from decimal import Decimal
 from enum import Enum
 
+from .causal_compression_candidate395 import AtrPercentilePlan395, inspect_atr_percentile_candidate
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
 from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_indicators import (
@@ -59,6 +60,12 @@ class B6TrendPlan390:
 
 
 @dataclass(frozen=True)
+class B6CompressionPlan396:
+    target_index: int
+    percentile: AtrPercentilePlan395
+
+
+@dataclass(frozen=True)
 class B6EnginePlan387:
     d1_start: int
     d1_stop: int
@@ -88,6 +95,7 @@ class B6Ingredient387:
     approach: bool | None = None
     volume_state: str = "NOT_REQUESTED"
     rvol: CausalIndicatorResult | None = None
+    compression: object | None = None
 
     @property
     def status(self):
@@ -423,3 +431,30 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     if plan.rf is not None:
         assessments += (_routed_rf393(inputs, history, atr_rows, plan, early, scope),)
     return B6EnginePreview387(assessments)
+
+
+def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
+    """Explicit alternate R_C candidate only; never infer R0/RE/RF."""
+    if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
+        raise ValueError("MST_396_BASELINE_SCOPE")
+    if variant_id != "B6/C_COMPRESSION" or type(plan) is not B6CompressionPlan396:
+        raise ValueError("MST_396_EXACT_COMPRESSION_VARIANT")
+    if type(plan.target_index) is not int or plan.target_index < 0:
+        raise ValueError("MST_396_EXPLICIT_TARGET_INDEX")
+    p = plan.percentile
+    # Validate the explicit parameters even if the exact window is missing.
+    inspect_atr_percentile_candidate((), plan=p, as_of_utc=inputs.as_of_utc)
+    rows = inputs.snapshots_for(Timeframe.D1)
+    start = plan.target_index - (14 + p.reference_count)
+    if start < 0 or plan.target_index >= len(rows):
+        result = B6Ingredient387(B6State387.MISSING, "EXACT_ATR_WINDOW_MISSING")
+    else:
+        proof = inspect_atr_percentile_candidate(
+            rows[start:plan.target_index+1], plan=p, as_of_utc=inputs.as_of_utc)
+        state = B6State387.BLOCKED
+        if proof.at_or_below is not None:
+            state = B6State387.MATCH if proof.at_or_below else B6State387.NONMATCH
+        result = B6Ingredient387(state, proof.reason, compression=proof)
+    route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy,
+                               variant_id=variant_id, phase="R_C")
+    return B6EnginePreview387(((route, result),))
