@@ -4,7 +4,7 @@ from decimal import Decimal as D
 import json
 import unittest
 
-from swing_trading.causal_compression_pivot402 import CompressionPivotPlan402
+from swing_trading.causal_compression_pivot402 import CompressionPivotPlan402, inspect_compression_upper_pivot
 from swing_trading.causal_structure_geometry import TiePolicy
 from swing_trading.b6_baseline_preview387 import B6CompressionPlan396, B6State387
 from swing_trading.causal_range_percentile397 import RangePercentilePlan397
@@ -14,12 +14,10 @@ from test_b6_rc_dryup400 import witnesses, rc
 from test_causal_indicators import make_bar, snap
 
 
-def fixture(*, higher=False, tie=False, late=False):
+def fixture(*, higher=False, tie=False):
     highs=(105,110,110 if tie else 104,115 if higher else 103,101)
     rows=tuple(snap(make_bar(i,open_price=D(100),close=D(100),high=D(h),
                        low=D(99),volume=200 if i<2 else 50)) for i,h in enumerate(highs))
-    if late:
-        rows=rows[:-1]+(snap(replace(rows[-1].selected,verified_at_utc=__import__('test_causal_indicators').AS_OF + __import__('datetime').timedelta(days=1))),)
     return rows
 
 
@@ -55,8 +53,11 @@ class UpperPivot402Tests(unittest.TestCase):
         self.assertIn("INSUFFICIENT",rc(row).upper_pivot.reason)
         row,_=run(model(fixture()[:-1]),plan())
         self.assertEqual(rc(row).upper_pivot.reason,"EXACT_COMPRESSION_BASE_MISSING")
-        row,_=run(model(fixture(late=True)),plan())
-        self.assertIsNone(rc(row).upper_pivot.upper_boundary)
+        rows=fixture()
+        proof=inspect_compression_upper_pivot(rows,target_index=4,plan=plan().upper_pivot,
+                    as_of_utc=rows[-1].selected.bar_end_utc)
+        self.assertIsNone(proof.upper_boundary)
+        self.assertEqual(proof.reason,"BASE_BAR_NOT_QUALIFIED_AT_CUTOFF")
 
     def test_dryup_base_mismatch_and_config_rejected(self):
         rows=fixture()
