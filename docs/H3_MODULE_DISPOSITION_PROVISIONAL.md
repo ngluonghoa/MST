@@ -18,7 +18,7 @@ these require separate consumer, migration and rollback evidence.
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 3 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
-| b8_base_preview415 | domain_and_reference | 416 | 12 | 33 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 454 | 12 | 34 | 1 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 159 | 7 | 20 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |

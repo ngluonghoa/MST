@@ -43,12 +43,18 @@ class B8EarlyPlan417:
 
 
 @dataclass(frozen=True)
+class B8ExtensionPlan423:
+    candidate_max_extension_atr: Decimal | None
+
+
+@dataclass(frozen=True)
 class B8ConfirmPlan418:
     timeframe: Timeframe
     breakout_index: int
     candidate_epsilon: Decimal
     volume: B6RFVolumePlan389 | B6H1VolumePlan394 | None = None
     rs: RSPlan421 | None = None
+    extension: B8ExtensionPlan423 | None = None
 
 
 @dataclass(frozen=True)
@@ -89,6 +95,8 @@ class B8Ingredient415:
     volume_state: str = "NOT_REQUESTED"
     rvol: CausalIndicatorResult | None = None
     rs: RSResult421 | None = None
+    extension_atr: Decimal | None = None
+    extension_candidate_match: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -381,6 +389,35 @@ def _rf_rs_result422(geometry, result):
     return replace(geometry,reason="RF_CROSS_AND_LOG_RS_CANDIDATE_ONLY",rs=result)
 
 
+def _validate_extension423(p):
+    if p is None:
+        return
+    if type(p) is not B8ExtensionPlan423:
+        raise ValueError("MST_423_EXPLICIT_EXTENSION_PLAN")
+    k=p.candidate_max_extension_atr
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k < 0):
+        raise ValueError("MST_423_EXPLICIT_MAX_EXTENSION")
+
+
+def _rf_extension423(inputs, p, base, geometry):
+    plan=p.rf.extension
+    _validate_extension423(plan)
+    if plan is None or geometry.state is not B8State415.MATCH:
+        return geometry
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    result=inspect_near_zone_arithmetic(price=target.close,
+        zone_lower=base.private_resistance,zone_upper=base.private_resistance,
+        atr_d1=base.private_atr,candidate_k_near=plan.candidate_max_extension_atr)
+    state=geometry.state
+    if result.in_candidate_band is None:
+        state=B8State415.DISTANCE
+    elif result.in_candidate_band is False:
+        state=B8State415.NONMATCH
+    return replace(geometry,state=state,reason="RF_SAME_PIVOT_EXTENSION_CANDIDATE_ONLY",
+                   extension_atr=result.normalized_by_atr,
+                   extension_candidate_match=result.in_candidate_band)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -412,5 +449,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
             variant_id=variant_id, phase="R_F", selected_frame=plan.rf.timeframe)
         geometry = _rf418(inputs, plan, base, early)
         volume = _rf_volume419(inputs, plan, geometry)
-        assessments += ((rf, _rf_rs422(inputs, plan, base, volume)),)
+        rs = _rf_rs422(inputs, plan, base, volume)
+        assessments += ((rf, _rf_extension423(inputs, plan, base, rs)),)
     return B8Preview415(assessments)
