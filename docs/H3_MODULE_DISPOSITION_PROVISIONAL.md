@@ -94,7 +94,7 @@ these require separate consumer, migration and rollback evidence.
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 118 | 11 | 23 | 2 | KEEP | none |
-| s1_confirm443 | domain_and_reference | 64 | 8 | 21 | 1 | KEEP | none |
+| s1_confirm443 | domain_and_reference | 64 | 9 | 21 | 1 | KEEP | none |
 | s1_context_preview439 | domain_and_reference | 184 | 9 | 33 | 1 | KEEP | none |
 | s1_distribution440 | domain_and_reference | 92 | 14 | 21 | 1 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 100 | 11 | 17 | 3 | KEEP | none |
