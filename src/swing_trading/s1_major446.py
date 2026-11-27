@@ -6,6 +6,7 @@ from .causal_structure_geometry import TiePolicy, _cross_tf_identity, _eligible,
 from .market_data import Timeframe
 from .s1_choch442 import _validate_pivots442, _rising442, _cross442
 from .s1_failed_break441 import _atr441, validate_pair_atr442
+from .s1_holdings445 import S1HoldingsPlan445, S1HoldingsResult445, inspect_holdings445, validate_holdings445
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class S1MajorPlan446:
     atr_start: int
     atr_stop: int
     candidate_epsilon: Decimal | None
+    holdings: S1HoldingsPlan445 | None = None
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,7 @@ class S1MajorResult446:
     weekly_higher_low: Decimal
     weekly_atr_d1: Decimal
     candidate_match: bool
+    weekly_holdings: S1HoldingsResult445 | None = None
 
     @property
     def action_eligible(self):
@@ -50,6 +53,8 @@ def select_early446(plan,variant):
     if type(p.history_start) is not int or not 0<=p.history_start<p.target_index-1:
         raise ValueError("MST_446_EXACT_WEEKLY_HISTORY")
     _validate_pivots442(p,p.target_index-1-p.history_start)
+    if p.holdings is not None:
+        validate_holdings445(p.holdings)
     return p.early_variant
 
 
@@ -78,7 +83,7 @@ def _weekly_shape446(inputs,p,prior,states,ingredient):
     return _rising442(history,p,cutoff,states,ingredient)
 
 
-def inspect_major446(inputs,plan,proof,*,states,ingredient):
+def inspect_major446(inputs,plan,proof,*,strategy,states,ingredient):
     p=plan.major
     if p is None or proof.state is not states.MATCH:
         return proof
@@ -100,4 +105,13 @@ def inspect_major446(inputs,plan,proof,*,states,ingredient):
     if cross.state is states.DISTANCE:
         return replace(proof,state=cross.state,reason="W1_EPSILON_UNCALIBRATED")
     result=S1MajorResult446(shape.private_higher_low,atr,cross.state is states.MATCH)
-    return replace(proof,state=cross.state,reason="W1_CLOSED_HL_BREAK_CANDIDATE_ONLY",major=result)
+    result_proof=replace(proof,state=cross.state,reason="W1_CLOSED_HL_BREAK_CANDIDATE_ONLY",major=result)
+    return _weekly_holdings447(target,p,result_proof,strategy=strategy,states=states)
+
+
+def _weekly_holdings447(target,p,proof,*,strategy,states):
+    if p.holdings is None or proof.state is not states.MATCH:
+        return proof
+    checked=inspect_holdings445(target,p.holdings,replace(proof,holdings=None),strategy=strategy,states=states)
+    return replace(proof,state=checked.state,reason=checked.reason,
+                   major=replace(proof.major,weekly_holdings=checked.holdings))

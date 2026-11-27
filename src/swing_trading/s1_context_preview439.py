@@ -15,6 +15,7 @@ from .s1_choch442 import S1ChochPlan442, inspect_choch442
 from .s1_confirm443 import S1ConfirmPlan443, inspect_rf443
 from .s1_holdings445 import S1HoldingsResult445
 from .s1_major446 import S1MajorPlan446, S1MajorResult446, select_early446, inspect_major446
+from .s1_strict447 import strict_chain447
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
@@ -37,6 +38,7 @@ class S1ContextPlan439:
     choch: S1ChochPlan442 | None = None
     rf: S1ConfirmPlan443 | None = None
     major: S1MajorPlan446 | None = None
+    strict_candidate_evidence: bool = False
 
 
 class S1State439(str, Enum):
@@ -59,6 +61,8 @@ class S1Ingredient439:
     private_atr: Decimal | None = None
     holdings: S1HoldingsResult445 | None = None
     major: S1MajorResult446 | None = None
+    candidate_evidence_complete: bool = False
+    mandatory_gaps: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -82,6 +86,8 @@ def _indices439(pair, count):
 
 
 def _validate439(p):
+    if type(p.strict_candidate_evidence) is not bool:
+        raise ValueError("MST_447_EXPLICIT_STRICT_FLAG")
     if type(p.timeframe) is not Timeframe or p.timeframe not in (Timeframe.W1,Timeframe.D1):
         raise ValueError("MST_439_EXPLICIT_CONTEXT_FRAME")
     if any(type(i) is not int for i in (p.start,p.stop,p.target_index)):
@@ -185,7 +191,9 @@ def inspect_s1_preview(inputs,*,strategy,variant_id,plan):
     if plan.rf is not None:
         proof=inspect_rf443(inputs,plan,early,variant=early_variant,strategy=strategy,
                             states=S1State439,ingredient=S1Ingredient439)
-        proof=inspect_major446(inputs,plan,proof,states=S1State439,ingredient=S1Ingredient439)
+        proof=inspect_major446(inputs,plan,proof,strategy=strategy,states=S1State439,ingredient=S1Ingredient439)
         rf=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,phase="R_F")
         assessments+=((rf,proof),)
+    assessments=strict_chain447(inputs,plan,assessments,strategy=strategy,variant=variant_id,
+                                states=S1State439,ingredient=S1Ingredient439)
     return S1Preview439(assessments)

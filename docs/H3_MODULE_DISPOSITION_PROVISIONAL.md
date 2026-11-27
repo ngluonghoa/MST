@@ -70,7 +70,7 @@ these require separate consumer, migration and rollback evidence.
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 9 | KEEP | none |
+| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 10 | KEEP | HIGH_FAN_IN |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 13 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
@@ -95,12 +95,13 @@ these require separate consumer, migration and rollback evidence.
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 118 | 11 | 23 | 3 | KEEP | none |
 | s1_confirm443 | domain_and_reference | 74 | 9 | 23 | 1 | KEEP | none |
-| s1_context_preview439 | domain_and_reference | 191 | 9 | 35 | 1 | KEEP | none |
+| s1_context_preview439 | domain_and_reference | 199 | 9 | 37 | 1 | KEEP | none |
 | s1_distribution440 | domain_and_reference | 96 | 11 | 21 | 2 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 100 | 11 | 17 | 4 | KEEP | none |
-| s1_holdings445 | domain_and_reference | 64 | 11 | 15 | 2 | KEEP | none |
-| s1_major446 | domain_and_reference | 103 | 9 | 23 | 1 | KEEP | none |
+| s1_holdings445 | domain_and_reference | 64 | 11 | 15 | 3 | KEEP | none |
+| s1_major446 | domain_and_reference | 117 | 10 | 24 | 1 | KEEP | none |
 | s1_rf_volume444 | domain_and_reference | 59 | 7 | 18 | 1 | KEEP | none |
+| s1_strict447 | domain_and_reference | 54 | 12 | 17 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
