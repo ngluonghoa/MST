@@ -1,0 +1,88 @@
+name: MST M4 Drive WIF Metadata Preflight - MANUAL READ ONLY
+
+# This workflow is NOT a market data sync, publisher or production cache.
+# workflow_dispatch works only after this file exists on default main.
+# Do not expose Google identity on PR or pull_request_target events.
+# Four action SHAs resolved from their official GitHub repositories on 2026-11-11.
+# GCP WIF provider MUST independently enforce matching numeric IDs and workflow_ref.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: mst-m4-drive-oidc-readonly-preflight
+  cancel-in-progress: false
+
+jobs:
+  verify-private-mst-pilot-metadata:
+    name: Main-only WIF identity and exact private Drive metadata gate
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check Cloud-only OIDC configuration is explicitly available
+        env:
+          MST_GCP_WIF_PROVIDER: ${{ vars.MST_GCP_WIF_PROVIDER }}
+          MST_GCP_DRIVE_SA_EMAIL: ${{ vars.MST_GCP_DRIVE_SA_EMAIL }}
+          MST_PILOT_FOLDER_ID: ${{ vars.MST_PILOT_FOLDER_ID }}
+          MST_PILOT_MANIFEST_ID: ${{ vars.MST_PILOT_MANIFEST_ID }}
+          MST_PILOT_SOURCE_DOC_IDS_JSON: ${{ vars.MST_PILOT_SOURCE_DOC_IDS_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$MST_GCP_WIF_PROVIDER"
+          test -n "$MST_GCP_DRIVE_SA_EMAIL"
+          test -n "$MST_PILOT_FOLDER_ID"
+          test -n "$MST_PILOT_MANIFEST_ID"
+          test -n "$MST_PILOT_SOURCE_DOC_IDS_JSON"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Exchange GitHub OIDC for Google workload identity (no SA JSON key)
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.MST_GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.MST_GCP_DRIVE_SA_EMAIL }}
+          create_credentials_file: true
+          export_environment_variables: true
+      - name: Install only the Google auth runtime
+        run: python -m pip install 'google-auth>=2,<3' 'requests>=2,<3'
+      - name: Verify 5 exact Drive metadata objects without Docs content or OHLCV
+        env:
+          MST_PILOT_FOLDER_ID: ${{ vars.MST_PILOT_FOLDER_ID }}
+          MST_PILOT_MANIFEST_ID: ${{ vars.MST_PILOT_MANIFEST_ID }}
+          MST_PILOT_SOURCE_DOC_IDS_JSON: ${{ vars.MST_PILOT_SOURCE_DOC_IDS_JSON }}
+        run: |
+          python -m scripts.m4_drive_oidc_readonly_preflight \
+            --mode live-readonly --out /tmp/mst-drive-oidc-metadata-READONLY.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          v=json.loads(Path('/tmp/mst-drive-oidc-metadata-READONLY.json').read_text())
+          assert v['status']=='SERVICE_IDENTITY_METADATA_PREFLIGHT_ONLY_PRODUCTION_INGEST_DENIED'
+          assert v['source']=='MAIN_ONLY_MANUAL_GITHUB_RUNNER_WIF_METADATA'
+          assert v['oidc_identity_exchanged_and_drive_metadata_accessed'] is True
+          assert v['metadata_object_count']==5
+          assert v['three_source_docs_metadata_access_verified'] is True
+          for k in ('actual_docs_content_read','vendor_market_api_called',
+                    'market_ohlcv_downloaded','google_drive_write_performed',
+                    'cloud_cache_automatic_refresh_active',
+                    'external_source_retention_license_attested',
+                    'issuer_first_known_and_official_calendar_attested',
+                    'external_signer_highwater_or_two_writer_cas_attested',
+                    'production_cache_or_trading_enabled'):
+              assert v[k] is False, k
+          print('MST MAIN-ONLY GOOGLE WIF PRIVATE DRIVE METADATA AUTH PASS; LIVE QUOTE SYNC AND PRODUCTION NO-GO')
+          PY
+      - name: Archive metadata-only evidence (no IDs, tokens, prices or secrets)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mst-m4-drive-wif-metadata-only-NO-LIVE-QUOTES
+          path: /tmp/mst-drive-oidc-metadata-READONLY.json
+          retention-days: 7
+          if-no-files-found: error
