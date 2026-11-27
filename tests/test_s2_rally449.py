@@ -7,6 +7,7 @@ import unittest
 
 from swing_trading.contracts import Strategy
 from swing_trading.market_data import Timeframe
+from swing_trading.private_multitf_readiness import PrivateMultiTfDenied
 from swing_trading.s2_context448 import S2RallyPlan449,S2State448
 from test_s2_context448 import fixture,run
 from test_causal_indicators import make_bar,snap
@@ -56,8 +57,8 @@ class S2Rally449Tests(unittest.TestCase):
         other=replace(target.observation_key,source_stream_id="other-fixture-stream")
         mixed=snap(replace(target,observation_key=other,
                            observation_revision=replace(target.observation_revision,observation_key=other)))
-        row,_=run(alter(inputs,Timeframe.M15,(rows[0],mixed)),p)
-        self.assertIs(row.private_preview.assessments[1][1].state,S2State448.BLOCKED)
+        with self.assertRaisesRegex(PrivateMultiTfDenied,"MST_368_MIXED_BUCKET_SOURCE_REVISION"):
+            alter(inputs,Timeframe.M15,(rows[0],mixed))
         late=snap(replace(rows[0].selected,verified_at_utc=rows[1].market_bar_key.bar_start_utc+timedelta(minutes=1)))
         row,_=run(alter(inputs,Timeframe.M15,(late,rows[1])),p)
         self.assertIs(row.private_preview.assessments[1][1].state,S2State448.BLOCKED)
