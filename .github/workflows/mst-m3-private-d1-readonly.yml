@@ -1,0 +1,43 @@
+name: MST M3 Private D1 Drive - OWNER MANUAL READONLY DRAFT
+
+# DRAFT: workflow_dispatch becomes available ONLY if a separately reviewed
+# version is merged into protected main. No cron, push, PR or market order.
+# Even on main, a separate owner-controlled variable and private secrets are
+# needed; default is a non-executing job. No broader Drive OAuth scope.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-m3-drive-owner-readonly
+  cancel-in-progress: false
+
+jobs:
+  exact-doc-readonly:
+    name: Owner-gated exact Drive Doc metadata/export readback - NO WRITE
+    if: ${{ github.repository == 'ngluonghoa/MST' && github.repository_id == '1450356304' && github.repository_owner_id == '353049266' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && vars.MST_M3_DRIVE_READONLY_OWNER_ACCEPTED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout owner main without persistent GitHub token
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned OAuth HTTP dependencies
+        run: python -m pip install --disable-pip-version-check google-auth==2.43.0 requests==2.32.5
+      - name: Exact-ID private Drive metadata and text export - read only
+        env:
+          MST_M3_DRIVE_READONLY_OWNER_ACCEPTED: ${{ vars.MST_M3_DRIVE_READONLY_OWNER_ACCEPTED }}
+          MST_GDRIVE_OAUTH_CLIENT_ID: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_ID }}
+          MST_GDRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.MST_GDRIVE_OAUTH_CLIENT_SECRET }}
+          MST_GDRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.MST_GDRIVE_OAUTH_REFRESH_TOKEN }}
+          MST_M3_PRIVATE_D1_OLD_MANIFEST_ID: ${{ secrets.MST_M3_PRIVATE_D1_OLD_MANIFEST_ID }}
+          MST_M3_PRIVATE_D1_NEW_MANIFEST_ID: ${{ secrets.MST_M3_PRIVATE_D1_NEW_MANIFEST_ID }}
+          MST_M3_PRIVATE_D1_ALLOWED_PARENT_IDS: ${{ secrets.MST_M3_PRIVATE_D1_ALLOWED_PARENT_IDS }}
+        run: python -m scripts.m3_private_drive_readonly_worker
