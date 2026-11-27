@@ -26,7 +26,7 @@ these require separate consumer, migration and rollback evidence.
 | cache_swap_preview | domain_and_reference | 133 | 16 | 47 | 0 | KEEP | none |
 | causal | domain_and_reference | 22 | 4 | 7 | 1 | KEEP | none |
 | causal_compression_approach403 | domain_and_reference | 110 | 10 | 19 | 2 | KEEP | none |
-| causal_compression_breakout404 | domain_and_reference | 78 | 10 | 27 | 1 | KEEP | none |
+| causal_compression_breakout404 | domain_and_reference | 78 | 8 | 29 | 1 | KEEP | none |
 | causal_compression_candidate395 | domain_and_reference | 86 | 7 | 27 | 3 | KEEP | none |
 | causal_compression_pivot402 | domain_and_reference | 76 | 11 | 30 | 2 | KEEP | none |
 | causal_contraction_candidate386 | domain_and_reference | 140 | 10 | 25 | 1 | KEEP | none |
