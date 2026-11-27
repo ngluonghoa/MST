@@ -111,7 +111,7 @@ these require separate consumer, migration and rollback evidence.
 | s3_tp_event463 | domain_and_reference | 207 | 11 | 23 | 2 | KEEP | none |
 | s4_holdings471 | domain_and_reference | 142 | 10 | 18 | 1 | KEEP | none |
 | s4_rejection467 | domain_and_reference | 364 | 12 | 19 | 2 | KEEP | none |
-| s5_transition473 | domain_and_reference | 335 | 10 | 16 | 1 | KEEP | none |
+| s5_transition473 | domain_and_reference | 335 | 11 | 14 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
