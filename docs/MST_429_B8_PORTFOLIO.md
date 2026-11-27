@@ -1,0 +1,3 @@
+# §429 — B8 explicit hypothetical same-size portfolio budget
+
+Use §428 hypothetical share count and §424 net per-share stop risk and buy fee. Explicit caller currency conversion multiplier, equity, available cash, reserved risk, per-trade and total risk fractions; snapshot known at RF verification or within explicit maximum age. Match iff fee-inclusive cash and added/total risk within respective budgets, inclusive. Reject missing prior ingredients and nonraw/scope/time mismatch. No default P11 threshold, verified brokerage balance, fill, gap/slippage or executable sizing. Six fictional regressions. Rollback by revert.
