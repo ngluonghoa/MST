@@ -1,5 +1,5 @@
 """§463 explicit M15 closed target attainment; hypothetical event only, not a fill."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
 
@@ -11,7 +11,7 @@ from .s1_choch442 import _validate_pivots442
 from .s3_context454 import (
     S3TrendWindow454, S3State454, S3Preview454, _history454, _trend454, _window454,
 )
-from .s3_tp458 import S3TPPlan458, inspect_s3_tp_preview, _scope458
+from .s3_tp458 import S3TPPlan458, inspect_s3_tp_preview, _scope458, _validate458
 
 
 @dataclass(frozen=True)
@@ -121,3 +121,87 @@ def inspect_s3_tp_event_preview(inputs,*,strategy,variant_id,plan):
     base,rc=(g for _,g in preview.assessments)
     route=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_E")
     return S3Preview454(preview.assessments+((route,_event463(inputs,plan,base,rc,strategy)),))
+
+
+@dataclass(frozen=True)
+class S3TPConfirmPlan464:
+    event: S3TPEventPlan463
+    confirmation: S3TPEvent463
+    linked_early_event_id: str
+    linked_early_revision_digest: str
+    linked_early_start_utc: datetime
+
+
+def _validate_confirm464(plan,variant):
+    if type(plan) is not S3TPConfirmPlan464 or variant!="S3/F_TP":
+        raise ValueError("MST_464_EXPLICIT_F_TP_VARIANT")
+    if type(plan.event) is not S3TPEventPlan463:
+        raise ValueError("MST_464_EXPLICIT_PRIOR_EVENT")
+    if type(plan.event.context) is not S3TPPlan458:
+        raise ValueError("MST_464_EXACT_TP_CONTEXT")
+    _validate458(plan.event.context)
+    _validate_event463(plan.event.early,plan.event.context)
+    p,early=plan.confirmation,plan.event.early
+    _validate_event463(p,plan.event.context)
+    if p.target_index<=early.target_index or p.d1.stop<early.d1.stop:
+        raise ValueError("MST_464_DISTINCT_LATER_CONFIRMATION")
+    if any(type(v) is not str or not v.strip() for v in
+           (plan.linked_early_event_id,plan.linked_early_revision_digest)):
+        raise ValueError("MST_464_EXPLICIT_PRIOR_EVENT_LINK")
+    if type(plan.linked_early_start_utc) is not datetime:
+        raise ValueError("MST_464_EXACT_PRIOR_START")
+    require_utc(plan.linked_early_start_utc)
+
+
+def _linked464(plan,bar):
+    e,p=plan.event.early,plan.confirmation
+    return ((plan.linked_early_event_id,plan.linked_early_revision_digest,
+             plan.linked_early_start_utc)==(e.source_event_id,e.revision_digest,e.bar_start_utc)
+            and e.source_event_id!=p.source_event_id
+            and e.event_known_at_utc<=bar.market_bar_key.bar_start_utc)
+
+
+def _confirm_trend464(inputs,plan,base,early_bar,bar):
+    e=plan.event.early
+    history,state=_history454(inputs.snapshots_for(Timeframe.D1),e.d1,early_bar)
+    if history is None:
+        return S3TPEventIngredient463(state,"TP_RF_EARLY_D1_UNRESOLVED")
+    trend=_trend454(history,e.d1,early_bar.market_bar_key.bar_start_utc)
+    if trend.state is not S3State454.MATCH:
+        return S3TPEventIngredient463(trend.state,trend.reason)
+    current=replace(base,private_d1_hh=trend.private_d1_hh,
+                    private_higher_low=trend.private_higher_low)
+    return _event_trend463(inputs,plan.confirmation,current,bar)
+
+
+def _confirm464(inputs,plan,base,early,strategy):
+    if early.state is not S3State454.MATCH:
+        return S3TPEventIngredient463(S3State454.BLOCKED,"TP_RF_RE_NOT_MATCHED")
+    p,e=plan.confirmation,plan.event.early
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows):
+        return S3TPEventIngredient463(S3State454.MISSING,"TP_RF_BAR_MISSING")
+    bar=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if bar is None or not _linked464(plan,bar):
+        return S3TPEventIngredient463(S3State454.BLOCKED,"TP_RF_EVENT_LINK_OR_CLOCK")
+    if not _matches_event463(p,plan.event.context.target,bar,strategy,inputs.as_of_utc):
+        return S3TPEventIngredient463(S3State454.BLOCKED,"TP_RF_CONFIRM_IDENTITY")
+    prior,_=_sequence(rows[e.target_index:p.target_index],cutoff=bar.market_bar_key.bar_start_utc)
+    if not prior or _source_identity(prior[0])!=_source_identity(bar):
+        return S3TPEventIngredient463(S3State454.BLOCKED,"TP_RF_PATH_UNRESOLVED")
+    if any(b.close<base.private_higher_low for b in prior):
+        return S3TPEventIngredient463(S3State454.NONMATCH,"TP_RF_PRIOR_D1_HL_LOSS")
+    denial=_confirm_trend464(inputs,plan,base,prior[0],bar)
+    if denial is not None:
+        return denial
+    state=S3State454.MATCH if bar.close>=base.private_target else S3State454.NONMATCH
+    return S3TPEventIngredient463(state,"DISTINCT_CLOSED_HYPOTHETICAL_TP_CONFIRMATION_ONLY",
+                                 p.source_event_id,bar.close)
+
+
+def inspect_s3_tp_confirm_preview(inputs,*,strategy,variant_id,plan):
+    _validate_confirm464(plan,variant_id)
+    preview=inspect_s3_tp_event_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.event)
+    base,_,early=(g for _,g in preview.assessments)
+    route=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_F")
+    return S3Preview454(preview.assessments+((route,_confirm464(inputs,plan,base,early,strategy)),))
