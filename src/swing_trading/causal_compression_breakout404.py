@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from .b6_rf_volume405 import B6RFVolumePlan389
 from .causal_compression_approach403 import inspect_compression_approach
 from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_structure_geometry import GeometryState, StructureSide, inspect_closed_bos_geometry
@@ -13,6 +14,7 @@ from .replay import require_utc
 class CompressionD1RFPlan404:
     breakout_index: int
     candidate_epsilon: Decimal
+    volume: B6RFVolumePlan389 | None = None
 
 
 @dataclass(frozen=True)

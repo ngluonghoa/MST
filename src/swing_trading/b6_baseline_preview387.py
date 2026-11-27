@@ -441,5 +441,8 @@ def _compression_rf405(inputs, strategy, variant_id, plan, rows):
         rf = inspect_compression_d1_breakout(rows, m15, **args)
     route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id,
                                phase="R_F", selected_frame=frame)
-    return route, B6Ingredient387(B6State387(rf.state), rf.reason,
-                                  volume_state=frame.value + "_VOLUME_SPEC_PENDING")
+    geometry = B6Ingredient387(B6State387(rf.state), rf.reason,
+                               volume_state=frame.value + "_VOLUME_SPEC_PENDING")
+    if frame is Timeframe.D1 and plan.rf.volume is not None:
+        geometry = _volume389(inputs, plan.rf, geometry)
+    return route, geometry
