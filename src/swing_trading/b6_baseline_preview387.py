@@ -16,6 +16,7 @@ from .causal_structure_geometry import (
     inspect_closed_bos_geometry,
 )
 from .causal_trend_candidate382 import inspect_d1_paired_trend_candidate
+from .causal_volume_dryup399 import DryUpPlan399, DryUpCandidate399, inspect_bound_d1_volume_dryup
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
@@ -64,6 +65,7 @@ class B6TrendPlan390:
 class B6CompressionPlan396:
     target_index: int
     percentile: AtrPercentilePlan395 | RangePercentilePlan397
+    dryup: DryUpPlan399 | None = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,7 @@ class B6EnginePlan387:
     candidate_k_near: Decimal
     rf: B6RFPlan388 | B6H1RFPlan393 | None = None
     r0: B6TrendPlan390 | None = None
+    dryup: DryUpPlan399 | None = None
 
 
 class B6State387(str, Enum):
@@ -97,6 +100,7 @@ class B6Ingredient387:
     volume_state: str = "NOT_REQUESTED"
     rvol: CausalIndicatorResult | None = None
     compression: object | None = None
+    dryup: DryUpCandidate399 | None = None
 
     @property
     def status(self):
@@ -409,7 +413,7 @@ def _routed_rf393(inputs, history, atr_rows, plan, early, scope):
 def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     """Only explicit two-contraction branch; not an approved R0 or R_F.
 
-    No alternate compression fallback, no claimed volume dry-up or ATR approval.
+    No alternate compression fallback, no volume dry-up or ATR approval.
     Target must be M15 and both D1 histories causally known at target start.
     """
     if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
@@ -425,6 +429,10 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     re = route_phase_inputs(inputs, phase="R_E", **scope)
     early = _re387(inputs, history, atr_rows, plan)
     contraction = _rc387(history, plan, inputs.as_of_utc)
+    if plan.dryup is not None:
+        dryup = inspect_bound_d1_volume_dryup(rows, base_stop=plan.d1_stop,
+            expected_base_start=plan.d1_start, plan=plan.dryup, as_of_utc=inputs.as_of_utc)
+        contraction = replace(contraction, dryup=dryup)
     assessments = ((rc, contraction), (re, early))
     if plan.r0 is not None:
         r0 = route_phase_inputs(inputs, phase="R0", selected_frame=Timeframe.D1, **scope)
@@ -465,6 +473,10 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         if proof.at_or_below is not None:
             state = B6State387.MATCH if proof.at_or_below else B6State387.NONMATCH
         result = B6Ingredient387(state, proof.reason, compression=proof)
+    if plan.dryup is not None:
+        dryup = inspect_bound_d1_volume_dryup(rows, base_stop=plan.target_index+1,
+            plan=plan.dryup, as_of_utc=inputs.as_of_utc)
+        result = replace(result, dryup=dryup)
     route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy,
                                variant_id=variant_id, phase="R_C")
     return B6EnginePreview387(((route, result),))
