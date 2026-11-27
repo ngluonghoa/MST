@@ -9,6 +9,7 @@ from swing_trading.contracts import Strategy
 from swing_trading.market_data import Timeframe
 from test_b8_rf418 import fixture
 from test_b8_base415 import run
+from test_causal_indicators import snap
 
 
 def plan(p,k):
@@ -35,11 +36,16 @@ class B8Extension423Tests(unittest.TestCase):
             self.assertEqual(safe["phases"][3]["ingredient_state"],"GEOMETRY_NONMATCH_ONLY")
 
     def test_exact_boundary_inclusive(self):
-        inputs,p=fixture()
-        row,_=run(inputs,p)
-        atr=row.private_preview.assessments[0][1].private_atr
-        inputs,p=fixture(close=D(15)+atr)
+        # Exact decimal boundary: remove the extra four TR units at the pivot
+        # by making a different non-pivot daily candle flat at its prior close.
+        inputs,p=fixture(close=D(19))
+        daily=inputs.snapshots_for(Timeframe.D1)
+        row=daily[1].selected
+        daily=daily[:1]+(snap(replace(row,open=D(10),high=D(10),low=D(10),close=D(10))),)+daily[2:]
+        inputs=replace(inputs,buckets=tuple((f,daily if f is Timeframe.D1 else rows)
+                                            for f,rows in inputs.buckets))
         row,_=run(inputs,plan(p,D(1)))
+        self.assertEqual(row.private_preview.assessments[0][1].private_atr,D(4))
         self.assertTrue(row.private_preview.assessments[-1][1].extension_candidate_match)
 
     def test_uncalibrated_and_legacy(self):
