@@ -8,6 +8,7 @@ from .causal_compression_pivot402 import (
 )
 from .causal_compression_approach403 import CompressionEarlyPlan403, compression_method398, inspect_compression_approach
 from .causal_compression_candidate395 import AtrPercentilePlan395
+from .causal_compression_breakout404 import CompressionD1RFPlan404, inspect_compression_d1_breakout
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
 from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_indicators import (
@@ -72,6 +73,7 @@ class B6CompressionPlan396:
     dryup: DryUpPlan399 | None = None
     upper_pivot: CompressionPivotPlan402 | None = None
     early: CompressionEarlyPlan403 | None = None
+    rf: CompressionD1RFPlan404 | None = None
 
 
 @dataclass(frozen=True)
@@ -450,7 +452,7 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
 
 
 def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
-    """Explicit compression R_C and optional R_E geometry; no R0/R_F."""
+    """Explicit compression R_C, optional R_E and D1 R_F geometry; no R0."""
     if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
         raise ValueError("MST_396_BASELINE_SCOPE")
     if variant_id != "B6/C_COMPRESSION" or type(plan) is not B6CompressionPlan396:
@@ -492,4 +494,13 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         re = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id, phase="R_E")
         assessments += ((re, B6Ingredient387(B6State387(early.state), early.reason,
                                              distance=early.distance, approach=early.approach)),)
+    if plan.rf is not None:
+        rf = inspect_compression_d1_breakout(rows, inputs.snapshots_for(Timeframe.M15),
+            target_index=plan.target_index, percentile=p, upper_pivot=plan.upper_pivot,
+            early=plan.early, rf=plan.rf, as_of_utc=inputs.as_of_utc,
+            expected_base_count=None if plan.dryup is None else plan.dryup.base_count)
+        route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id,
+                                   phase="R_F", selected_frame=Timeframe.D1)
+        assessments += ((route, B6Ingredient387(B6State387(rf.state), rf.reason,
+                                                volume_state="D1_VOLUME_SPEC_PENDING")),)
     return B6EnginePreview387(assessments)
