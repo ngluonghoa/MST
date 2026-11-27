@@ -1,0 +1,147 @@
+"""§473 S5 prior rising structure and explicit bearish transition candidate."""
+from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
+
+from .causal_structure_geometry import (
+    GeometryState,StructureSide,TiePolicy,_eligible,_sequence,_source_identity,
+)
+from .contracts import DecisionStatus,Strategy
+from .feature_engine460 import inspect_target_d1_atr
+from .market_data import Timeframe
+from .phase_input_routing369 import route_phase_inputs
+from .replay import require_utc
+from .s1_choch442 import _validate_pivots442,_pivots442
+from .s1_failed_break441 import validate_pair_atr442
+from .s1_context_preview439 import S1State439
+
+
+@dataclass(frozen=True)
+class S5TransitionPlan473:
+    timeframe: Timeframe
+    history_start: int
+    target_index: int
+    high_indices: tuple[int,int]
+    low_indices: tuple[int,int]
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+    event_id: str
+    revision_digest: str
+    bar_start_utc: datetime
+    event_known_at_utc: datetime
+
+
+@dataclass(frozen=True)
+class S5Ingredient473:
+    state: S1State439
+    reason: str
+    private_prior_high: Decimal | None = None
+    private_prior_hl: Decimal | None = None
+    private_event_id: str | None = None
+    private_event_start: datetime | None = None
+
+
+@dataclass(frozen=True)
+class S5Preview473:
+    assessments: tuple
+
+    @property
+    def status(self):
+        return DecisionStatus.UNVERIFIED
+
+    @property
+    def action_eligible(self):
+        return False
+
+
+def _validate473(p):
+    if type(p) is not S5TransitionPlan473:
+        raise ValueError("MST_473_EXPLICIT_TRANSITION")
+    validate_pair_atr442(p,frames=(Timeframe.D1,Timeframe.H1))
+    if type(p.history_start) is not int or not 0<=p.history_start<p.target_index-1:
+        raise ValueError("MST_473_BOUNDED_HISTORY")
+    _validate_pivots442(p,p.target_index-1-p.history_start)
+    if any(type(v) is not str or not v.strip() for v in (p.event_id,p.revision_digest)):
+        raise ValueError("MST_473_EXACT_EVENT_IDENTITY")
+    if any(type(v) is not datetime for v in (p.bar_start_utc,p.event_known_at_utc)):
+        raise ValueError("MST_473_EXACT_EVENT_CLOCK")
+    require_utc(p.bar_start_utc)
+    require_utc(p.event_known_at_utc)
+
+
+def _identity473(p,bar,cutoff):
+    return (p.bar_start_utc==bar.market_bar_key.bar_start_utc
+            and bar.verified_at_utc<=p.event_known_at_utc<=cutoff
+            and bar.source_event_ids.count(p.event_id)==1
+            and p.revision_digest==bar.observation_revision.source_revision_or_payload_digest)
+
+
+def _rising473(history,p,cutoff):
+    h1,h2=p.high_indices
+    l1,l2=p.low_indices
+    if not (h1<l1<h2<l2 or l1<h1<l2<h2):
+        return S5Ingredient473(S1State439.NONMATCH,"PRIOR_PAIRS_NOT_ALTERNATING")
+    highs,lows=_pivots442(history,p,cutoff)
+    if any(v.state is not GeometryState.DESCRIPTIVE_ONLY for v in highs+lows):
+        return S5Ingredient473(S1State439.BLOCKED,"PRIOR_PIVOT_WITNESS_UNRESOLVED")
+    if any(v.geometric_extremum is not True for v in highs+lows):
+        return S5Ingredient473(S1State439.NONMATCH,"PRIOR_PIVOT_NOT_EXTREMUM")
+    if not (highs[1].pivot_price>highs[0].pivot_price and lows[1].pivot_price>lows[0].pivot_price):
+        return S5Ingredient473(S1State439.NONMATCH,"PRIOR_UPTREND_NOT_OBSERVED")
+    return S5Ingredient473(S1State439.MATCH,"PRIOR_RISING_GEOMETRY_ONLY",
+                           highs[1].pivot_price,lows[1].pivot_price)
+
+
+def _context473(inputs,p,rows,bar):
+    prior=_eligible(rows[p.target_index-1],cutoff=bar.market_bar_key.bar_start_utc)
+    if prior is None:
+        return None,None
+    history=rows[p.history_start:p.target_index-1]
+    path,_=_sequence(rows[p.history_start:p.target_index],cutoff=bar.market_bar_key.bar_start_utc)
+    if not path or _source_identity(path[0])!=_source_identity(bar):
+        return None,None
+    proof=_rising473(history,p,prior.market_bar_key.bar_start_utc)
+    return prior,proof
+
+
+def _cross473(inputs,p,prior,bar,proof):
+    atr=inspect_target_d1_atr(inputs,p,bar)
+    if atr is None or atr<=0:
+        return S5Ingredient473(S1State439.BLOCKED,"TRANSITION_ATR_UNRESOLVED")
+    low=proof.private_prior_hl
+    if prior.close<low or bar.close>=low:
+        state=S1State439.NONMATCH
+    elif p.candidate_epsilon is None:
+        state=S1State439.DISTANCE
+    else:
+        state=S1State439.MATCH if bar.close<low-p.candidate_epsilon*atr else S1State439.NONMATCH
+    return S5Ingredient473(state,"CLOSED_BEARISH_TRANSITION_CANDIDATE_ONLY",
+                           proof.private_prior_high,low,p.event_id,p.bar_start_utc)
+
+
+def _r0473(inputs,p):
+    rows=inputs.snapshots_for(p.timeframe)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S5Ingredient473(S1State439.MISSING,"TRANSITION_OR_ATR_MISSING")
+    bar=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if bar is None or not _identity473(p,bar,inputs.as_of_utc):
+        return S5Ingredient473(S1State439.BLOCKED,"TRANSITION_IDENTITY_OR_CLOCK_UNRESOLVED")
+    prior,proof=_context473(inputs,p,rows,bar)
+    if proof is None:
+        return S5Ingredient473(S1State439.BLOCKED,"TRANSITION_HISTORY_NOT_CAUSAL")
+    if proof.state is not S1State439.MATCH:
+        return proof
+    return _cross473(inputs,p,prior,bar,proof)
+
+
+def inspect_s5_transition_preview(inputs,*,strategy,variant_id,plan):
+    _validate473(plan)
+    if type(strategy) is not Strategy or variant_id!="S5/BASE":
+        raise ValueError("MST_473_EXACT_SCOPE")
+    route=route_phase_inputs(inputs,zone_id="S5",strategy=strategy,variant_id=variant_id,
+                             phase="R0",selected_frame=plan.timeframe)
+    return S5Preview473(((route,_r0473(inputs,plan)),))
