@@ -18,6 +18,7 @@ these require separate consumer, migration and rollback evidence.
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 2 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 141 | 12 | 17 | 1 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 159 | 7 | 20 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -33,19 +34,19 @@ these require separate consumer, migration and rollback evidence.
 | causal_compression_pivot402 | domain_and_reference | 76 | 11 | 30 | 2 | KEEP | none |
 | causal_contraction_candidate386 | domain_and_reference | 140 | 10 | 25 | 1 | KEEP | none |
 | causal_cross_tf_candidate392 | domain_and_reference | 97 | 10 | 33 | 2 | KEEP | none |
-| causal_indicators | domain_and_reference | 404 | 18 | 58 | 18 | KEEP | HIGH_FAN_IN |
+| causal_indicators | domain_and_reference | 404 | 18 | 58 | 19 | KEEP | HIGH_FAN_IN |
 | causal_range_candidate384 | domain_and_reference | 129 | 8 | 37 | 1 | KEEP | none |
 | causal_range_percentile397 | domain_and_reference | 75 | 7 | 27 | 3 | KEEP | none |
-| causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 15 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 16 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | causal_trend_candidate382 | domain_and_reference | 88 | 11 | 19 | 3 | KEEP | none |
 | causal_volume_dryup399 | domain_and_reference | 109 | 9 | 27 | 1 | KEEP | none |
-| contracts | domain_and_reference | 70 | 5 | 7 | 19 | KEEP | HIGH_FAN_IN |
+| contracts | domain_and_reference | 70 | 5 | 7 | 20 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 415 | 14 | 27 | 2 | KEEP | none |
+| engine | domain_and_reference | 420 | 15 | 29 | 2 | KEEP | none |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
@@ -56,14 +57,14 @@ these require separate consumer, migration and rollback evidence.
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_renderer | domain_and_reference | 352 | 10 | 129 | 1 | IMPROVE | FUNCTION_90_PLUS |
-| market_data | domain_and_reference | 162 | 23 | 29 | 41 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| market_data | domain_and_reference | 162 | 23 | 29 | 42 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 7 | KEEP | none |
+| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 8 | KEEP | none |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 11 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 12 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_review_packet | evidence_and_rights | 264 | 37 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
