@@ -17,6 +17,7 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426, inspect_band426, validate_band426
 from .b8_risk_geometry424 import (B8MeasuredBaseRisk424, B8RiskResult424,
                                   inspect_b8_risk424, validate_risk424)
 from .relative_strength421 import (RSPlan421, RSResult421, inspect_rs421, validate_rs421,
@@ -58,6 +59,7 @@ class B8ConfirmPlan418:
     rs: RSPlan421 | None = None
     extension: B8ExtensionPlan423 | None = None
     risk: B8MeasuredBaseRisk424 | None = None
+    band: B8PriceBand426 | None = None
 
 
 @dataclass(frozen=True)
@@ -101,6 +103,7 @@ class B8Ingredient415:
     extension_atr: Decimal | None = None
     extension_candidate_match: bool | None = None
     risk: B8RiskResult424 | None = None
+    band: B8PriceBandResult426 | None = None
 
 
 @dataclass(frozen=True)
@@ -449,6 +452,24 @@ def _rf_risk_result424(geometry,result):
     return replace(geometry,reason="RF_MEASURED_BASE_NET_RR_CANDIDATE_ONLY",risk=result)
 
 
+def _rf_band426(inputs,p,geometry):
+    if p.rf.band is None:
+        return geometry
+    validate_band426(p.rf.band)
+    if geometry.state not in (B8State415.MATCH,B8State415.NONMATCH):
+        return geometry
+    if geometry.risk is None and geometry.state is B8State415.NONMATCH:
+        return geometry
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    result=inspect_band426(target,p.rf.band,
+                          max_entry=geometry.risk.max_entry if geometry.risk else None)
+    if result.state=="BLOCKED":
+        return replace(geometry,state=B8State415.BLOCKED,reason=result.reason,band=result)
+    if result.state=="NONMATCH" or result.candidate_match is False:
+        return replace(geometry,state=B8State415.NONMATCH,reason="RF_RAW_GRID_NONMATCH",band=result)
+    return replace(geometry,band=result)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -482,5 +503,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         volume = _rf_volume419(inputs, plan, geometry)
         rs = _rf_rs422(inputs, plan, base, volume)
         extension = _rf_extension423(inputs, plan, base, rs)
-        assessments += ((rf, _rf_risk424(inputs, plan, base, extension)),)
+        risk = _rf_risk424(inputs, plan, base, extension)
+        assessments += ((rf, _rf_band426(inputs, plan, risk)),)
     return B8Preview415(assessments)

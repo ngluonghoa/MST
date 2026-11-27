@@ -1,0 +1,3 @@
+# §426 — B8 RF session raw price-band and tick candidate
+
+Explicit caller-supplied uniform tick and raw price band bound to exact instrument, exchange, calendar version, session period and policy ID; known before RF start. RF OHLC must all respect supplied band/grid. Floor min(max entry, upper band) to tick, reject below floor; no default band or tick; adjusted prices blocked. This is a hypothetical same-session grid, not future session order eligibility, tiered tick schedule or authoritative venue attestation. No settlement, liquidity or execution approval. Six synthetic regression methods. Rollback by revert.
