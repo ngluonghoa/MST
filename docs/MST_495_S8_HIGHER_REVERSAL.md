@@ -1,0 +1,3 @@
+# §495 S8 higher-frame reversal geometry candidate
+
+Requires the exact matched §494 RE, first supplied later H1 or D1 path, same source and price basis, causal confirmed key low strictly below early support, bearish closed cross and explicitly supplied shared latest D1 ATR epsilon. Earlier supplied crosses, exhaustion-high recovery, late witnesses and event expiry deny the candidate. The M15 supplied recovery path is checked through the RF bar close; missing source/calendar completeness is not certified. This is a conservative research/validation candidate, not an approved detector. Independent volume and holdings remain mandatory before strict chain. No production/publication/action authority. Six fictional regressions.
