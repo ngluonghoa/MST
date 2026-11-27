@@ -80,7 +80,10 @@ class S4BosDown469Tests(unittest.TestCase):
                             verified_at_utc=rows[w+1].market_bar_key.bar_start_utc+timedelta(minutes=1)))
         self.assertIs(re(alter(inputs,p.timeframe,tuple(rows)),p)[0].state,RangeState385.BLOCKED)
         inputs,p=fixture()
-        self.assertIs(re(inputs,replace(p,low_index=2))[0].state,RangeState385.NONMATCH)
+        self.assertIs(re(inputs,replace(p,low_index=2))[0].state,RangeState385.BLOCKED)
+        rows=list(inputs.snapshots_for(p.timeframe))
+        rows[p.history_start]=snap(replace(rows[p.history_start].selected,low=D(104)))
+        self.assertIs(re(alter(inputs,p.timeframe,tuple(rows)),p)[0].state,RangeState385.NONMATCH)
 
     def test_invalid_scope_and_no_fallback(self):
         inputs,p=fixture()
