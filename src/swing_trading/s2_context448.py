@@ -12,6 +12,7 @@ from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .s1_failed_break441 import _atr441, _pair441, validate_pair_atr442
 from .s1_holdings445 import S1HoldingsPlan445, S1HoldingsResult445, validate_holdings445
+from .s2_strict453 import strict_chain453
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 
@@ -70,6 +71,7 @@ class S2ContextPlan448:
     rally: S2RallyPlan449 | None = None
     early: S2EarlyPlan450 | None = None
     rf: S2ConfirmPlan451 | None = None
+    strict_candidate_evidence: bool = False
 
 
 class S2State448(str,Enum):
@@ -92,6 +94,8 @@ class S2Ingredient448:
     private_micro_lh: Decimal | None=None
     private_micro_low: Decimal | None=None
     holdings: S1HoldingsResult445 | None=None
+    candidate_evidence_complete: bool=False
+    mandatory_gaps: tuple[str,...]=()
 
 
 @dataclass(frozen=True)
@@ -426,6 +430,8 @@ def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
         raise ValueError("MST_448_EXACT_SCOPE")
     if type(plan.anchor_index) is not int or not 0<=plan.anchor_index<512:
         raise ValueError("MST_448_EXACT_ANCHOR")
+    if type(plan.strict_candidate_evidence) is not bool:
+        raise ValueError("MST_453_EXPLICIT_STRICT_FLAG")
     _validate_window448(plan.d1,lows=True)
     _validate_window448(plan.h1,lows=False)
     route=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R0")
@@ -446,4 +452,5 @@ def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
         rf=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,
                               phase="R_F",selected_frame=plan.rf.timeframe)
         assessments+=((rf,proof),)
-    return S2Preview448(assessments)
+    return S2Preview448(strict_chain453(inputs,plan,assessments,strategy=strategy,
+        variant=variant_id,states=S2State448,ingredient=S2Ingredient448))
