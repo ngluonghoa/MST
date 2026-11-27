@@ -247,3 +247,89 @@ def inspect_s5_rally_preview(inputs,*,strategy,variant_id,plan):
     preview=inspect_s5_transition_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.context)
     route=route_phase_inputs(inputs,zone_id="S5",strategy=strategy,variant_id=variant_id,phase="R_C")
     return S5Preview473(preview.assessments+((route,_rally474(inputs,plan,preview.assessments[0][1])),))
+
+
+@dataclass(frozen=True)
+class S5EarlyPlan475:
+    rally: S5RallyPlan474
+    target_index: int
+    atr_start: int
+    atr_stop: int
+    candidate_k_rejection: Decimal | None
+
+
+@dataclass(frozen=True)
+class S5EarlyIngredient475:
+    state: S1State439
+    reason: str
+    private_rally_high: Decimal | None = None
+    private_rally_low: Decimal | None = None
+    private_event_id: str | None = None
+    private_target_start: datetime | None = None
+    private_distance: Decimal | None = None
+
+
+def _validate475(p):
+    if type(p) is not S5EarlyPlan475 or type(p.rally) is not S5RallyPlan474:
+        raise ValueError("MST_475_EXACT_EARLY_PLAN")
+    _validate474(p.rally)
+    if any(type(i) is not int for i in (p.target_index,p.atr_start,p.atr_stop)):
+        raise ValueError("MST_475_EXACT_INDICES")
+    witness=p.rally.history_start+p.rally.high_index+p.rally.right_count
+    if not witness<p.target_index<512 or not 0<=p.atr_start<p.atr_stop<=512:
+        raise ValueError("MST_475_DISTINCT_LATER_TARGET")
+    if p.atr_stop-p.atr_start<15:
+        raise ValueError("MST_475_ATR_WARMUP")
+    k=p.candidate_k_rejection
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k<0):
+        raise ValueError("MST_475_EXPLICIT_THRESHOLD")
+
+
+def _path475(inputs,p,target,rc):
+    rows=inputs.snapshots_for(Timeframe.M15)
+    witness=p.rally.history_start+p.rally.high_index+p.rally.right_count
+    cutoff=target.market_bar_key.bar_start_utc
+    bars,_=_sequence(rows[witness:p.target_index],cutoff=cutoff)
+    if not bars or _source_identity(bars[0])!=_source_identity(target):
+        return None
+    if rc.private_witness_known>cutoff:
+        return None
+    return bars
+
+
+def _shape475(inputs,p,target,bars,rc):
+    high=rc.private_rally_high
+    if any(b.high>high for b in (*bars,target)):
+        return S5EarlyIngredient475(S1State439.NONMATCH,"FIRST_LH_INVALIDATED")
+    if target.close>=target.open or target.close>=bars[-1].close or target.close>=high:
+        return S5EarlyIngredient475(S1State439.NONMATCH,"CLOSED_REJECTION_NOT_OBSERVED")
+    atr=inspect_target_d1_atr(inputs,p,target)
+    if atr is None or atr<=0:
+        return S5EarlyIngredient475(S1State439.BLOCKED,"REJECTION_ATR_UNRESOLVED")
+    distance=high-target.high
+    k=p.candidate_k_rejection
+    state=S1State439.DISTANCE if k is None else S1State439.MATCH if distance<=k*atr else S1State439.NONMATCH
+    return S5EarlyIngredient475(state,"FIRST_LH_CLOSED_REJECTION_CANDIDATE_ONLY",high,
+        rc.private_rally_low,rc.private_event_id,target.market_bar_key.bar_start_utc,distance)
+
+
+def _early475(inputs,p,rc):
+    if rc.state is not S1State439.MATCH:
+        return S5EarlyIngredient475(S1State439.BLOCKED,"R_C_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S5EarlyIngredient475(S1State439.MISSING,"REJECTION_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S5EarlyIngredient475(S1State439.BLOCKED,"REJECTION_TARGET_UNQUALIFIED")
+    bars=_path475(inputs,p,target,rc)
+    if bars is None:
+        return S5EarlyIngredient475(S1State439.BLOCKED,"REJECTION_PATH_NOT_CAUSAL")
+    return _shape475(inputs,p,target,bars,rc)
+
+
+def inspect_s5_early_preview(inputs,*,strategy,variant_id,plan):
+    _validate475(plan)
+    preview=inspect_s5_rally_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.rally)
+    route=route_phase_inputs(inputs,zone_id="S5",strategy=strategy,variant_id=variant_id,phase="R_E")
+    return S5Preview473(preview.assessments+((route,_early475(inputs,plan,preview.assessments[1][1])),))
