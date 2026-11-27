@@ -8,12 +8,15 @@ from .causal_compression_pivot402 import (
 )
 from .causal_compression_approach403 import CompressionEarlyPlan403, compression_method398, inspect_compression_approach
 from .causal_compression_candidate395 import AtrPercentilePlan395
-from .causal_compression_breakout404 import CompressionD1RFPlan404, inspect_compression_d1_breakout
+from .causal_compression_breakout404 import (
+    CompressionD1RFPlan404, CompressionH1RFPlan405, inspect_compression_d1_breakout,
+    inspect_compression_h1_breakout,
+)
+from .b6_rf_volume405 import B6RFVolumePlan389, B6H1VolumePlan394, _volume389, _h1_volume394
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
 from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_indicators import (
-    CausalIndicatorResult, IndicatorState, VolumeBasisWitness, VolumeComparisonBar,
-    VolumeSessionClass, calculate_rvol_tf20_raw_matched, calculate_wilder_atr14,
+    CausalIndicatorResult, IndicatorState, calculate_wilder_atr14,
 )
 from .causal_range_percentile397 import RangePercentilePlan397
 from .causal_structure_geometry import (
@@ -30,23 +33,10 @@ from .source_quality import CoverageState
 
 
 @dataclass(frozen=True)
-class B6RFVolumePlan389:
-    comparison_policy_version: str
-    witnesses: tuple[VolumeBasisWitness, ...]
-
-
-@dataclass(frozen=True)
 class B6RFPlan388:
     breakout_index: int
     candidate_epsilon: Decimal
     volume: B6RFVolumePlan389 | None = None
-
-
-@dataclass(frozen=True)
-class B6H1VolumePlan394:
-    comparison_policy_version: str
-    session_classes: tuple[VolumeSessionClass, ...]
-    witnesses: tuple[VolumeBasisWitness, ...]
 
 
 @dataclass(frozen=True)
@@ -73,7 +63,7 @@ class B6CompressionPlan396:
     dryup: DryUpPlan399 | None = None
     upper_pivot: CompressionPivotPlan402 | None = None
     early: CompressionEarlyPlan403 | None = None
-    rf: CompressionD1RFPlan404 | None = None
+    rf: CompressionD1RFPlan404 | CompressionH1RFPlan405 | None = None
 
 
 @dataclass(frozen=True)
@@ -278,37 +268,6 @@ def _rf388(inputs, history, atr_rows, plan, early):
 
 
 
-def _check_volume389(plan):
-    if (type(plan) is not B6RFVolumePlan389
-            or type(plan.comparison_policy_version) is not str
-            or not plan.comparison_policy_version.strip()
-            or type(plan.witnesses) is not tuple or len(plan.witnesses) != 21
-            or any(type(w) is not VolumeBasisWitness for w in plan.witnesses)):
-        raise ValueError("MST_389_EXACT_RAW_MATCHED_WITNESS_PLAN")
-
-
-def _volume389(inputs, rf, geometry):
-    if rf.volume is None:
-        return replace(geometry, volume_state="RAW_MATCHED_WITNESS_MISSING")
-    plan = rf.volume
-    _check_volume389(plan)
-    rows = inputs.snapshots_for(Timeframe.D1)
-    index = rf.breakout_index
-    if index < 20 or index >= len(rows):
-        return replace(geometry, volume_state="EXACT_TARGET_OR_PRIOR20_MISSING")
-    tagged = tuple(VolumeComparisonBar(row, VolumeSessionClass.DAILY,
-                                      plan.comparison_policy_version)
-                   for row in rows[index-20:index+1])
-    rvol = calculate_rvol_tf20_raw_matched(
-        tagged[-1], tagged[:-1], target_witness=plan.witnesses[-1],
-        prior_witnesses=plan.witnesses[:-1], as_of_utc=inputs.as_of_utc,
-    )
-    state = ("RVOL_COMPUTED_UNCALIBRATED" if rvol.state is IndicatorState.COMPUTED_UNCALIBRATED
-             else "RVOL_BLOCKED")
-    return replace(geometry, volume_state=state, rvol=rvol)
-
-
-
 def _trend390(rows, history, plan):
     trend = plan.r0
     if type(trend) is not B6TrendPlan390:
@@ -378,37 +337,6 @@ def _rf_h1393(inputs, history, atr_rows, plan, early):
 
 
 
-def _check_h1_volume394(plan):
-    if (type(plan) is not B6H1VolumePlan394
-            or type(plan.comparison_policy_version) is not str
-            or not plan.comparison_policy_version.strip()
-            or type(plan.session_classes) is not tuple or len(plan.session_classes) != 21
-            or any(type(c) is not VolumeSessionClass for c in plan.session_classes)
-            or type(plan.witnesses) is not tuple or len(plan.witnesses) != 21
-            or any(type(w) is not VolumeBasisWitness for w in plan.witnesses)):
-        raise ValueError("MST_394_EXPLICIT_H1_VOLUME_PLAN")
-
-
-def _h1_volume394(inputs, rf, geometry):
-    if rf.volume is None:
-        return replace(geometry, volume_state="H1_VOLUME_SPEC_PENDING")
-    plan = rf.volume
-    _check_h1_volume394(plan)
-    rows = inputs.snapshots_for(Timeframe.H1)
-    index = rf.breakout_index
-    if index < 20 or index >= len(rows):
-        return replace(geometry, volume_state="EXACT_TARGET_OR_PRIOR20_MISSING")
-    tagged = tuple(VolumeComparisonBar(row, session, plan.comparison_policy_version)
-                   for row, session in zip(rows[index-20:index+1], plan.session_classes))
-    rvol = calculate_rvol_tf20_raw_matched(
-        tagged[-1], tagged[:-1], target_witness=plan.witnesses[-1],
-        prior_witnesses=plan.witnesses[:-1], as_of_utc=inputs.as_of_utc,
-    )
-    state = ("RVOL_COMPUTED_UNCALIBRATED" if rvol.state is IndicatorState.COMPUTED_UNCALIBRATED
-             else "RVOL_BLOCKED")
-    return replace(geometry, volume_state=state, rvol=rvol)
-
-
 def _routed_rf393(inputs, history, atr_rows, plan, early, scope):
     if type(plan.rf) is B6H1RFPlan393:
         route = route_phase_inputs(inputs, phase="R_F", selected_frame=Timeframe.H1, **scope)
@@ -452,7 +380,7 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
 
 
 def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
-    """Explicit compression R_C, optional R_E and D1 R_F geometry; no R0."""
+    """Explicit compression R_C, optional R_E and D1/H1 R_F geometry; no R0."""
     if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
         raise ValueError("MST_396_BASELINE_SCOPE")
     if variant_id != "B6/C_COMPRESSION" or type(plan) is not B6CompressionPlan396:
@@ -495,12 +423,23 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         assessments += ((re, B6Ingredient387(B6State387(early.state), early.reason,
                                              distance=early.distance, approach=early.approach)),)
     if plan.rf is not None:
-        rf = inspect_compression_d1_breakout(rows, inputs.snapshots_for(Timeframe.M15),
-            target_index=plan.target_index, percentile=p, upper_pivot=plan.upper_pivot,
-            early=plan.early, rf=plan.rf, as_of_utc=inputs.as_of_utc,
-            expected_base_count=None if plan.dryup is None else plan.dryup.base_count)
-        route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id,
-                                   phase="R_F", selected_frame=Timeframe.D1)
-        assessments += ((route, B6Ingredient387(B6State387(rf.state), rf.reason,
-                                                volume_state="D1_VOLUME_SPEC_PENDING")),)
+        assessments += (_compression_rf405(inputs, strategy, variant_id, plan, rows),)
     return B6EnginePreview387(assessments)
+
+
+def _compression_rf405(inputs, strategy, variant_id, plan, rows):
+    args = dict(target_index=plan.target_index, percentile=plan.percentile,
+                upper_pivot=plan.upper_pivot, early=plan.early, rf=plan.rf,
+                as_of_utc=inputs.as_of_utc,
+                expected_base_count=None if plan.dryup is None else plan.dryup.base_count)
+    m15 = inputs.snapshots_for(Timeframe.M15)
+    if type(plan.rf) is CompressionH1RFPlan405:
+        frame = Timeframe.H1
+        rf = inspect_compression_h1_breakout(rows, m15, inputs.snapshots_for(frame), **args)
+    else:
+        frame = Timeframe.D1
+        rf = inspect_compression_d1_breakout(rows, m15, **args)
+    route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id,
+                               phase="R_F", selected_frame=frame)
+    return route, B6Ingredient387(B6State387(rf.state), rf.reason,
+                                  volume_state=frame.value + "_VOLUME_SPEC_PENDING")
