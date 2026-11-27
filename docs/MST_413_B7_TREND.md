@@ -1,0 +1,3 @@
+# §413 — B7 paired D1 falling geometry at R0/RF
+
+Optional explicit equal-policy 50+N D1 windows evaluated at RC target start and RF breakout start. §382 LH/LL + falling SMA50; no skip of newer known supplied bars, nonregressing window endpoint, same cross-frame source. RF requires both R0 and RF falling candidates and §412 cross; missing/failed context is not replaced. Does not establish continuous downtrend between samples, latest pivot selection, complete calendar, or market/risk/settlement/trade authority. Legacy geometry previews remain explicitly unverified. Six synthetic regressions. Rollback: revert atomic squash PR.
