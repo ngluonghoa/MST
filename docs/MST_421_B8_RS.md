@@ -1,0 +1,3 @@
+# §421 — B8 R0 aligned log RS candidate
+
+Frozen §24.5 log return difference on exact aligned adjusted D1 stock/benchmark closes. Explicit benchmark kind and ID, alignment policy, H and N; exact H+N+1 supplied stock and benchmark rows, stable per-stream identity and no newer/unknown supplied stock tail at cutoff. Candidate strengthening is signed endpoint slope (RS_t−RS_t−N)/N, optional explicit threshold; no approved benchmark mapping, calendar completeness, source or trading authority. Both sector/index labels are explicit diagnostic choices, not fallback or approved variants. Six synthetic regressions. Rollback: revert atomic squash PR.
