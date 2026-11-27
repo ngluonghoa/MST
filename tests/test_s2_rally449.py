@@ -52,6 +52,12 @@ class S2Rally449Tests(unittest.TestCase):
         rows=inputs.snapshots_for(Timeframe.M15)
         row,_=run(alter(inputs,Timeframe.M15,rows[:1]),p)
         self.assertIs(row.private_preview.assessments[1][1].state,S2State448.MISSING)
+        target=rows[1].selected
+        other=replace(target.observation_key,source_stream_id="other-fixture-stream")
+        mixed=snap(replace(target,observation_key=other,
+                           observation_revision=replace(target.observation_revision,observation_key=other)))
+        row,_=run(alter(inputs,Timeframe.M15,(rows[0],mixed)),p)
+        self.assertIs(row.private_preview.assessments[1][1].state,S2State448.BLOCKED)
         late=snap(replace(rows[0].selected,verified_at_utc=rows[1].market_bar_key.bar_start_utc+timedelta(minutes=1)))
         row,_=run(alter(inputs,Timeframe.M15,(late,rows[1])),p)
         self.assertIs(row.private_preview.assessments[1][1].state,S2State448.BLOCKED)
@@ -60,6 +66,9 @@ class S2Rally449Tests(unittest.TestCase):
         inputs,p=setup()
         daily=inputs.snapshots_for(Timeframe.D1)
         cutoff=inputs.snapshots_for(Timeframe.M15)[0].market_bar_key.bar_start_utc
+        new=snap(make_bar(2400,start=cutoff-timedelta(hours=6)+timedelta(minutes=1)))
+        row,_=run(alter(inputs,Timeframe.D1,daily+(new,)),p)
+        self.assertIs(row.private_preview.assessments[1][1].state,S2State448.BLOCKED)
         late=snap(replace(daily[0].selected,verified_at_utc=cutoff+timedelta(hours=1)))
         row,_=run(alter(inputs,Timeframe.D1,(late,)+daily[1:]),p)
         self.assertIs(row.private_preview.assessments[1][1].state,S2State448.BLOCKED)

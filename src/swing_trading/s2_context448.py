@@ -5,7 +5,7 @@ from enum import Enum
 
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
-    _sequence, inspect_causal_pivot,
+    _sequence, _source_identity, inspect_causal_pivot,
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
@@ -209,7 +209,7 @@ def _rally449(inputs,plan,base):
     if target is None:
         return S2Ingredient448(S2State448.BLOCKED,"RALLY_TARGET_NOT_ELIGIBLE")
     prior,_=_sequence(rows[plan.anchor_index:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
-    if not prior or _cross_tf_identity(prior[0])!=_cross_tf_identity(target):
+    if not prior or _source_identity(prior[0])!=_source_identity(target):
         return S2Ingredient448(S2State448.BLOCKED,"RALLY_HISTORY_NOT_CAUSAL")
     if any(x.close>base.private_resistance for x in prior):
         return S2Ingredient448(S2State448.NONMATCH,"RESISTANCE_ALREADY_BROKEN")
