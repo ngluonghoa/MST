@@ -55,7 +55,7 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 451 | 24 | 47 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
+| engine | domain_and_reference | 453 | 25 | 49 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
@@ -71,7 +71,7 @@ these require separate consumer, migration and rollback evidence.
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 16 | KEEP | HIGH_FAN_IN |
+| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 17 | KEEP | HIGH_FAN_IN |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 18 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
@@ -109,7 +109,7 @@ these require separate consumer, migration and rollback evidence.
 | s3_holdings465 | domain_and_reference | 166 | 10 | 18 | 1 | KEEP | none |
 | s3_tp458 | domain_and_reference | 153 | 11 | 20 | 2 | KEEP | none |
 | s3_tp_event463 | domain_and_reference | 207 | 11 | 23 | 2 | KEEP | none |
-| s4_rejection467 | domain_and_reference | 84 | 12 | 17 | 1 | KEEP | none |
+| s4_rejection467 | domain_and_reference | 169 | 12 | 19 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
