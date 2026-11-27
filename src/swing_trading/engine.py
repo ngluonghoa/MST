@@ -33,6 +33,7 @@ from .b7_support_preview409 import B7SupportPlan409, B7SupportPreview409, inspec
 from .b8_base_preview415 import B8BasePlan415, B8Preview415, inspect_b8_preview
 from .s1_context_preview439 import S1ContextPlan439, S1Preview439, inspect_s1_preview
 from .s2_context448 import S2ContextPlan448, S2Preview448, inspect_s2_preview
+from .s3_context454 import S3ContextPlan454, S3Preview454, inspect_s3_preview
 from .zone_manifest_v03 import MANIFESTS
 
 PREVIEW_ZONES = ("B2", "B5", "S2", "S7")
@@ -93,7 +94,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454
 
 
 @dataclass(frozen=True)
@@ -215,7 +216,7 @@ def _s7_states377(preview):
 
 
 def _preview_states377(preview):
-    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385, B6EnginePreview387, B7SupportPreview409, B8Preview415, S1Preview439, S2Preview448):
+    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385, B6EnginePreview387, B7SupportPreview409, B8Preview415, S1Preview439, S2Preview448, S3Preview454):
         return _pair_states377(preview)
     if type(preview) is B5RFPreview373:
         return _b5_states377(preview)
@@ -249,6 +250,8 @@ def _request_supported376(request):
         return False
     if type(request.plan) in (B6EnginePlan387, B6CompressionPlan396):
         return request.zone_id == "B6"
+    if type(request.plan) is S3ContextPlan454:
+        return request.zone_id == "S3"
     if type(request.plan) is S2ContextPlan448:
         return request.zone_id == "S2"
     if type(request.plan) is S1ContextPlan439:
@@ -304,6 +307,8 @@ def _dispatch375(inputs, request):
         request.zone_id, request.strategy, request.variant_id, request.plan)
     if type(variant) is not str or variant not in MANIFESTS[zone].variants:
         raise ValueError("MST_375_VARIANT_INVALID")
+    if type(plan) is S3ContextPlan454:
+        return inspect_s3_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is S2ContextPlan448:
         return inspect_s2_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is S1ContextPlan439:

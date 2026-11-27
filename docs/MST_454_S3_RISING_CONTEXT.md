@@ -1,0 +1,3 @@
+# §454 S3 R0 causal rising D1 and structural resistance
+
+Source: frozen MASTER_SPEC §16.3 and §24.4. Explicit M15 anchor, latest supplied D1 alternating HH/HL with first pivot known before later pair and no critical HL loss, explicit D1 or W1 structural resistance pivot with causal right witness. No automatic resistance-frame fallback, no inferred TP plan, no S1 major reversal inference. All four S3 variant IDs may use this structural R0 ingredient only; the actual pre-existing approved TP alternative and downstream phase branches are separate. Six fictional tests with 16 frame/strategy/variant combinations. UNVERIFIED, no data/calendar/parameter/sell authority. Legacy structural routes remain unchanged.
