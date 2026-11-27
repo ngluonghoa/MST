@@ -29,6 +29,10 @@ def validate_distribution440(p):
         raise ValueError("MST_440_EXPLICIT_DISTRIBUTION")
     if type(p.target_index) is not int or not 0<=p.target_index<512:
         raise ValueError("MST_440_EXPLICIT_INDEX")
+    validate_volume_policy440(p)
+
+
+def validate_volume_policy440(p):
     if type(p.comparison_policy) is not str or not p.comparison_policy.strip():
         raise ValueError("MST_440_EXPLICIT_COMPARISON_POLICY")
     if type(p.witnesses) is not tuple or len(p.witnesses)!=21:
