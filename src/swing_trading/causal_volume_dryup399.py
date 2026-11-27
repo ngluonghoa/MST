@@ -92,3 +92,18 @@ def inspect_d1_volume_dryup(history, *, plan, as_of_utc):
         return DryUpCandidate399("ZERO_REFERENCE_VOLUME")
     ratio = Decimal(sum(r.volume for r in rows[n:])) * n / (Decimal(total) * plan.base_count)
     return DryUpCandidate399("MEAN_RAW_MATCHED_VOLUME_RATIO_ONLY", ratio, ratio <= plan.max_ratio)
+
+
+def inspect_bound_d1_volume_dryup(rows, *, base_stop, plan, as_of_utc,
+                                  expected_base_start=None):
+    """Bind to the exact exclusive base endpoint and optional full base span."""
+    _check_plan399(plan)
+    if type(base_stop) is not int or base_stop < 1:
+        raise ValueError("MST_400_EXPLICIT_BASE_STOP")
+    base_start = base_stop - plan.base_count
+    if expected_base_start is not None and base_start != expected_base_start:
+        raise ValueError("MST_400_EXACT_CONTRACTION_BASE_REQUIRED")
+    start = base_start - plan.reference_count
+    if start < 0 or base_stop > len(rows):
+        return DryUpCandidate399("EXACT_REFERENCE_BASE_HISTORY_REQUIRED")
+    return inspect_d1_volume_dryup(rows[start:base_stop], plan=plan, as_of_utc=as_of_utc)
