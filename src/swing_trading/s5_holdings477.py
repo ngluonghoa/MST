@@ -7,7 +7,7 @@ from .contracts import Strategy
 from .s1_context_preview439 import S1State439
 from .market_data import Timeframe
 from .replay import require_utc
-from .s1_holdings545 import S1HoldingsPlan445,S1HoldingsResult445,validate_holdings545
+from .s1_holdings445 import S1HoldingsPlan445,S1HoldingsResult445,validate_holdings445
 from .s5_transition473 import S5ConfirmPlan476,S5Preview473,S5ConfirmIngredient476,inspect_s5_confirm_preview
 
 
@@ -80,7 +80,7 @@ def inspect_s5_holdings_preview(inputs,*,strategy,variant_id,plan):
     if type(plan) is not S5HoldingsPlan477 or type(plan.geometry) is not S5ConfirmPlan476:
         raise ValueError("MST_477_EXACT_HOLDINGS_PLAN")
     _validate477(plan.exit_plan)
-    validate_holdings545(plan.holdings)
+    validate_holdings445(plan.holdings)
     g=plan.geometry
     preview=inspect_s5_confirm_preview(inputs,strategy=strategy,variant_id=variant_id,plan=g)
     route,proof=preview.assessments[-1]
