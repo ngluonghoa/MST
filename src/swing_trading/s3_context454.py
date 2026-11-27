@@ -63,12 +63,28 @@ class S3ChochPlan456:
 
 
 @dataclass(frozen=True)
+class S3ConfirmPlan457:
+    timeframe: Timeframe
+    target_index: int
+    history_start: int
+    low_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    d1: S3TrendWindow454
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
 class S3ContextPlan454:
     anchor_index: int
     d1: S3TrendWindow454
     resistance: S3Resistance454
     near: S3NearPlan455 | None=None
     choch: S3ChochPlan456 | None=None
+    rf: S3ConfirmPlan457 | None=None
 
 
 class S3State454(str,Enum):
@@ -90,6 +106,7 @@ class S3Ingredient454:
     private_distance: Decimal | None=None
     private_extension_atr: Decimal | None=None
     private_micro_hl: Decimal | None=None
+    private_confirm_low: Decimal | None=None
 
 
 @dataclass(frozen=True)
@@ -326,14 +343,133 @@ def _choch456(inputs,plan,rc):
     return _choch_geometry456(prior,target,rc,low,atr,p)
 
 
+def _validate_rf457(p,plan,variant):
+    if type(p) is not S3ConfirmPlan457 or variant!="S3/F_MICRO_BREAK":
+        raise ValueError("MST_457_EXPLICIT_RF_VARIANT")
+    validate_pair_atr442(p)
+    if type(p.d1) is not S3TrendWindow454 or p.d1.stop<plan.d1.stop:
+        raise ValueError("MST_457_NONREGRESSING_D1_WINDOW")
+    _window454(p.d1)
+    _validate_pivots442(p.d1,p.d1.stop-p.d1.start)
+    if type(p.history_start) is not int or not 0<=p.history_start<p.target_index-1:
+        raise ValueError("MST_457_EXACT_HISTORY")
+    if type(p.low_index) is not int or not 0<=p.low_index<p.target_index-1-p.history_start:
+        raise ValueError("MST_457_EXACT_LOW_INDEX")
+    if any(type(i) is not int or not 1<=i<=40 for i in (p.left_count,p.right_count)):
+        raise ValueError("MST_457_BOUNDED_WITNESSES")
+    if type(p.tie_policy) is not TiePolicy:
+        raise ValueError("MST_457_EXPLICIT_TIE_POLICY")
+
+
+def _observed457(rows,early,target,base):
+    cutoff=target.market_bar_key.bar_start_utc
+    for snap in rows:
+        start=snap.market_bar_key.bar_start_utc
+        if start>=cutoff:
+            break
+        bar=snap.selected
+        if bar is None:
+            if start>=early.market_bar_key.bar_start_utc:
+                return S3State454.BLOCKED
+            continue
+        if bar.bar_end_utc<=early.bar_end_utc or bar.bar_end_utc>cutoff:
+            continue
+        if _eligible(snap,cutoff=cutoff) is None or _cross_tf_identity(bar)!=_cross_tf_identity(target):
+            return S3State454.BLOCKED
+        if not base.private_higher_low<=bar.close<=base.private_resistance:
+            return S3State454.NONMATCH
+    return S3State454.MATCH
+
+
+def _trend457(inputs,plan,p,early,target):
+    daily=inputs.snapshots_for(Timeframe.D1)
+    history,state=_history454(daily,p.d1,target)
+    if history is None:
+        return S3Ingredient454(state,"RF_D1_CONTEXT_UNRESOLVED")
+    cutoff=target.market_bar_key.bar_start_utc
+    updated,_=_sequence(daily[plan.d1.stop:p.d1.stop],cutoff=cutoff)
+    if updated is None:
+        return S3Ingredient454(S3State454.BLOCKED,"RF_D1_UPDATE_NOT_CAUSAL")
+    trend=_trend454(history,p.d1,cutoff)
+    if trend.state is not S3State454.MATCH:
+        return trend
+    if (trend.private_d1_hh<early.private_d1_hh or trend.private_higher_low<early.private_higher_low
+            or any(not early.private_higher_low<=x.close<=early.private_resistance for x in updated)):
+        return S3Ingredient454(S3State454.NONMATCH,"RF_D1_UPTREND_NOT_PRESERVED")
+    if plan.resistance.timeframe is Timeframe.W1:
+        context,state=_history454(inputs.snapshots_for(Timeframe.W1),plan.resistance,target)
+        if context is None:
+            return S3Ingredient454(state,"RF_W1_TARGET_NOT_CURRENT")
+    return trend
+
+
+def _low457(rows,p,prior,early):
+    cutoff=prior.market_bar_key.bar_start_utc
+    history=rows[p.history_start:p.target_index-1]
+    bars,_=_sequence(history,cutoff=cutoff)
+    if (not bars or bars[0].market_bar_key.bar_start_utc<early.verified_at_utc
+            or _source_identity(bars[0])!=_source_identity(prior)):
+        return None,S3State454.BLOCKED
+    pivot=inspect_causal_pivot(history,candidate_index=p.low_index,side=StructureSide.LOW,
+        left_count=p.left_count,right_count=p.right_count,tie_policy=p.tie_policy,as_of_utc=cutoff)
+    if pivot.state is not GeometryState.DESCRIPTIVE_ONLY:
+        return None,S3State454.BLOCKED
+    if pivot.geometric_extremum is not True:
+        return None,S3State454.NONMATCH
+    return pivot.pivot_price,S3State454.MATCH
+
+
+def _cross457(prior,target,low,atr,p,trend,early):
+    if low<=trend.private_higher_low or not trend.private_higher_low<=target.close<=early.private_resistance:
+        state=S3State454.NONMATCH
+    elif p.candidate_epsilon is None:
+        state=S3State454.DISTANCE
+    else:
+        match=prior.close>=low and target.close<low-p.candidate_epsilon*atr
+        state=S3State454.MATCH if match else S3State454.NONMATCH
+    return S3Ingredient454(state,"RF_MICRO_LOW_PROFIT_TAKING_CANDIDATE_ONLY",
+        trend.private_d1_hh,trend.private_higher_low,early.private_resistance,atr,
+        private_micro_hl=early.private_micro_hl,private_confirm_low=low)
+
+
+def _confirm457(inputs,plan,early):
+    p=plan.rf
+    if early is None or early.state is not S3State454.MATCH:
+        return S3Ingredient454(S3State454.BLOCKED,"RF_RE_NOT_MATCHED")
+    rows=inputs.snapshots_for(p.timeframe)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S3Ingredient454(S3State454.MISSING,"RF_TARGET_OR_ATR_MISSING")
+    early_bar=inputs.snapshots_for(Timeframe.M15)[plan.choch.target_index].selected
+    prior,target=_pair441(inputs,p,early_bar)
+    if prior is None:
+        return S3Ingredient454(S3State454.BLOCKED,"RF_PAIR_NOT_CAUSAL")
+    low,state=_low457(rows,p,prior,early_bar)
+    if low is None:
+        return S3Ingredient454(state,"RF_LOW_UNRESOLVED_OR_NONMATCH")
+    for tf in (Timeframe.H1,Timeframe.M15):
+        state=_observed457(inputs.snapshots_for(tf),early_bar,target,early)
+        if state is not S3State454.MATCH:
+            return S3Ingredient454(state,"RF_INTERVENING_CONTEXT_INVALIDATED")
+    trend=_trend457(inputs,plan,p,early,target)
+    if trend.state is not S3State454.MATCH:
+        return trend
+    atr=_atr441(inputs,p,target)
+    if atr is None or atr<=0:
+        return S3Ingredient454(S3State454.BLOCKED,"RF_ATR_UNRESOLVED")
+    return _cross457(prior,target,low,atr,p,trend,early)
+
+
 def inspect_s3_preview(inputs,*,strategy,variant_id,plan):
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
             or type(plan) is not S3ContextPlan454 or variant_id not in
             ("S3/E_MICRO_CHOCH","S3/E_TP","S3/F_MICRO_BREAK","S3/F_TP")):
         raise ValueError("MST_454_EXACT_SCOPE")
     _validate454(plan)
+    if plan.rf is not None:
+        _validate_rf457(plan.rf,plan,variant_id)
+    early_variant="S3/E_MICRO_CHOCH" if plan.rf is not None else variant_id
     if plan.choch is not None:
-        _validate_choch456(plan.choch,plan,variant_id)
+        _validate_choch456(plan.choch,plan,early_variant)
     route=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R0")
     base=_r0454(inputs,plan)
     assessments=((route,base),)
@@ -342,7 +478,13 @@ def inspect_s3_preview(inputs,*,strategy,variant_id,plan):
         rc=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_C")
         near=_near455(inputs,plan,base)
         assessments+=((rc,near),)
+    early=None
     if plan.choch is not None:
-        re=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_E")
-        assessments+=((re,_choch456(inputs,plan,near)),)
+        re=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=early_variant,phase="R_E")
+        early=_choch456(inputs,plan,near)
+        assessments+=((re,early),)
+    if plan.rf is not None:
+        rf=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,
+                              phase="R_F",selected_frame=plan.rf.timeframe)
+        assessments+=((rf,_confirm457(inputs,plan,early)),)
     return S3Preview454(assessments)
