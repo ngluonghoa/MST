@@ -6,14 +6,15 @@ from enum import Enum
 from .causal_compression_pivot402 import (
     CompressionPivotPlan402, CompressionPivotCandidate402, inspect_compression_upper_pivot,
 )
-from .causal_compression_candidate395 import AtrPercentilePlan395, inspect_atr_percentile_candidate
+from .causal_compression_approach403 import CompressionEarlyPlan403, compression_method398, inspect_compression_approach
+from .causal_compression_candidate395 import AtrPercentilePlan395
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
 from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_indicators import (
     CausalIndicatorResult, IndicatorState, VolumeBasisWitness, VolumeComparisonBar,
     VolumeSessionClass, calculate_rvol_tf20_raw_matched, calculate_wilder_atr14,
 )
-from .causal_range_percentile397 import RangePercentilePlan397, inspect_range_percentile_candidate
+from .causal_range_percentile397 import RangePercentilePlan397
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _source_identity,
     inspect_closed_bos_geometry,
@@ -70,6 +71,7 @@ class B6CompressionPlan396:
     percentile: AtrPercentilePlan395 | RangePercentilePlan397
     dryup: DryUpPlan399 | None = None
     upper_pivot: CompressionPivotPlan402 | None = None
+    early: CompressionEarlyPlan403 | None = None
 
 
 @dataclass(frozen=True)
@@ -447,16 +449,8 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     return B6EnginePreview387(assessments)
 
 
-def _compression_method398(p):
-    if type(p) is AtrPercentilePlan395:
-        return inspect_atr_percentile_candidate, 14, "EXACT_ATR_WINDOW_MISSING"
-    if type(p) is RangePercentilePlan397:
-        return inspect_range_percentile_candidate, 0, "EXACT_RANGE_WINDOW_MISSING"
-    raise ValueError("MST_398_EXPLICIT_COMPRESSION_METHOD")
-
-
 def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
-    """Explicit alternate R_C candidate only; never infer R0/RE/RF."""
+    """Explicit compression R_C and optional R_E geometry; no R0/R_F."""
     if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
         raise ValueError("MST_396_BASELINE_SCOPE")
     if variant_id != "B6/C_COMPRESSION" or type(plan) is not B6CompressionPlan396:
@@ -465,7 +459,7 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         raise ValueError("MST_396_EXPLICIT_TARGET_INDEX")
     p = plan.percentile
     # Validate the explicit parameters even if the exact window is missing.
-    method, warmup, missing = _compression_method398(p)
+    method, warmup, missing = compression_method398(p)
     method((), plan=p, as_of_utc=inputs.as_of_utc)
     rows = inputs.snapshots_for(Timeframe.D1)
     start = plan.target_index - (warmup + p.reference_count)
@@ -489,4 +483,13 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         result = replace(result, upper_pivot=pivot)
     route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy,
                                variant_id=variant_id, phase="R_C")
-    return B6EnginePreview387(((route, result),))
+    assessments = ((route, result),)
+    if plan.early is not None:
+        early = inspect_compression_approach(rows, inputs.snapshots_for(Timeframe.M15),
+            target_index=plan.target_index, percentile=p, upper_pivot=plan.upper_pivot,
+            plan=plan.early, as_of_utc=inputs.as_of_utc,
+            expected_base_count=None if plan.dryup is None else plan.dryup.base_count)
+        re = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id, phase="R_E")
+        assessments += ((re, B6Ingredient387(B6State387(early.state), early.reason,
+                                             distance=early.distance, approach=early.approach)),)
+    return B6EnginePreview387(assessments)
