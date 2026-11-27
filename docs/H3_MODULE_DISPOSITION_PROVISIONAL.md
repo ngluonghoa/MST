@@ -15,7 +15,7 @@ these require separate consumer, migration and rollback evidence.
 | b5_formula_geometry | domain_and_reference | 624 | 24 | 76 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | b5_phase_contract | domain_and_reference | 261 | 46 | 117 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_temporal_split_audit | domain_and_reference | 235 | 35 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| b6_baseline_preview387 | domain_and_reference | 460 | 10 | 26 | 2 | KEEP | none |
+| b6_baseline_preview387 | domain_and_reference | 460 | 11 | 26 | 2 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 105 | 3 | 22 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -38,7 +38,7 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 410 | 13 | 24 | 2 | KEEP | none |
+| engine | domain_and_reference | 410 | 13 | 25 | 2 | KEEP | none |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
