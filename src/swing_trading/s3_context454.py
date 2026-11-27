@@ -5,7 +5,7 @@ from enum import Enum
 
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
-    _sequence, inspect_causal_pivot,
+    _sequence, _source_identity, inspect_causal_pivot,
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
@@ -13,6 +13,7 @@ from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .s1_choch442 import _pivots442, _validate_pivots442
 from .s1_context_preview439 import _tail439
+from .s1_failed_break441 import _atr441
 
 
 @dataclass(frozen=True)
@@ -38,10 +39,20 @@ class S3Resistance454:
 
 
 @dataclass(frozen=True)
+class S3NearPlan455:
+    target_index: int
+    atr_start: int
+    atr_stop: int
+    candidate_k_near: Decimal | None
+    candidate_min_extension: Decimal | None
+
+
+@dataclass(frozen=True)
 class S3ContextPlan454:
     anchor_index: int
     d1: S3TrendWindow454
     resistance: S3Resistance454
+    near: S3NearPlan455 | None=None
 
 
 class S3State454(str,Enum):
@@ -59,6 +70,9 @@ class S3Ingredient454:
     private_d1_hh: Decimal | None=None
     private_higher_low: Decimal | None=None
     private_resistance: Decimal | None=None
+    private_atr: Decimal | None=None
+    private_distance: Decimal | None=None
+    private_extension_atr: Decimal | None=None
 
 
 @dataclass(frozen=True)
@@ -96,6 +110,24 @@ def _validate454(p):
         raise ValueError("MST_454_EXPLICIT_RESISTANCE_FRAME")
     if type(r.pivot_index) is not int or not 0<=r.pivot_index<r.stop-r.start:
         raise ValueError("MST_454_EXACT_RESISTANCE_PIVOT")
+
+
+    if p.near is not None:
+        _validate_near455(p.near,p.anchor_index)
+
+
+def _validate_near455(p,anchor):
+    if type(p) is not S3NearPlan455:
+        raise ValueError("MST_455_EXACT_NEAR_PLAN")
+    if any(type(i) is not int for i in (p.target_index,p.atr_start,p.atr_stop)):
+        raise ValueError("MST_455_EXACT_INDICES")
+    if not anchor<p.target_index<512 or not 0<=p.atr_start<p.atr_stop<=512:
+        raise ValueError("MST_455_BOUNDED_WINDOW")
+    if p.atr_stop-p.atr_start<15:
+        raise ValueError("MST_455_ATR_WARMUP")
+    for k in (p.candidate_k_near,p.candidate_min_extension):
+        if k is not None and (type(k) is not Decimal or not k.is_finite() or k<0):
+            raise ValueError("MST_455_EXPLICIT_THRESHOLDS")
 
 
 def _history454(rows,p,anchor):
@@ -168,6 +200,46 @@ def _r0454(inputs,plan):
     return _resistance454(inputs,plan.resistance,anchor,trend)
 
 
+def _near_geometry455(base,anchor,target,prior,atr,p):
+    distance=base.private_resistance-target.close
+    extension=(target.close-base.private_higher_low)/atr
+    if target.close<=anchor.close or distance<0 or extension<0:
+        state=S3State454.NONMATCH
+    elif any(not base.private_higher_low<=b.close<=base.private_resistance for b in prior):
+        state=S3State454.NONMATCH
+    elif p.candidate_k_near is None or p.candidate_min_extension is None:
+        state=S3State454.DISTANCE
+    elif distance<=p.candidate_k_near*atr and extension>=p.candidate_min_extension:
+        state=S3State454.MATCH
+    else:
+        state=S3State454.NONMATCH
+    return S3Ingredient454(state,"NEAR_STRUCTURAL_TARGET_EXTENSION_CANDIDATE_ONLY",
+        base.private_d1_hh,base.private_higher_low,base.private_resistance,atr,distance,extension)
+
+
+def _near455(inputs,plan,base):
+    p=plan.near
+    if base.state is not S3State454.MATCH:
+        return S3Ingredient454(S3State454.BLOCKED,"R0_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S3Ingredient454(S3State454.MISSING,"NEAR_TARGET_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S3Ingredient454(S3State454.BLOCKED,"NEAR_TARGET_NOT_ELIGIBLE")
+    prior,_=_sequence(rows[plan.anchor_index:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    if not prior or _source_identity(prior[0])!=_source_identity(target):
+        return S3Ingredient454(S3State454.BLOCKED,"NEAR_PRIOR_NOT_CAUSAL")
+    for frame,window in ((Timeframe.D1,plan.d1),(plan.resistance.timeframe,plan.resistance)):
+        history,state=_history454(inputs.snapshots_for(frame),window,target)
+        if history is None:
+            return S3Ingredient454(state,"NEAR_CONTEXT_NOT_CURRENT")
+    atr=_atr441(inputs,p,target)
+    if atr is None or atr<=0:
+        return S3Ingredient454(S3State454.BLOCKED,"NEAR_ATR_UNRESOLVED")
+    return _near_geometry455(base,prior[0],target,prior,atr,p)
+
+
 def inspect_s3_preview(inputs,*,strategy,variant_id,plan):
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
             or type(plan) is not S3ContextPlan454 or variant_id not in
@@ -175,4 +247,9 @@ def inspect_s3_preview(inputs,*,strategy,variant_id,plan):
         raise ValueError("MST_454_EXACT_SCOPE")
     _validate454(plan)
     route=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R0")
-    return S3Preview454(((route,_r0454(inputs,plan)),))
+    base=_r0454(inputs,plan)
+    assessments=((route,base),)
+    if plan.near is not None:
+        rc=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_C")
+        assessments+=((rc,_near455(inputs,plan,base)),)
+    return S3Preview454(assessments)
