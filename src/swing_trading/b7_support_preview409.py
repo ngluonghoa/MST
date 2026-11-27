@@ -6,7 +6,7 @@ from enum import Enum
 from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
-    inspect_causal_pivot, _source_identity,
+    inspect_causal_pivot, inspect_closed_bos_geometry, _source_identity,
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
@@ -17,6 +17,18 @@ from .zone_manifest_v03 import inspect_near_zone_arithmetic
 
 @dataclass(frozen=True)
 class B7ReclaimPlan410:
+    candidate_epsilon: Decimal
+
+
+@dataclass(frozen=True)
+class B7ChochPlan411:
+    history_start: int
+    history_stop: int
+    high_indices: tuple[int, int]
+    low_indices: tuple[int, int]
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
     candidate_epsilon: Decimal
 
 
@@ -34,6 +46,7 @@ class B7SupportPlan409:
     atr_stop: int
     candidate_k_near: Decimal | None
     reclaim: B7ReclaimPlan410 | None = None
+    choch: B7ChochPlan411 | None = None
 
 
 class B7SupportState409(str, Enum):
@@ -145,6 +158,72 @@ def _reclaim410(inputs, plan, rc):
     return B7SupportIngredient409(state, "SAME_SUPPORT_CLOSED_RECLAIM_GEOMETRY_ONLY")
 
 
+def _validate_micro_pair411(pair):
+    if type(pair) is not tuple or len(pair) != 2 or any(type(i) is not int or i < 0 for i in pair):
+        raise ValueError("MST_411_EXPLICIT_MICRO_PAIR")
+
+
+def _validate_choch411(plan, variant_id, prior_index):
+    if type(plan) is not B7ChochPlan411 or variant_id != "B7/E_CHOCH":
+        raise ValueError("MST_411_EXPLICIT_CHOCH_VARIANT")
+    if (type(plan.history_start) is not int or type(plan.history_stop) is not int
+            or not 0 <= plan.history_start < plan.history_stop <= prior_index):
+        raise ValueError("MST_411_PRE_PRIOR_HISTORY")
+    _validate_micro_pair411(plan.high_indices)
+    _validate_micro_pair411(plan.low_indices)
+    h1,h2 = plan.high_indices
+    l1,l2 = plan.low_indices
+    if not (h1 < l1 < h2 < l2 or l1 < h1 < l2 < h2):
+        raise ValueError("MST_411_ALTERNATING_MICRO_PAIRS")
+    _validate_micro_policy411(plan)
+
+
+def _validate_micro_policy411(plan):
+    if (type(plan.left_count) is not int or not 1 <= plan.left_count <= 40
+            or type(plan.right_count) is not int or not 1 <= plan.right_count <= 40
+            or type(plan.tie_policy) is not TiePolicy):
+        raise ValueError("MST_411_EXPLICIT_MICRO_POLICY")
+    epsilon = plan.candidate_epsilon
+    if type(epsilon) is not Decimal or not epsilon.is_finite() or epsilon < 0:
+        raise ValueError("MST_411_EXPLICIT_EPSILON")
+
+
+def _micro_shape411(history, p, cutoff):
+    def pair(indices, side):
+        return tuple(inspect_causal_pivot(history, candidate_index=i,
+            left_count=p.left_count, right_count=p.right_count, side=side,
+            tie_policy=p.tie_policy, as_of_utc=cutoff) for i in indices)
+    highs, lows = pair(p.high_indices, StructureSide.HIGH), pair(p.low_indices, StructureSide.LOW)
+    if any(x.state is not GeometryState.DESCRIPTIVE_ONLY or x.geometric_extremum is not True
+           for x in highs+lows):
+        return None, None
+    falling = highs[1].pivot_price < highs[0].pivot_price and lows[1].pivot_price < lows[0].pivot_price
+    return falling, highs[1].pivot_price
+
+
+def _choch411(inputs, plan):
+    p = plan.choch
+    rows = inputs.snapshots_for(Timeframe.M15)
+    index = plan.target_index + 1
+    history = _window409(rows, p.history_start, p.history_stop)
+    daily = _window409(inputs.snapshots_for(Timeframe.D1), plan.atr_start, plan.atr_stop)
+    if index >= len(rows) or not history or len(daily) < 15:
+        return B7SupportIngredient409(B7SupportState409.MISSING, "MICRO_PAIR_OR_ATR_MISSING")
+    cutoff = rows[index-1].market_bar_key.bar_start_utc
+    falling, upper = _micro_shape411(history, p, cutoff)
+    if falling is None:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "MICRO_PIVOTS_UNRESOLVED")
+    bos = inspect_closed_bos_geometry(history, pivot_index=p.high_indices[1],
+        left_count=p.left_count, right_count=p.right_count, previous=rows[index-1],
+        breakout=rows[index], atr_d1_history=daily, side=StructureSide.HIGH,
+        tie_policy=p.tie_policy, candidate_epsilon=p.candidate_epsilon, as_of_utc=inputs.as_of_utc)
+    if bos.state is GeometryState.BLOCKED:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "MICRO_CROSS_BLOCKED")
+    match = falling and bos.candidate_cross is True and bos.previous_close <= upper
+    state = B7SupportState409.MATCH if match else B7SupportState409.NONMATCH
+    return B7SupportIngredient409(state, "PRIOR_LH_LL_AND_CLOSED_MICRO_HIGH_CROSS_ONLY")
+
+
 def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
     """Explicit M15 low and D1/H1 pivot diagnostic; RC timeframe remains pending."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -161,4 +240,9 @@ def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
         early = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
                                    variant_id=variant_id, phase="R_E")
         assessments += ((early, _reclaim410(inputs, plan, rc)),)
+    if plan.choch is not None:
+        _validate_choch411(plan.choch, variant_id, plan.target_index)
+        early = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
+                                   variant_id=variant_id, phase="R_E")
+        assessments += ((early, _choch411(inputs, plan)),)
     return B7SupportPreview409(assessments)
