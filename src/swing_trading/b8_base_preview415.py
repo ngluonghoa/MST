@@ -17,6 +17,8 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+from .b8_portfolio429 import (B8PortfolioPlan429, B8PortfolioResult429,
+                              inspect_portfolio429, validate_portfolio429)
 from .b8_liquidity428 import (B8LiquidityPlan428, B8LiquidityResult428,
                                inspect_liquidity428, validate_liquidity428)
 from .b8_settlement427 import (B8SettlementPlan427, B8SettlementResult427,
@@ -66,6 +68,7 @@ class B8ConfirmPlan418:
     band: B8PriceBand426 | None = None
     settlement: B8SettlementPlan427 | None = None
     liquidity: B8LiquidityPlan428 | None = None
+    portfolio: B8PortfolioPlan429 | None = None
 
 
 @dataclass(frozen=True)
@@ -112,6 +115,7 @@ class B8Ingredient415:
     band: B8PriceBandResult426 | None = None
     settlement: B8SettlementResult427 | None = None
     liquidity: B8LiquidityResult428 | None = None
+    portfolio: B8PortfolioResult429 | None = None
 
 
 @dataclass(frozen=True)
@@ -515,6 +519,28 @@ def _rf_liquidity428(inputs,p,geometry,strategy):
     return replace(geometry,state=state,reason=result.reason,liquidity=result)
 
 
+def _rf_portfolio429(inputs,p,geometry,strategy):
+    plan=p.rf.portfolio
+    if plan is None:
+        return geometry
+    validate_portfolio429(plan)
+    if geometry.state is not B8State415.MATCH:
+        return geometry
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    result=inspect_portfolio429(target,plan,strategy=strategy,
+        shares=p.rf.liquidity.order_shares if geometry.liquidity else None,
+        net_risk=geometry.risk.net_risk if geometry.risk else None,
+        buy_fee_rate=p.rf.risk.buy_fee_rate if geometry.risk else None)
+    state=geometry.state
+    if result.state=="BLOCKED":
+        state=B8State415.BLOCKED
+    elif result.state=="MISSING_INPUT":
+        state=B8State415.MISSING
+    elif result.candidate_match is False:
+        state=B8State415.NONMATCH
+    return replace(geometry,state=state,reason=result.reason,portfolio=result)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -551,5 +577,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         risk = _rf_risk424(inputs, plan, base, extension)
         band = _rf_band426(inputs, plan, risk)
         settlement = _rf_settlement427(inputs, plan, band, strategy)
-        assessments += ((rf, _rf_liquidity428(inputs, plan, settlement, strategy)),)
+        liquidity = _rf_liquidity428(inputs, plan, settlement, strategy)
+        assessments += ((rf, _rf_portfolio429(inputs, plan, liquidity, strategy)),)
     return B8Preview415(assessments)
