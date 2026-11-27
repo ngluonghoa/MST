@@ -58,6 +58,17 @@ class UnifiedMode459Tests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 configuration_digest(bad)
 
+    def test_immutable_string_flags_digest_deterministic(self):
+        req = prev.request("B2", b2.config())
+        def digest(flags):
+            return configuration_digest((replace(req, plan=flags),))
+        self.assertEqual(digest(frozenset(("A", "B"))), digest(frozenset(("B", "A"))))
+        self.assertNotEqual(digest(frozenset(("A",))), digest(frozenset(("B",))))
+        self.assertNotEqual(digest(frozenset(("A",))), digest(("A",)))
+        for bad in ({"A"}, frozenset((1,))):
+            with self.assertRaises(ValueError):
+                digest(bad)
+
     def test_summary_redacted_and_no_promotion(self):
         inputs = b2.model("B2")
         p = profile((prev.request("B2", b2.config()),))

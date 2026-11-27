@@ -43,7 +43,7 @@ these require separate consumer, migration and rollback evidence.
 | causal_compression_pivot402 | domain_and_reference | 76 | 11 | 30 | 2 | KEEP | none |
 | causal_contraction_candidate386 | domain_and_reference | 140 | 10 | 25 | 1 | KEEP | none |
 | causal_cross_tf_candidate392 | domain_and_reference | 97 | 10 | 33 | 2 | KEEP | none |
-| causal_indicators | domain_and_reference | 404 | 18 | 58 | 24 | KEEP | HIGH_FAN_IN |
+| causal_indicators | domain_and_reference | 404 | 18 | 58 | 25 | KEEP | HIGH_FAN_IN |
 | causal_range_candidate384 | domain_and_reference | 129 | 8 | 37 | 1 | KEEP | none |
 | causal_range_percentile397 | domain_and_reference | 75 | 7 | 27 | 3 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 38 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
@@ -55,7 +55,7 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 489 | 39 | 77 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
+| engine | domain_and_reference | 492 | 40 | 79 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
@@ -67,7 +67,7 @@ these require separate consumer, migration and rollback evidence.
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_renderer | domain_and_reference | 352 | 10 | 129 | 1 | IMPROVE | FUNCTION_90_PLUS |
-| market_data | domain_and_reference | 162 | 23 | 29 | 69 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| market_data | domain_and_reference | 162 | 23 | 29 | 70 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -96,7 +96,7 @@ these require separate consumer, migration and rollback evidence.
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 119 | 11 | 23 | 7 | KEEP | none |
 | s1_confirm443 | domain_and_reference | 75 | 9 | 23 | 1 | KEEP | none |
-| s1_context_preview439 | domain_and_reference | 199 | 9 | 37 | 6 | KEEP | none |
+| s1_context_preview439 | domain_and_reference | 199 | 9 | 37 | 7 | KEEP | none |
 | s1_distribution440 | domain_and_reference | 96 | 11 | 21 | 2 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 81 | 11 | 17 | 9 | KEEP | none |
 | s1_holdings445 | domain_and_reference | 64 | 11 | 15 | 7 | KEEP | none |
@@ -113,7 +113,8 @@ these require separate consumer, migration and rollback evidence.
 | s4_rejection467 | domain_and_reference | 364 | 12 | 19 | 2 | KEEP | none |
 | s5_holdings477 | domain_and_reference | 142 | 10 | 18 | 1 | KEEP | none |
 | s5_transition473 | domain_and_reference | 445 | 15 | 15 | 3 | KEEP | none |
-| s6_breakout479 | domain_and_reference | 431 | 15 | 18 | 1 | KEEP | none |
+| s6_breakout479 | domain_and_reference | 431 | 15 | 18 | 2 | KEEP | none |
+| s6_rf_volume483 | domain_and_reference | 87 | 14 | 17 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
@@ -126,7 +127,7 @@ these require separate consumer, migration and rollback evidence.
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 2 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | structural_phase_evidence | domain_and_reference | 611 | 34 | 110 | 6 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| unified_mode459 | domain_and_reference | 117 | 11 | 22 | 1 | KEEP | none |
+| unified_mode459 | domain_and_reference | 121 | 13 | 26 | 1 | KEEP | none |
 | validation_replay461 | domain_and_reference | 134 | 12 | 19 | 0 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |

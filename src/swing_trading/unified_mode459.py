@@ -35,6 +35,10 @@ def _typed(value):
         return ["utc", value.isoformat()]
     if isinstance(value, Enum):
         return ["enum", type(value).__module__, type(value).__qualname__, _typed(value.value)]
+    if type(value) is frozenset:
+        if any(type(v) is not str for v in value):
+            raise ValueError("MST_459_STRING_FLAGS_REQUIRED")
+        return ["frozenset[str]", sorted(value)]
     if type(value) is tuple:
         return ["tuple", [_typed(v) for v in value]]
     if is_dataclass(value) and not isinstance(value, type):
