@@ -1,0 +1,3 @@
+# §448 — S2 explicit causal D1 bearish and H1 resistance/LH
+
+Add opt-in S2/BASE context plan; legacy B2/S2 independent geometry remains unchanged. Explicit D1 alternating descending high and low pairs and H1 descending high pair, latest supplied closed windows before M15 anchor, same cross-timeframe source/revision scope, first pivot known before second starts, no D1 close above critical LH after second high. H1 resistance no higher than D1 critical LH and anchor close strictly below it. Missing H1 is not replaced by D1. This is conservative structural candidate geometry, not approved trend, rejection, confirmation or sell label. Six fictional regression methods.
