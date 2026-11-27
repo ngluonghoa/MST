@@ -24,7 +24,7 @@ def _rf_risk424(inputs, p, base, geometry, states):
     return _rf_risk_result424(geometry,result,states)
 
 
-def _rf_risk_result424(geometry,result):
+def _rf_risk_result424(geometry,result,states):
     if geometry.extension_candidate_match is False:
         return replace(geometry,risk=result)
     if result.state=="BLOCKED":
