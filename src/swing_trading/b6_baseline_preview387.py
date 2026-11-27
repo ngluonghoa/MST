@@ -3,6 +3,9 @@ from dataclasses import asdict, dataclass, replace
 from decimal import Decimal
 from enum import Enum
 
+from .causal_compression_pivot402 import (
+    CompressionPivotPlan402, CompressionPivotCandidate402, inspect_compression_upper_pivot,
+)
 from .causal_compression_candidate395 import AtrPercentilePlan395, inspect_atr_percentile_candidate
 from .causal_contraction_candidate386 import ContractionPlan386, inspect_d1_contraction_candidate
 from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
@@ -66,6 +69,7 @@ class B6CompressionPlan396:
     target_index: int
     percentile: AtrPercentilePlan395 | RangePercentilePlan397
     dryup: DryUpPlan399 | None = None
+    upper_pivot: CompressionPivotPlan402 | None = None
 
 
 @dataclass(frozen=True)
@@ -101,6 +105,7 @@ class B6Ingredient387:
     rvol: CausalIndicatorResult | None = None
     compression: object | None = None
     dryup: DryUpCandidate399 | None = None
+    upper_pivot: CompressionPivotCandidate402 | None = None
 
     @property
     def status(self):
@@ -477,6 +482,11 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
         dryup = inspect_bound_d1_volume_dryup(rows, base_stop=plan.target_index+1,
             plan=plan.dryup, as_of_utc=inputs.as_of_utc)
         result = replace(result, dryup=dryup)
+    if plan.upper_pivot is not None:
+        pivot = inspect_compression_upper_pivot(rows, target_index=plan.target_index,
+            plan=plan.upper_pivot, as_of_utc=inputs.as_of_utc,
+            expected_base_count=None if plan.dryup is None else plan.dryup.base_count)
+        result = replace(result, upper_pivot=pivot)
     route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy,
                                variant_id=variant_id, phase="R_C")
     return B6EnginePreview387(((route, result),))
