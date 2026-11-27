@@ -99,7 +99,7 @@ these require separate consumer, migration and rollback evidence.
 | s1_distribution440 | domain_and_reference | 96 | 11 | 21 | 2 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 100 | 11 | 17 | 4 | KEEP | none |
 | s1_holdings445 | domain_and_reference | 64 | 11 | 15 | 2 | KEEP | none |
-| s1_major446 | domain_and_reference | 103 | 12 | 24 | 1 | KEEP | none |
+| s1_major446 | domain_and_reference | 103 | 9 | 23 | 1 | KEEP | none |
 | s1_rf_volume444 | domain_and_reference | 59 | 7 | 18 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
