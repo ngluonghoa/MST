@@ -31,6 +31,7 @@ from .s4_rejection467 import S4RejectionPlan467, inspect_s4_rejection_preview, S
 from .s4_holdings471 import S4HoldingsPlan471, inspect_s4_holdings_preview, S4StrictPlan472, inspect_s4_strict_preview
 from .s5_transition473 import S5TransitionPlan473,S5Preview473,inspect_s5_transition_preview,S5RallyPlan474,inspect_s5_rally_preview,S5EarlyPlan475,inspect_s5_early_preview,S5ConfirmPlan476,inspect_s5_confirm_preview
 from .s5_holdings477 import S5HoldingsPlan477,inspect_s5_holdings_preview,S5StrictPlan478,inspect_s5_strict_preview
+from .s6_breakout479 import S6BreakoutPlan479,S6Preview479,inspect_s6_breakout_preview
 from .b6_baseline_preview387 import (B6EnginePlan387, B6EnginePreview387, B6CompressionPlan396,
                                      inspect_b6_baseline_preview, inspect_b6_compression_preview)
 from .b7_support_preview409 import B7SupportPlan409, B7SupportPreview409, inspect_b7_support_preview
@@ -101,7 +102,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463 | S3TPConfirmPlan464 | S3HoldingsPlan465 | S3StrictPlan466 | S4RejectionPlan467 | S4FalseBreakPlan468 | S4BosDownPlan469 | S4ConfirmPlan470 | S4HoldingsPlan471 | S4StrictPlan472 | S5TransitionPlan473 | S5RallyPlan474 | S5EarlyPlan475 | S5ConfirmPlan476 | S5HoldingsPlan477 | S5StrictPlan478
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463 | S3TPConfirmPlan464 | S3HoldingsPlan465 | S3StrictPlan466 | S4RejectionPlan467 | S4FalseBreakPlan468 | S4BosDownPlan469 | S4ConfirmPlan470 | S4HoldingsPlan471 | S4StrictPlan472 | S5TransitionPlan473 | S5RallyPlan474 | S5EarlyPlan475 | S5ConfirmPlan476 | S5HoldingsPlan477 | S5StrictPlan478 | S6BreakoutPlan479
 
 
 @dataclass(frozen=True)
@@ -223,7 +224,7 @@ def _s7_states377(preview):
 
 
 def _preview_states377(preview):
-    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385, B6EnginePreview387, B7SupportPreview409, B8Preview415, S1Preview439, S2Preview448, S3Preview454, S5Preview473):
+    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385, B6EnginePreview387, B7SupportPreview409, B8Preview415, S1Preview439, S2Preview448, S3Preview454, S5Preview473, S6Preview479):
         return _pair_states377(preview)
     if type(preview) is B5RFPreview373:
         return _b5_states377(preview)
@@ -267,6 +268,8 @@ def _request_supported376(request):
         return request.zone_id == "B8"
     if type(request.plan) is B7SupportPlan409:
         return request.zone_id == "B7"
+    if type(request.plan) is S6BreakoutPlan479:
+        return request.zone_id == "S6"
     if type(request.plan) in (S5TransitionPlan473,S5RallyPlan474,S5EarlyPlan475,S5ConfirmPlan476,S5HoldingsPlan477,S5StrictPlan478):
         return request.zone_id == "S5"
     if type(request.plan) in (S4RejectionPlan467, S4FalseBreakPlan468, S4BosDownPlan469, S4ConfirmPlan470, S4HoldingsPlan471, S4StrictPlan472):
@@ -342,6 +345,8 @@ def _dispatch375(inputs, request):
         return inspect_b6_compression_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is B6EnginePlan387:
         return inspect_b6_baseline_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
+    if type(plan) is S6BreakoutPlan479:
+        return inspect_s6_breakout_preview(inputs,strategy=strategy,variant_id=variant,plan=plan)
     if type(plan) is S5StrictPlan478:
         return inspect_s5_strict_preview(inputs,strategy=strategy,variant_id=variant,plan=plan)
     if type(plan) is S5HoldingsPlan477:
