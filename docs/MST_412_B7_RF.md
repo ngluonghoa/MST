@@ -1,0 +1,3 @@
+# §412 — B7 R_F later closed micro-high cross candidate
+
+Explicit M15/H1 RF plan for either early variant. Require selected R_E geometry match and exact M15 early target known before RF prior starts; no fallback or overlapping confirmation. Same cross-frame provider/basis/adjustment scope, same stream for M15. §206 causal pivot and ATR14, previous close at/below raw high and closed target above high+explicit candidate epsilon ATR. No approved continuity, trend preservation, market, risk, settlement, liquidity or trading eligibility. Six synthetic tests (including full-hour H1 fixtures). Rollback: revert atomic squash PR.
