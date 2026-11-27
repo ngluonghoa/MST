@@ -94,3 +94,49 @@ def inspect_s5_holdings_preview(inputs,*,strategy,variant_id,plan):
     else:
         result=_apply477(plan,proof,anchor,target,strategy,variant_id)
     return S5Preview473(preview.assessments[:-1]+((route,result),))
+
+@dataclass(frozen=True)
+class S5StrictPlan478:
+    scenario: S5HoldingsPlan477
+
+
+@dataclass(frozen=True)
+class S5StrictIngredient478:
+    state: S1State439
+    reason: str
+    private_ingredient: object | None = None
+    candidate_evidence_complete: bool = False
+    mandatory_gaps: tuple[str,...] = ()
+
+
+def _strict478(proof,phase,previous):
+    if proof is None:
+        return S5StrictIngredient478(S1State439.MISSING,"EXPLICIT_PHASE_PLAN_MISSING",
+                                     mandatory_gaps=("PLAN_"+phase,))
+    if proof.state is not S1State439.MATCH:
+        return S5StrictIngredient478(proof.state,proof.reason,proof)
+    if not previous:
+        return S5StrictIngredient478(S1State439.BLOCKED,"PRIOR_STRICT_CANDIDATE_INCOMPLETE",
+                                     proof,mandatory_gaps=("PRIOR_PHASE",))
+    if phase=="R_F" and (type(proof) is not S5HoldingsIngredient477
+            or type(proof.private_holdings) is not S1HoldingsResult445
+            or proof.private_holdings.candidate_match is not True):
+        return S5StrictIngredient478(S1State439.MISSING,"RF_HOLDINGS_SCENARIO_MISSING",
+                                     proof,mandatory_gaps=("RF_SETTLED_HOLDINGS_SCENARIO",))
+    return S5StrictIngredient478(proof.state,proof.reason,proof,True)
+
+
+def inspect_s5_strict_preview(inputs,*,strategy,variant_id,plan):
+    if type(plan) is not S5StrictPlan478 or type(plan.scenario) is not S5HoldingsPlan477:
+        raise ValueError("MST_478_EXACT_STRICT_SCENARIO")
+    preview=inspect_s5_holdings_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.scenario)
+    phases=("R0","R_C","R_E","R_F")
+    if tuple(route.phase for route,_ in preview.assessments)!=phases:
+        raise ValueError("MST_478_EXACT_PHASE_CHAIN")
+    out=[]
+    previous=True
+    for route,proof in preview.assessments:
+        result=_strict478(proof,route.phase,previous)
+        previous=result.candidate_evidence_complete
+        out.append((route,result))
+    return S5Preview473(tuple(out))
