@@ -131,3 +131,81 @@ def inspect_s6_breakout_preview(inputs,*,strategy,variant_id,plan):
         raise ValueError("MST_479_EXACT_SCOPE")
     route=route_phase_inputs(inputs,zone_id="S6",strategy=strategy,variant_id=variant_id,phase="R0")
     return S6Preview479(((route,_r0479(inputs,plan)),))
+
+@dataclass(frozen=True)
+class S6FailurePlan480:
+    breakout: S6BreakoutPlan479
+    failure_index: int
+    candidate_max_bars: int | None
+
+
+@dataclass(frozen=True)
+class S6FailureIngredient480:
+    state: S1State439
+    reason: str
+    private_pivot: Decimal | None = None
+    private_event_id: str | None = None
+    private_failure_start: datetime | None = None
+    private_failure_known: datetime | None = None
+    private_supplied_bars: int | None = None
+
+
+def _validate480(p):
+    if type(p) is not S6FailurePlan480 or type(p.breakout) is not S6BreakoutPlan479:
+        raise ValueError("MST_480_EXACT_FAILURE_PLAN")
+    _validate479(p.breakout)
+    if type(p.failure_index) is not int or not p.breakout.target_index<p.failure_index<512:
+        raise ValueError("MST_480_DISTINCT_LATER_FAILURE")
+    n=p.candidate_max_bars
+    limit=3 if p.breakout.timeframe is Timeframe.D1 else 6
+    if n is not None and (type(n) is not int or not 1<=n<=limit):
+        raise ValueError("MST_480_EXPLICIT_CANDIDATE_WINDOW")
+
+
+def _path480(inputs,p,target):
+    b=p.breakout
+    rows=inputs.snapshots_for(b.timeframe)
+    bars,_=_sequence(rows[b.target_index:p.failure_index+1],cutoff=target.verified_at_utc)
+    if not bars or len(bars)<2:
+        return None
+    if b.event_known_at_utc>bars[1].market_bar_key.bar_start_utc:
+        return None
+    for previous,current in zip(bars,bars[1:]):
+        if previous.verified_at_utc>current.market_bar_key.bar_start_utc:
+            return None
+    return bars
+
+
+def _shape480(p,target,bars,base):
+    pivot=base.private_pivot
+    elapsed=p.failure_index-p.breakout.target_index
+    if any(b.close<=pivot for b in bars[1:-1]) or target.close>pivot:
+        state=S1State439.NONMATCH
+    elif p.candidate_max_bars is None:
+        state=S1State439.DISTANCE
+    else:
+        state=S1State439.MATCH if elapsed<=p.candidate_max_bars else S1State439.NONMATCH
+    return S6FailureIngredient480(state,"FIRST_SUPPLIED_FAILURE_TO_HOLD_PIVOT_CANDIDATE_ONLY",
+        pivot,base.private_event_id,target.market_bar_key.bar_start_utc,target.verified_at_utc,elapsed)
+
+
+def _failure480(inputs,p,base):
+    if base.state is not S1State439.MATCH:
+        return S6FailureIngredient480(S1State439.BLOCKED,"BREAKOUT_NOT_MATCHED")
+    rows=inputs.snapshots_for(p.breakout.timeframe)
+    if p.failure_index>=len(rows):
+        return S6FailureIngredient480(S1State439.MISSING,"FAILURE_BAR_MISSING")
+    target=_eligible(rows[p.failure_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S6FailureIngredient480(S1State439.BLOCKED,"FAILURE_BAR_UNQUALIFIED")
+    bars=_path480(inputs,p,target)
+    if bars is None:
+        return S6FailureIngredient480(S1State439.BLOCKED,"FAILURE_PATH_NOT_CAUSAL")
+    return _shape480(p,target,bars,base)
+
+
+def inspect_s6_failure_preview(inputs,*,strategy,variant_id,plan):
+    _validate480(plan)
+    preview=inspect_s6_breakout_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.breakout)
+    route=route_phase_inputs(inputs,zone_id="S6",strategy=strategy,variant_id=variant_id,phase="R_C")
+    return S6Preview479(preview.assessments+((route,_failure480(inputs,plan,preview.assessments[0][1])),))
