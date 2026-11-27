@@ -1,0 +1,37 @@
+name: MST Market Scanner - Manual Synthetic Contract Only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mst-scanner-synthetic-manual
+  cancel-in-progress: false
+
+jobs:
+  synthetic-scanner-qa:
+    # Exact repo, immutable owner IDs and main-only manual dispatch.
+    # NO market provider access, Google auth, Drive Cache, or trading here.
+    if: >-
+      github.repository == 'ngluonghoa/MST' &&
+      github.repository_id == '1450356304' &&
+      github.repository_owner_id == '353049266' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout without persisted token
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Validate manual-only synthetic contract
+        run: python -m unittest discover -s tests -p "test_mst_market_scanner_manual_contract_lab.py" -v
+      - name: Synthetic smoke receipt (no provider, no Drive)
+        run: python scripts/mst_market_scanner_manual_contract_lab.py --synthetic-self-test
