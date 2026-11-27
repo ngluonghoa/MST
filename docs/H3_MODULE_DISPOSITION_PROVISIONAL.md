@@ -18,9 +18,10 @@ these require separate consumer, migration and rollback evidence.
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 3 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
-| b8_base_preview415 | domain_and_reference | 487 | 12 | 40 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 497 | 12 | 44 | 1 | KEEP | none |
 | b8_execution_preview430 | domain_and_reference | 122 | 9 | 20 | 1 | KEEP | none |
 | b8_liquidity428 | domain_and_reference | 95 | 10 | 15 | 2 | KEEP | none |
+| b8_mandatory435 | domain_and_reference | 59 | 9 | 14 | 1 | KEEP | none |
 | b8_portfolio429 | domain_and_reference | 97 | 11 | 11 | 2 | KEEP | none |
 | b8_price_band426 | domain_and_reference | 82 | 8 | 18 | 2 | KEEP | none |
 | b8_risk_geometry424 | domain_and_reference | 105 | 8 | 17 | 2 | KEEP | none |
