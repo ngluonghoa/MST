@@ -14,6 +14,7 @@ from .replay import require_utc
 from .s1_context_preview439 import S1State439
 from .s1_failed_break441 import validate_pair_atr442
 from .s5_transition473 import _identity473
+from .s7_retest_evidence import S7EarlyMode
 
 
 @dataclass(frozen=True)
@@ -241,3 +242,74 @@ def inspect_s7_retest487_preview(inputs,*,strategy,variant_id,plan):
     preview=inspect_s7_breakdown_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.breakdown)
     route=route_phase_inputs(inputs,zone_id="S7",strategy=strategy,variant_id=variant_id,phase="R_C")
     return S7Preview486(preview.assessments+((route,_retest487(inputs,plan,preview.assessments[0][1])),))
+
+
+@dataclass(frozen=True)
+class S7EarlyPlan488:
+    retest: S7RetestPlan487
+    mode: S7EarlyMode
+    target_index: int
+    expires_at_utc: datetime
+    policy_known_at_utc: datetime
+
+
+@dataclass(frozen=True)
+class S7EarlyIngredient488:
+    state: S1State439
+    reason: str
+    private_pivot: Decimal | None = None
+    private_event_id: str | None = None
+    private_early_known: datetime | None = None
+    private_mode: S7EarlyMode | None = None
+
+
+def _validate488(p):
+    if type(p) is not S7EarlyPlan488 or type(p.retest) is not S7RetestPlan487:
+        raise ValueError("MST_488_EXACT_EARLY_PLAN")
+    _validate487(p.retest)
+    if type(p.mode) is not S7EarlyMode or type(p.target_index) is not int:
+        raise ValueError("MST_488_EXPLICIT_SHAPE_AND_INDEX")
+    offset=0 if p.mode is S7EarlyMode.TOUCH_CLOSE_BELOW else 1
+    if p.target_index!=p.retest.target_index+offset or p.target_index>=512:
+        raise ValueError("MST_488_EXACT_RETEST_OR_NEXT_OBSERVED")
+    if any(type(v) is not datetime for v in (p.expires_at_utc,p.policy_known_at_utc)):
+        raise ValueError("MST_488_EXPLICIT_HYPOTHETICAL_CLOCK")
+    require_utc(p.expires_at_utc)
+    require_utc(p.policy_known_at_utc)
+    if p.policy_known_at_utc>p.retest.breakdown.bar_start_utc or p.expires_at_utc<=p.policy_known_at_utc:
+        raise ValueError("MST_488_POLICY_NOT_CAUSAL")
+
+
+def _shape488(p,target,retest,rc):
+    pivot=rc.private_pivot
+    if p.mode is S7EarlyMode.TOUCH_CLOSE_BELOW:
+        matched=target.high>=pivot and target.close<pivot
+    else:
+        matched=retest.close>pivot and target.close<pivot
+    return S7EarlyIngredient488(S1State439.MATCH if matched else S1State439.NONMATCH,
+        "EXACT_M15_CLOSED_REJECTION_CANDIDATE_ONLY",pivot,rc.private_event_id,
+        target.verified_at_utc,p.mode)
+
+
+def _early488(inputs,p,rc):
+    if rc.state is not S1State439.MATCH:
+        return S7EarlyIngredient488(S1State439.BLOCKED,"R_C_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows):
+        return S7EarlyIngredient488(S1State439.MISSING,"EARLY_BAR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None or target.verified_at_utc>p.expires_at_utc:
+        return S7EarlyIngredient488(S1State439.BLOCKED,"EARLY_TARGET_OR_EXPIRY_UNRESOLVED")
+    retest=rows[p.retest.target_index].selected
+    if p.mode is S7EarlyMode.LATER_CLOSE_BELOW:
+        if (_eligible(rows[p.retest.target_index],cutoff=target.market_bar_key.bar_start_utc) is None
+                or _source_identity(retest)!=_source_identity(target)):
+            return S7EarlyIngredient488(S1State439.BLOCKED,"EARLY_FOLLOWUP_NOT_CAUSAL")
+    return _shape488(p,target,retest,rc)
+
+
+def inspect_s7_early488_preview(inputs,*,strategy,variant_id,plan):
+    _validate488(plan)
+    preview=inspect_s7_retest487_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.retest)
+    route=route_phase_inputs(inputs,zone_id="S7",strategy=strategy,variant_id=variant_id,phase="R_E")
+    return S7Preview486(preview.assessments+((route,_early488(inputs,plan,preview.assessments[1][1])),))
