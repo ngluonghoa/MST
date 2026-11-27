@@ -35,6 +35,7 @@ from .s1_context_preview439 import S1ContextPlan439, S1Preview439, inspect_s1_pr
 from .s2_context448 import S2ContextPlan448, S2Preview448, inspect_s2_preview
 from .s3_context454 import S3ContextPlan454, S3Preview454, inspect_s3_preview
 from .s3_tp458 import S3TPPlan458, inspect_s3_tp_preview
+from .s3_tp_event463 import S3TPEventPlan463, inspect_s3_tp_event_preview
 from .zone_manifest_v03 import MANIFESTS
 
 PREVIEW_ZONES = ("B2", "B5", "S2", "S7")
@@ -95,7 +96,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463
 
 
 @dataclass(frozen=True)
@@ -251,7 +252,7 @@ def _request_supported376(request):
         return False
     if type(request.plan) in (B6EnginePlan387, B6CompressionPlan396):
         return request.zone_id == "B6"
-    if type(request.plan) in (S3ContextPlan454, S3TPPlan458):
+    if type(request.plan) in (S3ContextPlan454, S3TPPlan458, S3TPEventPlan463):
         return request.zone_id == "S3"
     if type(request.plan) is S2ContextPlan448:
         return request.zone_id == "S2"
@@ -308,6 +309,8 @@ def _dispatch375(inputs, request):
         request.zone_id, request.strategy, request.variant_id, request.plan)
     if type(variant) is not str or variant not in MANIFESTS[zone].variants:
         raise ValueError("MST_375_VARIANT_INVALID")
+    if type(plan) is S3TPEventPlan463:
+        return inspect_s3_tp_event_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is S3TPPlan458:
         return inspect_s3_tp_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is S3ContextPlan454:
