@@ -125,7 +125,7 @@ def _r0486(inputs,p):
     return _cross486(inputs,p,target,path,pivot)
 
 
-def inspect_s6_breakdown_preview(inputs,*,strategy,variant_id,plan):
+def inspect_s7_breakdown_preview(inputs,*,strategy,variant_id,plan):
     _validate486(plan)
     if type(strategy) is not Strategy or variant_id not in ("S7/F_MICRO_BREAK","S7/F_CONTINUATION"):
         raise ValueError("MST_486_EXACT_SCOPE")
