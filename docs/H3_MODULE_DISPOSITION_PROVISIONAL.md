@@ -19,7 +19,7 @@ these require separate consumer, migration and rollback evidence.
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 3 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
 | b8_base_preview415 | domain_and_reference | 555 | 12 | 38 | 1 | IMPROVE | FILE_500_PLUS |
-| b8_liquidity428 | domain_and_reference | 95 | 9 | 14 | 1 | KEEP | none |
+| b8_liquidity428 | domain_and_reference | 95 | 10 | 15 | 1 | KEEP | none |
 | b8_price_band426 | domain_and_reference | 82 | 8 | 18 | 1 | KEEP | none |
 | b8_risk_geometry424 | domain_and_reference | 105 | 8 | 17 | 1 | KEEP | none |
 | b8_settlement427 | domain_and_reference | 75 | 9 | 13 | 1 | KEEP | none |
