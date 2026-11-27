@@ -25,7 +25,7 @@ these require separate consumer, migration and rollback evidence.
 | b8_price_band426 | domain_and_reference | 82 | 8 | 18 | 2 | KEEP | none |
 | b8_risk_geometry424 | domain_and_reference | 105 | 8 | 17 | 2 | KEEP | none |
 | b8_settlement427 | domain_and_reference | 75 | 9 | 13 | 2 | KEEP | none |
-| b8_tod_preview432 | domain_and_reference | 65 | 18 | 25 | 1 | KEEP | none |
+| b8_tod_preview432 | domain_and_reference | 67 | 18 | 25 | 1 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 159 | 7 | 20 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
