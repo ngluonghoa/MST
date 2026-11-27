@@ -303,3 +303,129 @@ def inspect_s6_early_preview(inputs,*,strategy,variant_id,plan):
     preview=inspect_s6_failure_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.failure)
     route=route_phase_inputs(inputs,zone_id="S6",strategy=strategy,variant_id=variant_id,phase="R_E")
     return S6Preview479(preview.assessments+((route,_early481(inputs,plan,preview.assessments[1][1])),))
+
+@dataclass(frozen=True)
+class S6ConfirmPlan482:
+    early: S6EarlyPlan481
+    timeframe: Timeframe
+    target_index: int
+    history_start: int
+    low_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class S6ConfirmIngredient482:
+    state: S1State439
+    reason: str
+    private_pivot: Decimal | None = None
+    private_micro_low: Decimal | None = None
+    private_event_id: str | None = None
+
+
+def _validate482(p):
+    if type(p) is not S6ConfirmPlan482 or type(p.early) is not S6EarlyPlan481:
+        raise ValueError("MST_482_EXACT_CONFIRM_PLAN")
+    _validate481(p.early)
+    validate_pair_atr442(p,frames=(Timeframe.H1,Timeframe.D1))
+    if p.timeframe is not p.early.failure.breakout.timeframe:
+        raise ValueError("MST_482_CORRESPONDING_ORIGIN_FRAME")
+    if any(type(i) is not int for i in (p.history_start,p.low_index,p.left_count,p.right_count)):
+        raise ValueError("MST_482_EXACT_PIVOT_INDICES")
+    if not 1<=p.left_count<=40 or not 1<=p.right_count<=40 or type(p.tie_policy) is not TiePolicy:
+        raise ValueError("MST_482_EXPLICIT_PIVOT_POLICY")
+    if not 0<=p.history_start or not p.left_count<=p.low_index or not p.history_start+p.low_index+p.right_count<p.target_index-1:
+        raise ValueError("MST_482_DISTINCT_LATER_CONFIRMATION")
+
+
+def _path482(inputs,p,target,re):
+    rows=inputs.snapshots_for(p.timeframe)
+    if any(s.market_bar_key.bar_start_utc>=re.private_early_known for s in rows[:p.history_start]):
+        return None
+    path,_=_sequence(rows[p.history_start:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    if not path or _source_identity(path[0])!=_source_identity(target):
+        return None
+    if path[0].market_bar_key.bar_start_utc<re.private_early_known:
+        return None
+    early=inputs.snapshots_for(Timeframe.M15)[p.early.target_index].selected
+    if _cross_tf_identity(early)!=_cross_tf_identity(target):
+        return None
+    return path
+
+
+def _m15_recovery482(inputs,re,target):
+    cutoff=target.market_bar_key.bar_start_utc
+    for s in inputs.snapshots_for(Timeframe.M15):
+        if not re.private_early_known<=s.market_bar_key.bar_start_utc<cutoff:
+            continue
+        if s.selected is not None and s.selected.bar_end_utc>cutoff:
+            continue
+        b=_eligible(s,cutoff=cutoff)
+        if b is None or _cross_tf_identity(b)!=_cross_tf_identity(target):
+            return S1State439.BLOCKED
+        if b.close>=re.private_pivot:
+            return S1State439.NONMATCH
+    return None
+
+
+def _pivot482(inputs,p,prior):
+    rows=inputs.snapshots_for(p.timeframe)
+    return inspect_causal_pivot(rows[p.history_start:p.target_index-1],candidate_index=p.low_index,
+        side=StructureSide.LOW,left_count=p.left_count,right_count=p.right_count,
+        tie_policy=p.tie_policy,as_of_utc=prior.market_bar_key.bar_start_utc)
+
+
+def _shape482(inputs,p,target,path,re):
+    if any(b.close>=re.private_pivot for b in (*path,target)):
+        return S6ConfirmIngredient482(S1State439.NONMATCH,"RF_PIVOT_RECOVERY_OR_NOT_BELOW")
+    denial=_m15_recovery482(inputs,re,target)
+    if denial is not None:
+        return S6ConfirmIngredient482(denial,"RF_M15_PATH_OR_RECOVERY")
+    pivot=_pivot482(inputs,p,path[-1])
+    if pivot.state is not GeometryState.DESCRIPTIVE_ONLY:
+        return S6ConfirmIngredient482(S1State439.BLOCKED,"RF_MICRO_LOW_UNRESOLVED")
+    if pivot.geometric_extremum is not True or pivot.pivot_price>=re.private_pivot:
+        return S6ConfirmIngredient482(S1State439.NONMATCH,"RF_MICRO_LOW_NOT_EXACT")
+    atr=inspect_target_d1_atr(inputs,p,target)
+    if atr is None or atr<=0:
+        return S6ConfirmIngredient482(S1State439.BLOCKED,"RF_ATR_UNRESOLVED")
+    return _cross482(p,target,path[-1],re,pivot.pivot_price,atr)
+
+
+def _cross482(p,target,prior,re,low,atr):
+    if prior.close<low or target.close>=low:
+        state=S1State439.NONMATCH
+    elif p.candidate_epsilon is None:
+        state=S1State439.DISTANCE
+    else:
+        state=S1State439.MATCH if target.close<low-p.candidate_epsilon*atr else S1State439.NONMATCH
+    return S6ConfirmIngredient482(state,"LATER_CLOSED_PIVOT_AND_MICRO_SUPPORT_FAILURE_CANDIDATE_ONLY",
+        re.private_pivot,low,re.private_event_id)
+
+
+def _confirm482(inputs,p,re):
+    if re.state is not S1State439.MATCH:
+        return S6ConfirmIngredient482(S1State439.BLOCKED,"R_E_NOT_MATCHED")
+    rows=inputs.snapshots_for(p.timeframe)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S6ConfirmIngredient482(S1State439.MISSING,"RF_BAR_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None or target.verified_at_utc>p.early.expires_at_utc:
+        return S6ConfirmIngredient482(S1State439.BLOCKED,"RF_TARGET_OR_EXPIRY_UNRESOLVED")
+    path=_path482(inputs,p,target,re)
+    if path is None:
+        return S6ConfirmIngredient482(S1State439.BLOCKED,"RF_PATH_NOT_CAUSAL")
+    return _shape482(inputs,p,target,path,re)
+
+
+def inspect_s6_confirm_preview(inputs,*,strategy,variant_id,plan):
+    _validate482(plan)
+    preview=inspect_s6_early_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.early)
+    route=route_phase_inputs(inputs,zone_id="S6",strategy=strategy,variant_id=variant_id,
+                             phase="R_F",selected_frame=plan.timeframe)
+    return S6Preview479(preview.assessments+((route,_confirm482(inputs,plan,preview.assessments[2][1])),))
