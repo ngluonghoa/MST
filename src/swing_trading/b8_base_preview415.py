@@ -27,6 +27,7 @@ from .relative_strength421 import RSPlan421, RSResult421, validate_rs421
 from .b8_rs_stock434 import B8RSStockPlan434, inspect_b8_rs434, validate_stock434
 from .rvol_tod_contract import TODCumulativeObservation, TODRawPrefix
 from .b8_tod_preview432 import validate_tod432, inspect_early_tod432
+from .b8_mandatory435 import apply_phase435
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,7 @@ class B8BasePlan415:
     rs: RSPlan421 | None = None
     r0_band: B8PriceBand426 | None = None
     rs_stock: B8RSStockPlan434 | None = None
+    strict_candidate_evidence: bool = False
 
 
 class B8State415(str, Enum):
@@ -119,6 +121,8 @@ class B8Ingredient415:
     portfolio: B8PortfolioResult429 | None = None
     rvol_candidate_match: bool | None = None
     tod_candidate_match: bool | None = None
+    candidate_evidence_complete: bool | None = None
+    mandatory_gaps: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -141,6 +145,8 @@ def _check_bounds415(start, stop, minimum):
 
 
 def _validate415(p):
+    if type(p.strict_candidate_evidence) is not bool:
+        raise ValueError("MST_435_EXPLICIT_STRICT_CANDIDATE_FLAG")
     if type(p.timeframe) is not Timeframe or p.timeframe not in (Timeframe.D1, Timeframe.H1):
         raise ValueError("MST_415_EXPLICIT_BASE_FRAME")
     if type(p.target_index) is not int or not 0 <= p.target_index < 512:
@@ -456,6 +462,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
                                phase="R0", selected_frame=plan.timeframe)
     base = _r0_rs421(inputs, plan, _r0415(inputs, plan))
     base = _r0_band433(inputs, plan, base)
+    base = apply_phase435(plan,"R0",base,variant_id,states=B8State415)
     assessments = ((route, base),)
     near = early = None
     if plan.near is not None:
@@ -463,6 +470,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         rc = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
                                 variant_id=variant_id, phase="R_C")
         near = _near416(inputs, plan, base)
+        near = apply_phase435(plan,"R_C",near,variant_id,states=B8State415)
         assessments += ((rc, near),)
     if plan.early is not None:
         _validate_early417(plan.early)
@@ -472,6 +480,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
                                 variant_id=variant_id, phase="R_E")
         early = inspect_early_tod432(inputs, plan, _early417(inputs, plan, base, near),
                                      states=B8State415)
+        early = apply_phase435(plan,"R_E",early,variant_id,states=B8State415)
         assessments += ((re, early),)
     if plan.rf is not None:
         _validate_rf418(plan.rf)
@@ -483,5 +492,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         extension = _rf_extension423(inputs, plan, base, rs)
         execution = inspect_b8_execution430(inputs, plan, base, extension, strategy,
                                             states=B8State415)
+        execution = apply_phase435(plan,"R_F",execution,variant_id,states=B8State415)
         assessments += ((rf, execution),)
     return B8Preview415(assessments)
