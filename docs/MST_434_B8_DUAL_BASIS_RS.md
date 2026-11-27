@@ -1,0 +1,3 @@
+# §434 — B8 explicit dual-basis stock RS alignment
+
+The locked RS formula requires adjusted D1, while §426/433 price bands and §428 liquidity require RAW. Separate caller-supplied immutable adjusted D1 stock stream; require exact aligned raw D1 window, same stock/exchange/calendar/session/interval/project/provider, distinct stream IDs and causal qualification at each RS cutoff. Independent source lineage within each series; no numeric conversion or mixing of raw/adjusted prices. R0 and RF reuse same plan and immutable adjusted series with existing same-definition/benchmark-overlap gates. No automatic fallback or real source/adjustment attestation. Six fictional regressions include simultaneous raw band and adjusted RS. Rollback by revert.

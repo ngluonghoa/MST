@@ -23,8 +23,8 @@ from .b8_liquidity428 import B8LiquidityPlan428, B8LiquidityResult428
 from .b8_settlement427 import B8SettlementPlan427, B8SettlementResult427
 from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426, inspect_band426, validate_band426
 from .b8_risk_geometry424 import B8MeasuredBaseRisk424, B8RiskResult424
-from .relative_strength421 import (RSPlan421, RSResult421, inspect_rs421, validate_rs421,
-                                   inspect_rs_confirmation422)
+from .relative_strength421 import RSPlan421, RSResult421, validate_rs421
+from .b8_rs_stock434 import B8RSStockPlan434, inspect_b8_rs434, validate_stock434
 from .rvol_tod_contract import TODCumulativeObservation, TODRawPrefix
 from .b8_tod_preview432 import validate_tod432, inspect_early_tod432
 
@@ -88,6 +88,7 @@ class B8BasePlan415:
     rf: B8ConfirmPlan418 | None = None
     rs: RSPlan421 | None = None
     r0_band: B8PriceBand426 | None = None
+    rs_stock: B8RSStockPlan434 | None = None
 
 
 class B8State415(str, Enum):
@@ -353,14 +354,18 @@ def _rf_rvol_threshold431(inputs,p,bound):
 
 
 def _r0_rs421(inputs, p, base):
+    if p.rs_stock is not None:
+        validate_stock434(p.rs_stock)
+        if p.rs is None:
+            raise ValueError("MST_434_ADJUSTED_STREAM_REQUIRES_RS_PLAN")
     if p.rs is None:
         return base
     validate_rs421(p.rs)
     if base.state is not B8State415.MATCH:
         return base
     target = inputs.snapshots_for(Timeframe.M15)[p.target_index].selected
-    result = inspect_rs421(inputs.snapshots_for(Timeframe.D1), p.rs,
-                           cutoff=target.market_bar_key.bar_start_utc)
+    result = inspect_b8_rs434(inputs.snapshots_for(Timeframe.D1),p.rs,stock=p.rs_stock,
+                               cutoff=target.market_bar_key.bar_start_utc)
     if result.state == "MISSING_INPUT":
         return replace(base,state=B8State415.MISSING,reason="RS_HISTORY_MISSING",rs=result)
     if result.state != "COMPUTED_UNCALIBRATED":
@@ -396,8 +401,8 @@ def _rf_rs422(inputs, p, base, geometry):
         return replace(geometry,state=B8State415.BLOCKED,reason="RF_RS_NOT_BOUND_TO_D1_TARGET")
     cutoff=(target.verified_at_utc if p.rf.timeframe is Timeframe.D1
             else target.market_bar_key.bar_start_utc)
-    result=inspect_rs_confirmation422(inputs.snapshots_for(Timeframe.D1),p.rs,p.rf.rs,
-                                      cutoff=cutoff)
+    result=inspect_b8_rs434(inputs.snapshots_for(Timeframe.D1),p.rf.rs,stock=p.rs_stock,
+                            earlier=p.rs,cutoff=cutoff)
     return _rf_rs_result422(geometry,result)
 
 
