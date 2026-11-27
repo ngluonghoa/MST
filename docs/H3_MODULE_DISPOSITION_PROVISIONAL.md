@@ -113,10 +113,10 @@ these require separate consumer, migration and rollback evidence.
 | s4_rejection467 | domain_and_reference | 364 | 12 | 19 | 2 | KEEP | none |
 | s5_holdings477 | domain_and_reference | 142 | 10 | 18 | 1 | KEEP | none |
 | s5_transition473 | domain_and_reference | 445 | 15 | 15 | 4 | KEEP | none |
-| s6_breakout479 | domain_and_reference | 431 | 15 | 18 | 3 | KEEP | none |
+| s6_breakout479 | domain_and_reference | 431 | 15 | 18 | 3 | IMPROVE | DUPLICATE_AST |
 | s6_holdings484 | domain_and_reference | 152 | 14 | 22 | 1 | KEEP | none |
 | s6_rf_volume483 | domain_and_reference | 87 | 14 | 17 | 2 | KEEP | none |
-| s7_breakdown486 | domain_and_reference | 444 | 15 | 18 | 1 | KEEP | none |
+| s7_breakdown486 | domain_and_reference | 444 | 15 | 18 | 1 | IMPROVE | DUPLICATE_AST |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
