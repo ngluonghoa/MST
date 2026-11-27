@@ -62,6 +62,7 @@ class B7TrendPlan413:
     left_count: int
     right_count: int
     tie_policy: TiePolicy
+    intermediate: tuple[B7TrendWindow413, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -335,14 +336,16 @@ def _validate_trend413(p, rf):
         _validate_trend_window413(p.rf, p.lookback)
         if rf is None or p.rf.stop < p.r0.stop:
             raise ValueError("MST_413_NONREGRESSING_RF_WINDOW")
+    if p.intermediate is not None:
+        _validate_sequence414(p)
 
 
-def _trend_at413(inputs, p, w, target):
+def _trend_at413(inputs, p, w, target, *, cutoff=None):
     daily = inputs.snapshots_for(Timeframe.D1)
     history = _window409(daily, w.start, w.stop)
     if not history or target is None:
         return B7SupportIngredient409(B7SupportState409.MISSING, "D1_TREND_WINDOW_OR_TARGET_MISSING")
-    cutoff = target.market_bar_key.bar_start_utc
+    cutoff = target.market_bar_key.bar_start_utc if cutoff is None else cutoff
     if any(_eligible(row, cutoff=cutoff) is not None for row in daily[w.stop:]):
         return B7SupportIngredient409(B7SupportState409.BLOCKED, "NEWER_KNOWN_D1_BAR_SKIPPED")
     result = inspect_d1_paired_trend_candidate(history, high_indices=w.high_indices,
@@ -367,6 +370,51 @@ def _r0_trend413(inputs, plan):
     return _trend_at413(inputs, plan.trend, plan.trend.r0, target)
 
 
+def _validate_sequence414(p):
+    if type(p.intermediate) is not tuple or p.rf is None:
+        raise ValueError("MST_414_EXPLICIT_SEQUENCE")
+    expected = tuple(range(p.r0.stop+1, p.rf.stop))
+    for w in p.intermediate:
+        _validate_trend_window413(w, p.lookback)
+    if tuple(w.stop for w in p.intermediate) != expected:
+        raise ValueError("MST_414_EXACT_INTERMEDIATE_WINDOWS")
+
+
+def _tail_unresolved414(daily, stop, cutoff):
+    for snap in daily[stop:]:
+        row = snap.selected
+        if row is None and snap.market_bar_key.bar_start_utc < cutoff:
+            return True
+        if row is not None and row.bar_end_utc <= cutoff:
+            return True
+    return False
+
+
+def _observed_step414(inputs, p, w, target, previous_cutoff):
+    daily = inputs.snapshots_for(Timeframe.D1)
+    row = _eligible(daily[w.stop-1], cutoff=target.market_bar_key.bar_start_utc)
+    if row is None or row.bar_end_utc <= previous_cutoff:
+        return None, B7SupportIngredient409(B7SupportState409.BLOCKED, "LATE_OR_OVERLAPPED_D1_STEP")
+    cutoff = max(row.verified_at_utc, row.retrieved_at_utc, row.bar_end_utc)
+    result = _trend_at413(inputs, p, w, target, cutoff=cutoff)
+    return cutoff, result
+
+
+def _sequence414(inputs, plan, target, endpoint):
+    p = plan.trend
+    daily = inputs.snapshots_for(Timeframe.D1)
+    rc = _trend_target413(inputs, Timeframe.M15, plan.target_index)
+    if rc is None or _tail_unresolved414(daily, p.rf.stop, target.market_bar_key.bar_start_utc):
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "UNRESOLVED_D1_TAIL")
+    cutoff = rc.market_bar_key.bar_start_utc
+    windows = p.intermediate + (p.rf,) if p.rf.stop > p.r0.stop else ()
+    for w in windows:
+        cutoff, result = _observed_step414(inputs, p, w, target, cutoff)
+        if result.state is not B7SupportState409.MATCH:
+            return result
+    return B7SupportIngredient409(endpoint.state, "SUPPLIED_D1_WINDOW_SEQUENCE_ONLY")
+
+
 def _rf_trend413(inputs, plan, r0, cross):
     if plan.trend.rf is None:
         return B7SupportIngredient409(B7SupportState409.MISSING, "EXPLICIT_RF_TREND_WINDOW_MISSING")
@@ -375,7 +423,10 @@ def _rf_trend413(inputs, plan, r0, cross):
     if cross.state is not B7SupportState409.MATCH:
         return cross
     target = _trend_target413(inputs, plan.rf.timeframe, plan.rf.breakout_index)
-    return _trend_at413(inputs, plan.trend, plan.trend.rf, target)
+    endpoint = _trend_at413(inputs, plan.trend, plan.trend.rf, target)
+    if endpoint.state is B7SupportState409.MATCH and plan.trend.intermediate is not None:
+        return _sequence414(inputs, plan, target, endpoint)
+    return endpoint
 
 
 def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
