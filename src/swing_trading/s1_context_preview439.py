@@ -13,6 +13,7 @@ from .s1_distribution440 import S1DistributionPlan440, inspect_distribution440
 from .s1_failed_break441 import S1FailedBreakPlan441, inspect_failed441
 from .s1_choch442 import S1ChochPlan442, inspect_choch442
 from .s1_confirm443 import S1ConfirmPlan443, inspect_rf443
+from .s1_holdings445 import S1HoldingsResult445
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
@@ -54,6 +55,7 @@ class S1Ingredient439:
     rvol: CausalIndicatorResult | None = None
     close_location: Decimal | None = None
     private_atr: Decimal | None = None
+    holdings: S1HoldingsResult445 | None = None
 
 
 @dataclass(frozen=True)
@@ -177,7 +179,7 @@ def inspect_s1_preview(inputs,*,strategy,variant_id,plan):
                               phase="R_E",selected_frame=plan.choch.timeframe)
         assessments+=((re,early),)
     if plan.rf is not None:
-        proof=inspect_rf443(inputs,plan,early,variant=variant_id,
+        proof=inspect_rf443(inputs,plan,early,variant=variant_id,strategy=strategy,
                             states=S1State439,ingredient=S1Ingredient439)
         rf=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,phase="R_F")
         assessments+=((rf,proof),)

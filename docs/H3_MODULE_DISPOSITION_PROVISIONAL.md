@@ -49,7 +49,7 @@ these require separate consumer, migration and rollback evidence.
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 25 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | causal_trend_candidate382 | domain_and_reference | 88 | 11 | 19 | 3 | KEEP | none |
 | causal_volume_dryup399 | domain_and_reference | 109 | 9 | 27 | 1 | KEEP | none |
-| contracts | domain_and_reference | 70 | 5 | 7 | 24 | KEEP | HIGH_FAN_IN |
+| contracts | domain_and_reference | 70 | 5 | 7 | 25 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -90,14 +90,15 @@ these require separate consumer, migration and rollback evidence.
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | relative_strength421 | domain_and_reference | 155 | 11 | 14 | 2 | KEEP | none |
-| replay | domain_and_reference | 26 | 3 | 5 | 55 | KEEP | HIGH_FAN_IN |
+| replay | domain_and_reference | 26 | 3 | 5 | 56 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 118 | 11 | 23 | 2 | KEEP | none |
-| s1_confirm443 | domain_and_reference | 69 | 9 | 22 | 1 | KEEP | none |
-| s1_context_preview439 | domain_and_reference | 184 | 9 | 33 | 1 | KEEP | none |
+| s1_confirm443 | domain_and_reference | 74 | 10 | 23 | 1 | KEEP | none |
+| s1_context_preview439 | domain_and_reference | 186 | 9 | 33 | 1 | KEEP | none |
 | s1_distribution440 | domain_and_reference | 96 | 11 | 21 | 2 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 100 | 11 | 17 | 3 | KEEP | none |
+| s1_holdings445 | domain_and_reference | 64 | 14 | 16 | 2 | KEEP | none |
 | s1_rf_volume444 | domain_and_reference | 59 | 7 | 18 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
