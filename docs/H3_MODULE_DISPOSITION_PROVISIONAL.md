@@ -33,7 +33,7 @@ these require separate consumer, migration and rollback evidence.
 | causal_range_percentile397 | domain_and_reference | 75 | 7 | 27 | 1 | KEEP | none |
 | causal_structure_geometry | domain_and_reference | 334 | 32 | 89 | 11 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | causal_trend_candidate382 | domain_and_reference | 88 | 11 | 19 | 2 | KEEP | none |
-| causal_volume_dryup399 | domain_and_reference | 94 | 7 | 27 | 0 | KEEP | none |
+| causal_volume_dryup399 | domain_and_reference | 94 | 9 | 27 | 0 | KEEP | none |
 | contracts | domain_and_reference | 70 | 5 | 7 | 18 | KEEP | HIGH_FAN_IN |
 | d1_atr_reconciliation | domain_and_reference | 288 | 27 | 113 | 2 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | d1_mcp_transport_bridge | source_adapter_and_quality | 292 | 11 | 44 | 2 | KEEP | none |
