@@ -17,6 +17,8 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+from .b8_liquidity428 import (B8LiquidityPlan428, B8LiquidityResult428,
+                               inspect_liquidity428, validate_liquidity428)
 from .b8_settlement427 import (B8SettlementPlan427, B8SettlementResult427,
                                 inspect_settlement427, validate_settlement427)
 from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426, inspect_band426, validate_band426
@@ -63,6 +65,7 @@ class B8ConfirmPlan418:
     risk: B8MeasuredBaseRisk424 | None = None
     band: B8PriceBand426 | None = None
     settlement: B8SettlementPlan427 | None = None
+    liquidity: B8LiquidityPlan428 | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +111,7 @@ class B8Ingredient415:
     risk: B8RiskResult424 | None = None
     band: B8PriceBandResult426 | None = None
     settlement: B8SettlementResult427 | None = None
+    liquidity: B8LiquidityResult428 | None = None
 
 
 @dataclass(frozen=True)
@@ -490,6 +494,27 @@ def _rf_settlement427(inputs,p,geometry,strategy):
     return replace(geometry,settlement=result)
 
 
+def _rf_liquidity428(inputs,p,geometry,strategy):
+    plan=p.rf.liquidity
+    if plan is None:
+        return geometry
+    validate_liquidity428(plan)
+    if geometry.state is not B8State415.MATCH:
+        return geometry
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    result=inspect_liquidity428(inputs.snapshots_for(Timeframe.D1),target,plan,strategy=strategy)
+    state=geometry.state
+    if result.state=="BLOCKED":
+        state=B8State415.BLOCKED
+    elif result.state=="MISSING_INPUT":
+        state=B8State415.MISSING
+    elif result.candidate_match is False:
+        state=B8State415.NONMATCH
+    elif result.candidate_match is None:
+        state=B8State415.DISTANCE
+    return replace(geometry,state=state,reason=result.reason,liquidity=result)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -525,5 +550,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         extension = _rf_extension423(inputs, plan, base, rs)
         risk = _rf_risk424(inputs, plan, base, extension)
         band = _rf_band426(inputs, plan, risk)
-        assessments += ((rf, _rf_settlement427(inputs, plan, band, strategy)),)
+        settlement = _rf_settlement427(inputs, plan, band, strategy)
+        assessments += ((rf, _rf_liquidity428(inputs, plan, settlement, strategy)),)
     return B8Preview415(assessments)
