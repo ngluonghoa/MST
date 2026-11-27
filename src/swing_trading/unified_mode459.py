@@ -7,7 +7,10 @@ from hashlib import sha256
 import json
 import re
 
-from .engine import BaselinePreviewRequest375, BaselineEnginePreview375, evaluate_baseline_preview
+from .engine import (
+    BaselinePreviewRequest375, BaselineEnginePreview375, D1ContextPlan383,
+    evaluate_baseline_preview, _current_d1_context383, _attach_context383,
+)
 from .replay import require_utc
 
 ENGINE_CONTRACT = "mst.shared-candidate.v1"
@@ -43,12 +46,17 @@ def _typed(value):
     raise ValueError("MST_459_UNSUPPORTED_PROFILE_VALUE")
 
 
-def configuration_digest(requests):
+def configuration_digest(requests, *, trend_plan=None):
     if type(requests) is not tuple or len(requests) > 32:
         raise ValueError("MST_459_EXPLICIT_REQUESTS")
     if any(type(r) is not BaselinePreviewRequest375 for r in requests):
         raise ValueError("MST_459_EXACT_REQUEST")
-    payload = json.dumps([ENGINE_CONTRACT, _typed(requests)], ensure_ascii=True,
+    payload_parts = [ENGINE_CONTRACT, _typed(requests)]
+    if trend_plan is not None:
+        if type(trend_plan) is not D1ContextPlan383:
+            raise ValueError("MST_460_EXACT_TREND_PLAN")
+        payload_parts.append(_typed(trend_plan))
+    payload = json.dumps(payload_parts, ensure_ascii=True,
                          separators=(",", ":"), allow_nan=False)
     return sha256(payload.encode("utf-8")).hexdigest()
 
@@ -60,6 +68,7 @@ class CandidateProfile459:
     code_git_sha: str
     configuration_sha256: str
     requests: tuple[BaselinePreviewRequest375, ...]
+    trend_plan: D1ContextPlan383 | None = None
 
     def __post_init__(self):
         for value in (self.profile_id, self.version):
@@ -67,7 +76,7 @@ class CandidateProfile459:
                 raise ValueError("MST_459_EXPLICIT_PROFILE_ID")
         if type(self.code_git_sha) is not str or not re.fullmatch(r"[a-f0-9]{40}", self.code_git_sha):
             raise ValueError("MST_459_EXPLICIT_CODE_REFERENCE")
-        if self.configuration_sha256 != configuration_digest(self.requests):
+        if self.configuration_sha256 != configuration_digest(self.requests, trend_plan=self.trend_plan):
             raise ValueError("MST_459_PROFILE_DIGEST_MISMATCH")
 
 
@@ -76,9 +85,12 @@ class ModeEvaluation459:
     mode: EngineMode
     private_profile: CandidateProfile459
     private_preview: BaselineEnginePreview375
+    private_d1_feature: tuple | None = None
 
     def safe_summary(self):
         summary = self.private_preview.safe_phase_summary()
+        if self.private_d1_feature is not None:
+            _attach_context383(summary, dict(self.private_d1_feature))
         summary.update(schema="mst.private.unified_mode.v1", mode=self.mode.value,
                        engine_contract=ENGINE_CONTRACT, validation_qualified=False,
                        production_qualified=False, publication_allowed=False,
@@ -96,7 +108,10 @@ def evaluate_candidate(inputs, *, mode, profile):
         raise ValueError("MST_459_EXPLICIT_MODE_PROFILE")
     if mode is EngineMode.PRODUCTION:
         raise ValueError("MST_459_PRODUCTION_NOT_QUALIFIED")
-    if profile.configuration_sha256 != configuration_digest(profile.requests):
+    if profile.configuration_sha256 != configuration_digest(profile.requests, trend_plan=profile.trend_plan):
         raise ValueError("MST_459_PROFILE_DIGEST_MISMATCH")
     preview = evaluate_baseline_preview(inputs, requests=profile.requests)
-    return ModeEvaluation459(mode, profile, preview)
+    context = None
+    if profile.trend_plan is not None:
+        context = tuple(_current_d1_context383(inputs, profile.trend_plan).items())
+    return ModeEvaluation459(mode, profile, preview, context)
