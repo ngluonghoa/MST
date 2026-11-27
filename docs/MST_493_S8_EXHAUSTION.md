@@ -1,0 +1,3 @@
+# §493 S8 RC explicit exhaustion candidate
+
+Exact §492 distribution and D1 source event/revision/time. Strict positive return above historical percentile and explicit minimum. Two diagnostic modes within S8/BASE: RANGE_UPPER_WICK (range/prior ATR above percentile and explicit minimum, explicit upper-wick fraction) or VOLUME_CLIMAX (raw matched volume above explicit multiple >1 of historical percentile; not RVOL). No mode fallback or approved thresholds. Policy known before target, explicit hypothetical expiry for later phases. Six fictional regressions. No source qualification or trading authority.
