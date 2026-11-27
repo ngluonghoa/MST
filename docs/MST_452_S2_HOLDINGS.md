@@ -1,0 +1,3 @@
+# §452 S2 hypothetical settled holdings candidate
+
+Source: frozen MASTER_SPEC §16.2/§24.4. Optional explicit fictional holdings scenario only after RF geometry MATCH; exact instrument and strategy, policy identifier, UTC known clock and max age at target verification, validated nonnegative open/settled/reserved/requested shares. Available = settled − reserved; positive request may not exceed available. Reuses §445 input contract without S1-only mandatory RVOL because S2/BASE RVOL is optional. No actual holdings, official settlement or sell authority; status UNVERIFIED, no naked short, legacy geometry-only preview unchanged. Strict cumulative completeness follows separately.

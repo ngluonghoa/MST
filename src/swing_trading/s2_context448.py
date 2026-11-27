@@ -1,5 +1,6 @@
 """§448 explicit causal D1 descending trend and H1 lower-high resistance."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import timedelta
 from decimal import Decimal
 from enum import Enum
 
@@ -10,6 +11,7 @@ from .causal_structure_geometry import (
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .s1_failed_break441 import _atr441, _pair441, validate_pair_atr442
+from .s1_holdings445 import S1HoldingsPlan445, S1HoldingsResult445, validate_holdings445
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 
@@ -57,6 +59,7 @@ class S2ConfirmPlan451:
     atr_start: int
     atr_stop: int
     candidate_epsilon: Decimal | None
+    holdings: S1HoldingsPlan445 | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +91,7 @@ class S2Ingredient448:
     private_distance: Decimal | None=None
     private_micro_lh: Decimal | None=None
     private_micro_low: Decimal | None=None
+    holdings: S1HoldingsResult445 | None=None
 
 
 @dataclass(frozen=True)
@@ -314,6 +318,8 @@ def _validate_rf451(p,plan):
     if type(p) is not S2ConfirmPlan451:
         raise ValueError("MST_451_EXPLICIT_CONFIRM_PLAN")
     validate_pair_atr442(p)
+    if p.holdings is not None:
+        validate_holdings445(p.holdings)
     _validate_window448(p.d1,lows=True)
     if type(p.history_start) is not int or not 0<=p.history_start<p.target_index-1:
         raise ValueError("MST_451_EXACT_HISTORY")
@@ -372,7 +378,22 @@ def _cross451(prior,target,low,atr,p,trend,early):
         private_micro_lh=early.private_micro_lh,private_micro_low=low)
 
 
-def _confirm451(inputs,plan,early):
+def _holdings452(target,p,proof,strategy):
+    if p is None or proof.state is not S2State448.MATCH:
+        return proof
+    if p.instrument_id!=target.market_bar_key.instrument_id or p.strategy is not strategy:
+        return replace(proof,state=S2State448.BLOCKED,reason="RF_HOLDINGS_SCOPE_MISMATCH")
+    age=target.verified_at_utc-p.known_at_utc
+    if not timedelta(0)<=age<=timedelta(seconds=p.max_age_seconds):
+        return replace(proof,state=S2State448.BLOCKED,reason="RF_HOLDINGS_NOT_CAUSAL_OR_FRESH")
+    available=p.settled_shares-p.reserved_shares
+    match=p.sell_shares<=available
+    return replace(proof,state=S2State448.MATCH if match else S2State448.NONMATCH,
+        reason="RF_HYPOTHETICAL_SETTLED_HOLDINGS_ONLY",
+        holdings=S1HoldingsResult445(available,p.sell_shares,match))
+
+
+def _confirm451(inputs,plan,early,strategy):
     p=plan.rf
     _validate_rf451(p,plan)
     if early is None or early.state is not S2State448.MATCH:
@@ -395,7 +416,8 @@ def _confirm451(inputs,plan,early):
     atr=_atr441(inputs,p,target)
     if atr is None or atr<=0:
         return S2Ingredient448(S2State448.BLOCKED,"RF_CAUSAL_D1_ATR_UNRESOLVED")
-    return _cross451(prior,target,low,atr,p,trend,early)
+    proof=_cross451(prior,target,low,atr,p,trend,early)
+    return _holdings452(target,p.holdings,proof,strategy)
 
 
 def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
@@ -420,7 +442,7 @@ def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
         early=_early450(inputs,plan,rc)
         assessments+=((re,early),)
     if plan.rf is not None:
-        proof=_confirm451(inputs,plan,early)
+        proof=_confirm451(inputs,plan,early,strategy)
         rf=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,
                               phase="R_F",selected_frame=plan.rf.timeframe)
         assessments+=((rf,proof),)
