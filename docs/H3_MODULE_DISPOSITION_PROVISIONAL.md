@@ -18,7 +18,7 @@ these require separate consumer, migration and rollback evidence.
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 3 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
-| b8_base_preview415 | domain_and_reference | 473 | 12 | 37 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 498 | 12 | 37 | 1 | KEEP | none |
 | b8_execution_preview430 | domain_and_reference | 122 | 9 | 20 | 1 | KEEP | none |
 | b8_liquidity428 | domain_and_reference | 95 | 10 | 15 | 2 | KEEP | none |
 | b8_portfolio429 | domain_and_reference | 97 | 11 | 11 | 2 | KEEP | none |

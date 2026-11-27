@@ -1,0 +1,3 @@
+# §431 — B8 explicit same-frame RF RVOL candidate threshold
+
+Optional positive finite Decimal minimum; no default 1.3 or calibration. Reuse exact same-frame target and prior20 raw matched witnesses; explicit threshold requires witness and target witness verification no later than RF candle verification. Inclusive comparison of RVOL value. Missing witness blocked as missing; late witness blocked; below threshold nonmatch, no later phase promotion. No threshold preserves §419 arithmetic-only legacy behavior. Six fictional regressions. No action eligibility or approved parameter. Rollback by revert.

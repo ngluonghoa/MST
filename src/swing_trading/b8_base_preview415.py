@@ -66,6 +66,7 @@ class B8ConfirmPlan418:
     settlement: B8SettlementPlan427 | None = None
     liquidity: B8LiquidityPlan428 | None = None
     portfolio: B8PortfolioPlan429 | None = None
+    candidate_min_rvol: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +114,7 @@ class B8Ingredient415:
     settlement: B8SettlementResult427 | None = None
     liquidity: B8LiquidityResult428 | None = None
     portfolio: B8PortfolioResult429 | None = None
+    rvol_candidate_match: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -293,6 +295,11 @@ def _early_tod420(inputs, p, geometry):
                    volume_state="TOD_COMPUTED_UNCALIBRATED", rvol=result)
 
 
+def _validate_rvol431(k):
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k<=0):
+        raise ValueError("MST_431_EXPLICIT_POSITIVE_RVOL_THRESHOLD")
+
+
 def _validate_rf418(p):
     if type(p) is not B8ConfirmPlan418 or type(p.timeframe) is not Timeframe:
         raise ValueError("MST_418_EXPLICIT_RF_PLAN")
@@ -303,6 +310,7 @@ def _validate_rf418(p):
     e = p.candidate_epsilon
     if type(e) is not Decimal or not e.is_finite() or e < 0:
         raise ValueError("MST_418_EXPLICIT_EPSILON")
+    _validate_rvol431(p.candidate_min_rvol)
     if p.volume is not None:
         if p.timeframe is Timeframe.D1:
             _check_volume389(p.volume)
@@ -348,7 +356,11 @@ def _rf418(inputs, p, base, early):
 
 
 def _rf_volume419(inputs, p, geometry):
-    if p.rf.volume is None or geometry.state is not B8State415.MATCH:
+    if geometry.state is not B8State415.MATCH:
+        return geometry
+    if p.rf.volume is None:
+        if p.rf.candidate_min_rvol is not None:
+            return replace(geometry,state=B8State415.MISSING,reason="RF_EXPLICIT_RVOL_WITNESS_REQUIRED")
         return geometry
     bound = (_volume389(inputs, p.rf, geometry) if p.rf.timeframe is Timeframe.D1
              else _h1_volume394(inputs, p.rf, geometry))
@@ -356,7 +368,20 @@ def _rf_volume419(inputs, p, geometry):
         return replace(bound, state=B8State415.MISSING, reason="RF_VOLUME_HISTORY_MISSING")
     if bound.volume_state != "RVOL_COMPUTED_UNCALIBRATED":
         return replace(bound, state=B8State415.BLOCKED, reason="RF_VOLUME_WITNESS_BLOCKED")
-    return replace(bound, reason="RF_CROSS_AND_RAW_RVOL_ARITHMETIC_ONLY")
+    return _rf_rvol_threshold431(inputs,p,bound)
+
+
+def _rf_rvol_threshold431(inputs,p,bound):
+    k=p.rf.candidate_min_rvol
+    if k is None:
+        return replace(bound,reason="RF_CROSS_AND_RAW_RVOL_ARITHMETIC_ONLY")
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    if p.rf.volume.witnesses[-1].verified_at_utc>target.verified_at_utc:
+        return replace(bound,state=B8State415.BLOCKED,reason="RF_VOLUME_WITNESS_AFTER_TARGET_VERIFICATION")
+    match=bound.rvol.value>=k
+    state=B8State415.MATCH if match else B8State415.NONMATCH
+    return replace(bound,state=state,reason="RF_EXPLICIT_RAW_RVOL_THRESHOLD_CANDIDATE_ONLY",
+                   rvol_candidate_match=match)
 
 
 def _r0_rs421(inputs, p, base):
