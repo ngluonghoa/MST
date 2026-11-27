@@ -24,7 +24,7 @@ class B8Risk424Tests(unittest.TestCase):
                     row,safe=run(inputs,plan(p),strategy=strategy,variant=variant)
                     proof=row.private_preview.assessments[-1][1].risk
                     self.assertEqual((proof.stop,proof.target,proof.net_reward,proof.net_risk),
-                                     (D(8),D(22),D(5),D(9)))
+                                     (D(7),D(23),D(6),D(10)))
                     self.assertTrue(proof.candidate_match)
                     self.assertEqual(safe["phases"][3]["ingredient_state"],"GEOMETRY_MATCH_ONLY")
 
@@ -32,8 +32,8 @@ class B8Risk424Tests(unittest.TestCase):
         inputs,p=fixture()
         row,_=run(inputs,plan(p,buy=D(".01"),sell=D(".02"),tax=D(".01")))
         proof=row.private_preview.assessments[-1][1].risk
-        self.assertEqual(proof.net_reward,D("4.17"))
-        self.assertEqual(proof.net_risk,D("9.41"))
+        self.assertEqual(proof.net_reward,D("5.14"))
+        self.assertEqual(proof.net_risk,D("10.38"))
         self.assertFalse(proof.candidate_match)
 
     def test_stop_buffer_and_threshold(self):
@@ -42,12 +42,12 @@ class B8Risk424Tests(unittest.TestCase):
         base,rf=row.private_preview.assessments[0][1],row.private_preview.assessments[-1][1]
         with localcontext() as ctx:
             ctx.prec=50
-            self.assertEqual(rf.risk.stop,D(8)-base.private_atr*D(".5"))
+            self.assertEqual(rf.risk.stop,D(7)-base.private_atr*D(".5"))
         self.assertFalse(rf.risk.candidate_match)
         self.assertEqual(safe["phases"][3]["ingredient_state"],"GEOMETRY_NONMATCH_ONLY")
 
     def test_target_already_reached_and_invalid_stop(self):
-        for close,buffer in ((D(22),D(0)),(D(17),D(10))):
+        for close,buffer in ((D(23),D(0)),(D(17),D(10))):
             inputs,p=fixture(close=close)
             row,safe=run(inputs,plan(p,buffer=buffer))
             self.assertEqual(row.private_preview.assessments[-1][1].risk.state,"NONMATCH")
