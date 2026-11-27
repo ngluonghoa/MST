@@ -64,6 +64,7 @@ class B6CompressionPlan396:
     upper_pivot: CompressionPivotPlan402 | None = None
     early: CompressionEarlyPlan403 | None = None
     rf: CompressionD1RFPlan404 | CompressionH1RFPlan405 | None = None
+    r0: B6TrendPlan390 | None = None
 
 
 @dataclass(frozen=True)
@@ -268,18 +269,21 @@ def _rf388(inputs, history, atr_rows, plan, early):
 
 
 
-def _trend390(rows, history, plan):
-    trend = plan.r0
+def _prior_trend408(rows, start, trend):
     if type(trend) is not B6TrendPlan390:
         raise ValueError("MST_390_EXPLICIT_TREND_PLAN")
     if type(trend.lookback) is not int or not 1 <= trend.lookback <= 462:
         raise ValueError("MST_390_BOUNDED_LOOKBACK")
-    if not history or plan.d1_start < 50 + trend.lookback:
+    if not 50 + trend.lookback <= start < len(rows):
         return None
-    prefix = rows[plan.d1_start - 50 - trend.lookback:plan.d1_start]
+    prefix = rows[start - 50 - trend.lookback:start]
     # Exact preceding window, no skipping unresolved rows, no later trend.
     return inspect_d1_paired_trend_candidate(
-        prefix, as_of_utc=history[0].market_bar_key.bar_start_utc, **asdict(trend))
+        prefix, as_of_utc=rows[start].market_bar_key.bar_start_utc, **asdict(trend))
+
+
+def _trend390(rows, history, plan):
+    return _prior_trend408(rows, plan.d1_start if history else -1, plan.r0)
 
 
 def _r0390(rows, history, plan, rc):
@@ -379,8 +383,24 @@ def inspect_b6_baseline_preview(inputs, *, strategy, variant_id, plan):
     return B6EnginePreview387(assessments)
 
 
+def _compression_r0408(rows, plan, rc):
+    if plan.upper_pivot is None:
+        return B6Ingredient387(B6State387.MISSING, "EXPLICIT_COMPRESSION_BASE_MISSING")
+    start = plan.target_index + 1 - plan.upper_pivot.base_count
+    trend = _prior_trend408(rows, start, plan.r0)
+    if trend is None:
+        return B6Ingredient387(B6State387.MISSING, "PRIOR_D1_TREND_WINDOW_MISSING")
+    if rc.upper_pivot.upper_boundary is not True:
+        return B6Ingredient387(B6State387.BLOCKED, "COMPRESSION_UPPER_PIVOT_UNRESOLVED")
+    if trend["relation"] != "ALIGNED_GEOMETRY_ONLY":
+        return B6Ingredient387(B6State387.BLOCKED, "PRIOR_D1_DIRECTION_UNRESOLVED")
+    if trend["structure"] == "HH_HL_GEOMETRY":
+        return B6Ingredient387(B6State387.MATCH, "PRIOR_D1_RISE_AND_COMPRESSION_UPPER_PIVOT_ONLY")
+    return B6Ingredient387(B6State387.NONMATCH, "PRIOR_D1_OPPOSITE_GEOMETRY_ONLY")
+
+
 def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
-    """Explicit compression R_C, optional R_E and D1/H1 R_F geometry; no R0."""
+    """Explicit compression R_C, optional D1 R0, R_E and D1/H1 R_F geometry."""
     if type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy:
         raise ValueError("MST_396_BASELINE_SCOPE")
     if variant_id != "B6/C_COMPRESSION" or type(plan) is not B6CompressionPlan396:
@@ -414,6 +434,9 @@ def inspect_b6_compression_preview(inputs, *, strategy, variant_id, plan):
     route = route_phase_inputs(inputs, zone_id="B6", strategy=strategy,
                                variant_id=variant_id, phase="R_C")
     assessments = ((route, result),)
+    if plan.r0 is not None:
+        r0 = route_phase_inputs(inputs, zone_id="B6", strategy=strategy, variant_id=variant_id, phase="R0", selected_frame=Timeframe.D1)
+        assessments = ((r0, _compression_r0408(rows, plan, result)),) + assessments
     if plan.early is not None:
         early = inspect_compression_approach(rows, inputs.snapshots_for(Timeframe.M15),
             target_index=plan.target_index, percentile=p, upper_pivot=plan.upper_pivot,
