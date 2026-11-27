@@ -1,0 +1,3 @@
+# §432 — B8 selected-variant RVOL_TOD candidate threshold
+
+Optional positive finite Decimal minimum only in explicit intraday TOD variant. Exact M15 target and prior20 raw M1 cumulative prefix evidence; if threshold requested, compute at target M15 verification cutoff, not later replay as-of. Missing plan => missing input; below inclusive boundary => nonmatch and RF blocked. Legacy arithmetic-only path unchanged. Extracted §420 validation/arithmetic to dedicated module, original plan/state identities retained. Six fictional regressions. No default threshold, calibrated parameter, production or action authority. Rollback by revert.

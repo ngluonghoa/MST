@@ -25,8 +25,8 @@ from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426
 from .b8_risk_geometry424 import B8MeasuredBaseRisk424, B8RiskResult424
 from .relative_strength421 import (RSPlan421, RSResult421, inspect_rs421, validate_rs421,
                                    inspect_rs_confirmation422)
-from .rvol_tod_contract import (TODCumulativeObservation, TODRawPrefix,
-                                calculate_rvol_tod20_from_raw_prefixes)
+from .rvol_tod_contract import TODCumulativeObservation, TODRawPrefix
+from .b8_tod_preview432 import validate_tod432, inspect_early_tod432
 
 
 @dataclass(frozen=True)
@@ -46,6 +46,7 @@ class B8TODPlan420:
 class B8EarlyPlan417:
     candidate_epsilon: Decimal
     tod: B8TODPlan420 | None = None
+    candidate_min_rvol_tod: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -115,6 +116,7 @@ class B8Ingredient415:
     liquidity: B8LiquidityResult428 | None = None
     portfolio: B8PortfolioResult429 | None = None
     rvol_candidate_match: bool | None = None
+    tod_candidate_match: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -258,41 +260,6 @@ def _early417(inputs, p, base, near):
     match = prior.close <= base.private_resistance and target.close > boundary
     state = B8State415.MATCH if match else B8State415.NONMATCH
     return B8Ingredient415(state, "SAME_RESISTANCE_CLOSED_CROSS_ONLY")
-
-
-def _validate_tod420(p, variant_id):
-    if p is None:
-        return
-    if variant_id != "B8/INTRADAY_RVOL_TOD_PENDING" or type(p) is not B8TODPlan420:
-        raise ValueError("MST_420_EXPLICIT_TOD_VARIANT")
-    if (type(p.target) is not TODCumulativeObservation or type(p.target_prefix) is not TODRawPrefix
-            or type(p.prior_sessions) is not tuple or len(p.prior_sessions) != 20
-            or any(type(x) is not TODCumulativeObservation for x in p.prior_sessions)
-            or type(p.prior_prefixes) is not tuple or len(p.prior_prefixes) != 20
-            or any(type(x) is not TODRawPrefix for x in p.prior_prefixes)):
-        raise ValueError("MST_420_EXACT_TOD_PLAN")
-
-
-def _early_tod420(inputs, p, geometry):
-    tod = p.early.tod
-    if tod is None or geometry.state is not B8State415.MATCH:
-        return geometry
-    rows = inputs.snapshots_for(Timeframe.M15)
-    index = p.target_index + 2
-    if tod.target.snapshot != rows[index]:
-        return replace(geometry, state=B8State415.BLOCKED, reason="TOD_TARGET_NOT_BOUND",
-                       volume_state="TOD_BLOCKED")
-    if any(x.snapshot not in rows[:index] for x in tod.prior_sessions):
-        return replace(geometry, state=B8State415.BLOCKED, reason="TOD_PRIOR_NOT_BOUND",
-                       volume_state="TOD_BLOCKED")
-    result = calculate_rvol_tod20_from_raw_prefixes(tod.target, tod.prior_sessions,
-        target_prefix=tod.target_prefix, prior_prefixes=tod.prior_prefixes,
-        as_of_utc=inputs.as_of_utc)
-    if result.state is not IndicatorState.COMPUTED_UNCALIBRATED:
-        return replace(geometry, state=B8State415.BLOCKED, reason="TOD_RAW_PREFIX_BLOCKED",
-                       volume_state="TOD_BLOCKED", rvol=result)
-    return replace(geometry, reason="RE_CROSS_AND_RAW_TOD_ARITHMETIC_ONLY",
-                   volume_state="TOD_COMPUTED_UNCALIBRATED", rvol=result)
 
 
 def _validate_rvol431(k):
@@ -479,10 +446,12 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         assessments += ((rc, near),)
     if plan.early is not None:
         _validate_early417(plan.early)
-        _validate_tod420(plan.early.tod, variant_id)
+        validate_tod432(plan.early.tod, variant_id, plan.early.candidate_min_rvol_tod,
+                        plan_type=B8TODPlan420)
         re = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
                                 variant_id=variant_id, phase="R_E")
-        early = _early_tod420(inputs, plan, _early417(inputs, plan, base, near))
+        early = inspect_early_tod432(inputs, plan, _early417(inputs, plan, base, near),
+                                     states=B8State415)
         assessments += ((re, early),)
     if plan.rf is not None:
         _validate_rf418(plan.rf)
