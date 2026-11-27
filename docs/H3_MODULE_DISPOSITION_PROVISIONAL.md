@@ -80,7 +80,7 @@ these require separate consumer, migration and rollback evidence.
 | reference_offline_verified_archive | evidence_and_rights | 159 | 15 | 96 | 0 | IMPROVE | FUNCTION_90_PLUS |
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| relative_strength421 | domain_and_reference | 114 | 10 | 17 | 1 | KEEP | none |
+| relative_strength421 | domain_and_reference | 114 | 11 | 14 | 1 | KEEP | none |
 | replay | domain_and_reference | 26 | 3 | 5 | 52 | KEEP | HIGH_FAN_IN |
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
