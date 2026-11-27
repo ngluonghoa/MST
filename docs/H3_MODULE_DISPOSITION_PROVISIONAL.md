@@ -94,11 +94,11 @@ these require separate consumer, migration and rollback evidence.
 | replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 118 | 11 | 23 | 2 | KEEP | none |
-| s1_confirm443 | domain_and_reference | 74 | 10 | 23 | 1 | KEEP | none |
+| s1_confirm443 | domain_and_reference | 74 | 9 | 23 | 1 | KEEP | none |
 | s1_context_preview439 | domain_and_reference | 186 | 9 | 33 | 1 | KEEP | none |
 | s1_distribution440 | domain_and_reference | 96 | 11 | 21 | 2 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 100 | 11 | 17 | 3 | KEEP | none |
-| s1_holdings445 | domain_and_reference | 64 | 14 | 16 | 2 | KEEP | none |
+| s1_holdings445 | domain_and_reference | 64 | 11 | 15 | 2 | KEEP | none |
 | s1_rf_volume444 | domain_and_reference | 59 | 7 | 18 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
