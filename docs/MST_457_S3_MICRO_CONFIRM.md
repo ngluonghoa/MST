@@ -1,0 +1,3 @@
+# §457 S3 explicit H1/M15 micro confirmation
+
+S3/F_MICRO_BREAK only. Explicit preceding S3/E_MICRO_CHOCH typed plan and phase route, then later causal selected H1/M15 micro low pivot with closed prior and later cross. No implicit TP alternative. Current D1 rising HH/HL nonregressing and original critical HL/resistance preserved; supplied D1 updates and intervening closed H1/M15 observations must be causal and stay inside original structure. W1 target window must stay current if selected. Target must remain above or at current D1 critical HL; micro low strictly above it. Explicit ATR14 epsilon; absent is uncalibrated distance. No holdings, parameter/source approval or sell authority. Six fictional tests; old E-only plan unchanged. TP and holdings follow separately.
