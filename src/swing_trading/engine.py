@@ -28,7 +28,7 @@ from .s7_retest_evidence import (
 )
 from .range_baseline_preview385 import RangeEnginePlan385, RangeEnginePreview385, inspect_routed_range_preview
 from .s4_rejection467 import S4RejectionPlan467, inspect_s4_rejection_preview, S4FalseBreakPlan468, inspect_s4_false_break_preview, S4BosDownPlan469, inspect_s4_bos_down_preview, S4ConfirmPlan470, inspect_s4_confirm_preview
-from .s4_holdings471 import S4HoldingsPlan471, inspect_s4_holdings_preview
+from .s4_holdings471 import S4HoldingsPlan471, inspect_s4_holdings_preview, S4StrictPlan472, inspect_s4_strict_preview
 from .b6_baseline_preview387 import (B6EnginePlan387, B6EnginePreview387, B6CompressionPlan396,
                                      inspect_b6_baseline_preview, inspect_b6_compression_preview)
 from .b7_support_preview409 import B7SupportPlan409, B7SupportPreview409, inspect_b7_support_preview
@@ -99,7 +99,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463 | S3TPConfirmPlan464 | S3HoldingsPlan465 | S3StrictPlan466 | S4RejectionPlan467 | S4FalseBreakPlan468 | S4BosDownPlan469 | S4ConfirmPlan470 | S4HoldingsPlan471
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463 | S3TPConfirmPlan464 | S3HoldingsPlan465 | S3StrictPlan466 | S4RejectionPlan467 | S4FalseBreakPlan468 | S4BosDownPlan469 | S4ConfirmPlan470 | S4HoldingsPlan471 | S4StrictPlan472
 
 
 @dataclass(frozen=True)
@@ -265,7 +265,7 @@ def _request_supported376(request):
         return request.zone_id == "B8"
     if type(request.plan) is B7SupportPlan409:
         return request.zone_id == "B7"
-    if type(request.plan) in (S4RejectionPlan467, S4FalseBreakPlan468, S4BosDownPlan469, S4ConfirmPlan470, S4HoldingsPlan471):
+    if type(request.plan) in (S4RejectionPlan467, S4FalseBreakPlan468, S4BosDownPlan469, S4ConfirmPlan470, S4HoldingsPlan471, S4StrictPlan472):
         return request.zone_id == "S4"
     if type(request.plan) is RangeEnginePlan385:
         return request.zone_id in ("B3", "S4")
@@ -338,6 +338,8 @@ def _dispatch375(inputs, request):
         return inspect_b6_compression_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is B6EnginePlan387:
         return inspect_b6_baseline_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
+    if type(plan) is S4StrictPlan472:
+        return inspect_s4_strict_preview(inputs,strategy=strategy,variant_id=variant,plan=plan)
     if type(plan) is S4HoldingsPlan471:
         return inspect_s4_holdings_preview(inputs,strategy=strategy,variant_id=variant,plan=plan)
     if type(plan) is S4ConfirmPlan470:

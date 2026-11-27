@@ -93,3 +93,50 @@ def inspect_s4_holdings_preview(inputs,*,strategy,variant_id,plan):
     else:
         result=_apply471(plan,proof,anchor,target,strategy,variant_id)
     return RangeEnginePreview385(preview.assessments[:-1]+((route,result),))
+
+
+@dataclass(frozen=True)
+class S4StrictPlan472:
+    scenario: S4HoldingsPlan471
+
+
+@dataclass(frozen=True)
+class S4StrictIngredient472:
+    state: RangeState385
+    reason: str
+    private_ingredient: object | None = None
+    candidate_evidence_complete: bool = False
+    mandatory_gaps: tuple[str,...] = ()
+
+
+def _strict472(proof,phase,previous):
+    if proof is None:
+        return S4StrictIngredient472(RangeState385.MISSING,"EXPLICIT_PHASE_PLAN_MISSING",
+                                     mandatory_gaps=("PLAN_"+phase,))
+    if proof.state is not RangeState385.MATCH:
+        return S4StrictIngredient472(proof.state,proof.reason,proof)
+    if not previous:
+        return S4StrictIngredient472(RangeState385.BLOCKED,"PRIOR_STRICT_CANDIDATE_INCOMPLETE",
+                                     proof,mandatory_gaps=("PRIOR_PHASE",))
+    if phase=="R_F" and (type(proof) is not S4HoldingsIngredient471
+            or type(proof.private_holdings) is not S1HoldingsResult445
+            or proof.private_holdings.candidate_match is not True):
+        return S4StrictIngredient472(RangeState385.MISSING,"RF_HOLDINGS_SCENARIO_MISSING",
+                                     proof,mandatory_gaps=("RF_SETTLED_HOLDINGS_SCENARIO",))
+    return S4StrictIngredient472(proof.state,proof.reason,proof,True)
+
+
+def inspect_s4_strict_preview(inputs,*,strategy,variant_id,plan):
+    if type(plan) is not S4StrictPlan472 or type(plan.scenario) is not S4HoldingsPlan471:
+        raise ValueError("MST_472_EXACT_STRICT_SCENARIO")
+    preview=inspect_s4_holdings_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.scenario)
+    phases=("R0","R_C","R_E","R_F")
+    if tuple(route.phase for route,_ in preview.assessments)!=phases:
+        raise ValueError("MST_472_EXACT_PHASE_CHAIN")
+    out=[]
+    previous=True
+    for route,proof in preview.assessments:
+        result=_strict472(proof,route.phase,previous)
+        previous=result.candidate_evidence_complete
+        out.append((route,result))
+    return RangeEnginePreview385(tuple(out))
