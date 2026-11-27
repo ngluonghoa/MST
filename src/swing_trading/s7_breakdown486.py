@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from .causal_structure_geometry import (
-    GeometryState,StructureSide,TiePolicy,_eligible,_sequence,_source_identity,inspect_causal_pivot,
+    GeometryState,StructureSide,TiePolicy,_eligible,_sequence,_source_identity,_cross_tf_identity,inspect_causal_pivot,
 )
 from .contracts import DecisionStatus,Strategy
 from .feature_engine460 import inspect_target_d1_atr
@@ -131,3 +131,113 @@ def inspect_s7_breakdown_preview(inputs,*,strategy,variant_id,plan):
         raise ValueError("MST_486_EXACT_SCOPE")
     route=route_phase_inputs(inputs,zone_id="S7",strategy=strategy,variant_id=variant_id,phase="R0",selected_frame=plan.timeframe)
     return S7Preview486(((route,_r0486(inputs,plan)),))
+
+
+@dataclass(frozen=True)
+class S7RetestPlan487:
+    breakdown: S7BreakdownPlan486
+    history_start: int
+    target_index: int
+    atr_start: int
+    atr_stop: int
+    candidate_max_sessions: int | None
+    candidate_near_atr: Decimal | None
+
+
+@dataclass(frozen=True)
+class S7RetestIngredient487:
+    state: S1State439
+    reason: str
+    private_pivot: Decimal | None = None
+    private_event_id: str | None = None
+    private_sessions: int | None = None
+    private_range_distance_atr: Decimal | None = None
+    private_close_distance_atr: Decimal | None = None
+    private_target_start: datetime | None = None
+
+
+def _validate487(p):
+    if type(p) is not S7RetestPlan487 or type(p.breakdown) is not S7BreakdownPlan486:
+        raise ValueError("MST_487_EXACT_RETEST_PLAN")
+    if any(type(v) is not int for v in (p.history_start,p.target_index,p.atr_start,p.atr_stop)):
+        raise ValueError("MST_487_EXACT_INDICES")
+    if not 0<=p.history_start<p.target_index<512 or not 0<=p.atr_start<p.atr_stop<=512:
+        raise ValueError("MST_487_BOUNDED_WINDOWS")
+    if p.atr_stop-p.atr_start<15:
+        raise ValueError("MST_487_ATR_WARMUP")
+    n,k=p.candidate_max_sessions,p.candidate_near_atr
+    if n is not None and (type(n) is not int or not 1<=n<=15):
+        raise ValueError("MST_487_EXPLICIT_CANDIDATE_SESSION_WINDOW")
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k<0):
+        raise ValueError("MST_487_EXPLICIT_NEAR_THRESHOLD")
+
+
+def _path487(inputs,p,target):
+    rows=inputs.snapshots_for(Timeframe.M15)
+    known=p.breakdown.event_known_at_utc
+    if any(s.market_bar_key.bar_start_utc>=known for s in rows[:p.history_start]):
+        return None
+    bars,_=_sequence(rows[p.history_start:p.target_index+1],cutoff=target.verified_at_utc)
+    origin=inputs.snapshots_for(p.breakdown.timeframe)[p.breakdown.target_index].selected
+    if not bars or bars[0].market_bar_key.bar_start_utc<known:
+        return None
+    if _cross_tf_identity(bars[0])!=_cross_tf_identity(origin):
+        return None
+    if any(a.verified_at_utc>b.market_bar_key.bar_start_utc for a,b in zip(bars,bars[1:])):
+        return None
+    return bars
+
+
+def _sessions487(bars):
+    seen=set()
+    previous=None
+    for bar in bars:
+        sid=bar.market_bar_key.session_period_id
+        if sid!=previous:
+            if sid in seen:
+                return None
+            seen.add(sid)
+            previous=sid
+    return len(seen)
+
+
+def _geometry487(p,target,path,proof,atr,n):
+    pivot=proof.private_pivot
+    if path[-2].close>=pivot or any(b.close>=pivot for b in path[:-1]):
+        return S7RetestIngredient487(S1State439.NONMATCH,"RETEST_NOT_FROM_BELOW")
+    distance=max(target.low-pivot,Decimal(0),pivot-target.high)/atr
+    close_distance=abs(target.close-pivot)/atr
+    if p.candidate_max_sessions is not None and n>p.candidate_max_sessions:
+        state=S1State439.NONMATCH
+    elif p.candidate_max_sessions is None or p.candidate_near_atr is None:
+        state=S1State439.DISTANCE
+    else:
+        state=S1State439.MATCH if distance<=p.candidate_near_atr else S1State439.NONMATCH
+    return S7RetestIngredient487(state,"OBSERVED_SESSION_RANGE_NEAR_CANDIDATE_ONLY",
+        pivot,proof.private_event_id,n,distance,close_distance,target.market_bar_key.bar_start_utc)
+
+
+def _retest487(inputs,p,proof):
+    if proof.state is not S1State439.MATCH:
+        return S7RetestIngredient487(S1State439.BLOCKED,"BREAKDOWN_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S7RetestIngredient487(S1State439.MISSING,"RETEST_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S7RetestIngredient487(S1State439.BLOCKED,"RETEST_TARGET_UNQUALIFIED")
+    path=_path487(inputs,p,target)
+    if path is None:
+        return S7RetestIngredient487(S1State439.BLOCKED,"RETEST_PATH_NOT_CAUSAL")
+    n=_sessions487(path)
+    atr=inspect_target_d1_atr(inputs,p,target)
+    if n is None or atr is None or atr<=0:
+        return S7RetestIngredient487(S1State439.BLOCKED,"RETEST_SESSIONS_OR_ATR_UNRESOLVED")
+    return _geometry487(p,target,path,proof,atr,n)
+
+
+def inspect_s7_retest487_preview(inputs,*,strategy,variant_id,plan):
+    _validate487(plan)
+    preview=inspect_s7_breakdown_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.breakdown)
+    route=route_phase_inputs(inputs,zone_id="S7",strategy=strategy,variant_id=variant_id,phase="R_C")
+    return S7Preview486(preview.assessments+((route,_retest487(inputs,plan,preview.assessments[0][1])),))

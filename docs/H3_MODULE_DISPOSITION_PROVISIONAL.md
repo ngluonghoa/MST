@@ -55,7 +55,7 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 502 | 43 | 85 | 3 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
+| engine | domain_and_reference | 504 | 44 | 87 | 3 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
@@ -116,7 +116,7 @@ these require separate consumer, migration and rollback evidence.
 | s6_breakout479 | domain_and_reference | 431 | 15 | 18 | 3 | KEEP | none |
 | s6_holdings484 | domain_and_reference | 152 | 14 | 22 | 1 | KEEP | none |
 | s6_rf_volume483 | domain_and_reference | 87 | 14 | 17 | 2 | KEEP | none |
-| s7_breakdown486 | domain_and_reference | 133 | 15 | 18 | 1 | KEEP | none |
+| s7_breakdown486 | domain_and_reference | 243 | 15 | 18 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
