@@ -13,7 +13,7 @@ from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .s1_choch442 import _pivots442, _validate_pivots442
 from .s1_context_preview439 import _tail439
-from .s1_failed_break441 import _atr441
+from .s1_failed_break441 import _atr441, _pair441, validate_pair_atr442
 
 
 @dataclass(frozen=True)
@@ -48,11 +48,27 @@ class S3NearPlan455:
 
 
 @dataclass(frozen=True)
+class S3ChochPlan456:
+    timeframe: Timeframe
+    target_index: int
+    history_start: int
+    high_indices: tuple[int,int]
+    low_indices: tuple[int,int]
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
 class S3ContextPlan454:
     anchor_index: int
     d1: S3TrendWindow454
     resistance: S3Resistance454
     near: S3NearPlan455 | None=None
+    choch: S3ChochPlan456 | None=None
 
 
 class S3State454(str,Enum):
@@ -73,6 +89,7 @@ class S3Ingredient454:
     private_atr: Decimal | None=None
     private_distance: Decimal | None=None
     private_extension_atr: Decimal | None=None
+    private_micro_hl: Decimal | None=None
 
 
 @dataclass(frozen=True)
@@ -240,16 +257,92 @@ def _near455(inputs,plan,base):
     return _near_geometry455(base,prior[0],target,prior,atr,p)
 
 
+def _validate_choch456(p,plan,variant):
+    if type(p) is not S3ChochPlan456 or variant!="S3/E_MICRO_CHOCH":
+        raise ValueError("MST_456_EXPLICIT_MICRO_CHOCH_VARIANT")
+    validate_pair_atr442(p,frames=(Timeframe.M15,))
+    if type(p.history_start) is not int or not 0<=p.history_start<p.target_index-1:
+        raise ValueError("MST_456_EXACT_HISTORY")
+    if plan.near is not None and p.history_start<=plan.near.target_index:
+        raise ValueError("MST_456_HISTORY_MUST_FOLLOW_NEAR")
+    _validate_pivots442(p,p.target_index-1-p.history_start)
+
+
+def _micro456(history,p,prior,rc):
+    cutoff=prior.market_bar_key.bar_start_utc
+    bars,_=_sequence(history,cutoff=cutoff)
+    if not bars or _source_identity(bars[0])!=_source_identity(prior):
+        return None,S3State454.BLOCKED
+    shape=_trend454(history,p,cutoff)
+    if shape.state is not S3State454.MATCH:
+        return None,shape.state
+    low=shape.private_higher_low
+    if low<=rc.private_higher_low or shape.private_d1_hh>rc.private_resistance:
+        return None,S3State454.NONMATCH
+    return low,S3State454.MATCH
+
+
+def _choch_geometry456(prior,target,rc,low,atr,p):
+    if p.candidate_epsilon is None:
+        state=S3State454.DISTANCE
+    else:
+        boundary=low-p.candidate_epsilon*atr
+        match=prior.close>=low and rc.private_higher_low<=target.close<boundary
+        state=S3State454.MATCH if match else S3State454.NONMATCH
+    return S3Ingredient454(state,"M15_MICRO_CHOCH_PROFIT_TAKING_CANDIDATE_ONLY",
+        rc.private_d1_hh,rc.private_higher_low,rc.private_resistance,atr,private_micro_hl=low)
+
+
+def _choch456(inputs,plan,rc):
+    p=plan.choch
+    if rc is None or rc.state is not S3State454.MATCH:
+        return S3Ingredient454(S3State454.BLOCKED,"R_C_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S3Ingredient454(S3State454.MISSING,"CHOCH_TARGET_OR_ATR_MISSING")
+    near=rows[plan.near.target_index].selected
+    prior,target=_pair441(inputs,p,near)
+    if prior is None:
+        return S3Ingredient454(S3State454.BLOCKED,"CHOCH_PAIR_NOT_CAUSAL")
+    cutoff=target.market_bar_key.bar_start_utc
+    path,_=_sequence(rows[plan.near.target_index:p.target_index],cutoff=cutoff)
+    if not path or _source_identity(path[0])!=_source_identity(target):
+        return S3Ingredient454(S3State454.BLOCKED,"CHOCH_PATH_NOT_CAUSAL")
+    if any(not rc.private_higher_low<=b.close<=rc.private_resistance for b in path):
+        return S3Ingredient454(S3State454.NONMATCH,"CHOCH_CONTEXT_INVALIDATED")
+    if not rc.private_higher_low<=target.close<=rc.private_resistance:
+        return S3Ingredient454(S3State454.NONMATCH,"CHOCH_TARGET_OUTSIDE_STRUCTURE")
+    for frame,window in ((Timeframe.D1,plan.d1),(plan.resistance.timeframe,plan.resistance)):
+        history,state=_history454(inputs.snapshots_for(frame),window,target)
+        if history is None:
+            return S3Ingredient454(state,"CHOCH_CONTEXT_NOT_CURRENT")
+    history=rows[p.history_start:p.target_index-1]
+    low,state=_micro456(history,p,prior,rc)
+    if low is None:
+        return S3Ingredient454(state,"CHOCH_MICRO_STRUCTURE_UNRESOLVED_OR_NONMATCH")
+    atr=_atr441(inputs,p,target)
+    if atr is None or atr<=0:
+        return S3Ingredient454(S3State454.BLOCKED,"CHOCH_ATR_UNRESOLVED")
+    return _choch_geometry456(prior,target,rc,low,atr,p)
+
+
 def inspect_s3_preview(inputs,*,strategy,variant_id,plan):
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
             or type(plan) is not S3ContextPlan454 or variant_id not in
             ("S3/E_MICRO_CHOCH","S3/E_TP","S3/F_MICRO_BREAK","S3/F_TP")):
         raise ValueError("MST_454_EXACT_SCOPE")
     _validate454(plan)
+    if plan.choch is not None:
+        _validate_choch456(plan.choch,plan,variant_id)
     route=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R0")
     base=_r0454(inputs,plan)
     assessments=((route,base),)
+    near=None
     if plan.near is not None:
         rc=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_C")
-        assessments+=((rc,_near455(inputs,plan,base)),)
+        near=_near455(inputs,plan,base)
+        assessments+=((rc,near),)
+    if plan.choch is not None:
+        re=route_phase_inputs(inputs,zone_id="S3",strategy=strategy,variant_id=variant_id,phase="R_E")
+        assessments+=((re,_choch456(inputs,plan,near)),)
     return S3Preview454(assessments)
