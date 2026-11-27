@@ -43,7 +43,7 @@ these require separate consumer, migration and rollback evidence.
 | causal_compression_pivot402 | domain_and_reference | 76 | 11 | 30 | 2 | KEEP | none |
 | causal_contraction_candidate386 | domain_and_reference | 140 | 10 | 25 | 1 | KEEP | none |
 | causal_cross_tf_candidate392 | domain_and_reference | 97 | 10 | 33 | 2 | KEEP | none |
-| causal_exhaustion492 | domain_and_reference | 113 | 17 | 16 | 2 | KEEP | none |
+| causal_exhaustion492 | domain_and_reference | 113 | 15 | 24 | 2 | KEEP | none |
 | causal_indicators | domain_and_reference | 404 | 18 | 58 | 27 | KEEP | HIGH_FAN_IN |
 | causal_range_candidate384 | domain_and_reference | 129 | 8 | 37 | 1 | KEEP | none |
 | causal_range_percentile397 | domain_and_reference | 75 | 7 | 27 | 3 | KEEP | none |
@@ -120,7 +120,7 @@ these require separate consumer, migration and rollback evidence.
 | s7_breakdown486 | domain_and_reference | 444 | 15 | 18 | 2 | IMPROVE | DUPLICATE_AST |
 | s7_holdings490 | domain_and_reference | 148 | 11 | 19 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
-| s8_context492 | domain_and_reference | 48 | 5 | 13 | 1 | KEEP | none |
+| s8_context492 | domain_and_reference | 48 | 6 | 12 | 1 | KEEP | none |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
 | source_capability_evidence | domain_and_reference | 231 | 32 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
