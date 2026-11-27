@@ -1,0 +1,7 @@
+# §430 — B8 RF execution-preview decomposition and cumulative gap review
+
+Extract only the §424–429 execution chain verbatim in order (risk, band, settlement, liquidity, portfolio), with explicit state enum passed by the existing orchestration. Existing public plan/ingredient/state class identity, phase routing, safe summaries, thresholds, prior validation order and authority remain unchanged. All existing unit tests plus six cross-component fictional regressions. Rollback: revert atomic squash PR; no schema migration.
+
+## Remaining B8 parity gaps (locked §24.4)
+
+R0: base, ATR, pivot and RS ingredients exist, but mandatory conjunction with aligned benchmark and price-limit policy is not yet a fully enforced detector; same-session raw grid is RF-only. R_C and R_E: explicit geometry and TOD arithmetic, no calibrated NEAR/epsilon or approved TOD threshold. R_F: closed H1/D1 crossing, RVOL, RS, ATR cap and R:R arithmetic; volume is computed uncalibrated and optional, RS candidate threshold unapproved, optional execution ingredients do not imply mandatory evidence complete. Risk chain uses hypothetical entry and externally supplied calendar/settlement, uniform tick, raw matched value and caller budget; no real execution/verified portfolio, tick tiers, slippage, fill or calibration. No event authority, no actual action eligibility. Follow-up: explicit opt-in cumulative mandatory evidence status, no silent promotion; separate real-data gates and S-zone parity.

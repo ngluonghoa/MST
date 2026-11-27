@@ -18,12 +18,13 @@ these require separate consumer, migration and rollback evidence.
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
 | b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 3 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
-| b8_base_preview415 | domain_and_reference | 582 | 12 | 39 | 1 | IMPROVE | FILE_500_PLUS |
-| b8_liquidity428 | domain_and_reference | 95 | 10 | 15 | 1 | KEEP | none |
-| b8_portfolio429 | domain_and_reference | 97 | 11 | 11 | 1 | KEEP | none |
-| b8_price_band426 | domain_and_reference | 82 | 8 | 18 | 1 | KEEP | none |
-| b8_risk_geometry424 | domain_and_reference | 105 | 8 | 17 | 1 | KEEP | none |
-| b8_settlement427 | domain_and_reference | 75 | 9 | 13 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 473 | 12 | 37 | 1 | KEEP | none |
+| b8_execution_preview430 | domain_and_reference | 122 | 9 | 20 | 1 | KEEP | none |
+| b8_liquidity428 | domain_and_reference | 95 | 10 | 15 | 2 | KEEP | none |
+| b8_portfolio429 | domain_and_reference | 97 | 11 | 11 | 2 | KEEP | none |
+| b8_price_band426 | domain_and_reference | 82 | 8 | 18 | 2 | KEEP | none |
+| b8_risk_geometry424 | domain_and_reference | 105 | 8 | 17 | 2 | KEEP | none |
+| b8_settlement427 | domain_and_reference | 75 | 9 | 13 | 2 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 159 | 7 | 20 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -62,7 +63,7 @@ these require separate consumer, migration and rollback evidence.
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_renderer | domain_and_reference | 352 | 10 | 129 | 1 | IMPROVE | FUNCTION_90_PLUS |
-| market_data | domain_and_reference | 162 | 23 | 29 | 47 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| market_data | domain_and_reference | 162 | 23 | 29 | 48 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
