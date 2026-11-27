@@ -1,0 +1,5 @@
+# §437 selected TOD strict B8 integration (fictional only)
+
+Extend §436's complete same-input D1-base candidate with the explicitly selected intraday TOD variant. Bind all 20 prior exact M15 slots and the target M15 slot to the actual supplied M15 bucket; each supplied raw M1 prefix and witness is rekeyed to the same fictional RAW lineage. Keep independently aligned adjusted D1 for RS, regenerate the R0 raw band, and retain exact RF raw RVOL, risk, settlement, liquidity and portfolio evidence. Explicit synthetic TOD and RF thresholds 2 and 2.5, not approved thresholds. D1/H1 RF and SHORT/SWING.
+
+Six regression methods exercise all four positive combinations, TOD threshold nonmatch, cumulative witness late at RE verification, truncated prefix/wrong slot, missing TOD/wrong variant and deterministic redacted nonactionable output. This establishes fictional same-input candidate-chain coverage, not real venue calendar continuity, cross-timeframe full OHLCV reconstruction, source qualification, calibration or trade approval. No production, cache or automation changes. Rollback: revert squash commit.
