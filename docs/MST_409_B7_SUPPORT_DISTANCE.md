@@ -1,0 +1,3 @@
+# §409 B7 support-distance ingredient
+
+Source frozen §15.7 and §24.4/24.5. Both explicit B7 variants may request independent R_C geometry, with exact caller-indexed closed M15 target low, preceding D1/H1 low pivot and D1 ATR14, available before target start. M15 target, low and pivot frame are diagnostic choices, not approved feature policy. Normative distance to singleton support interval divided by ATR, optional explicit candidate k; no default, no silent fallback. R0/R_E/R_F unchanged; no no-reversal, MA stretch, selling exhaustion, RSI, risk, settlement or liquidity approval. All statuses UNVERIFIED/NO_TRADE. Synthetic fixtures only. Rollback: revert this atomic squash commit; no source/cache/UI/credential change.
