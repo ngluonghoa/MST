@@ -127,7 +127,7 @@ these require separate consumer, migration and rollback evidence.
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 2 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | structural_phase_evidence | domain_and_reference | 611 | 34 | 110 | 6 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| unified_mode459 | domain_and_reference | 117 | 11 | 22 | 1 | KEEP | none |
+| unified_mode459 | domain_and_reference | 121 | 13 | 26 | 1 | KEEP | none |
 | validation_replay461 | domain_and_reference | 134 | 12 | 19 | 0 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
