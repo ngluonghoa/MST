@@ -1,9 +1,13 @@
 """§415 B8 explicit prior base and resistance candidate; not an approved base."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from enum import Enum
 
-from .causal_indicators import IndicatorState, calculate_wilder_atr14
+from .causal_indicators import CausalIndicatorResult, IndicatorState, calculate_wilder_atr14
+from .b6_rf_volume405 import (
+    B6RFVolumePlan389, B6H1VolumePlan394, _check_volume389, _check_h1_volume394,
+    _volume389, _h1_volume394,
+)
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
     _sequence, inspect_causal_pivot, _source_identity,
@@ -30,6 +34,7 @@ class B8ConfirmPlan418:
     timeframe: Timeframe
     breakout_index: int
     candidate_epsilon: Decimal
+    volume: B6RFVolumePlan389 | B6H1VolumePlan394 | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +71,8 @@ class B8Ingredient415:
     private_resistance: Decimal | None = None
     private_atr: Decimal | None = None
     distance_atr: Decimal | None = None
+    volume_state: str = "NOT_REQUESTED"
+    rvol: CausalIndicatorResult | None = None
 
 
 @dataclass(frozen=True)
@@ -221,6 +228,11 @@ def _validate_rf418(p):
     e = p.candidate_epsilon
     if type(e) is not Decimal or not e.is_finite() or e < 0:
         raise ValueError("MST_418_EXPLICIT_EPSILON")
+    if p.volume is not None:
+        if p.timeframe is Timeframe.D1:
+            _check_volume389(p.volume)
+        else:
+            _check_h1_volume394(p.volume)
 
 
 def _rf_pair418(inputs, p, rows, m15):
@@ -258,6 +270,18 @@ def _rf418(inputs, p, base, early):
     return B8Ingredient415(state, "LATER_HIGHER_FRAME_SAME_RESISTANCE_CROSS_ONLY")
 
 
+def _rf_volume419(inputs, p, geometry):
+    if p.rf.volume is None or geometry.state is not B8State415.MATCH:
+        return geometry
+    bound = (_volume389(inputs, p.rf, geometry) if p.rf.timeframe is Timeframe.D1
+             else _h1_volume394(inputs, p.rf, geometry))
+    if bound.volume_state == "EXACT_TARGET_OR_PRIOR20_MISSING":
+        return replace(bound, state=B8State415.MISSING, reason="RF_VOLUME_HISTORY_MISSING")
+    if bound.volume_state != "RVOL_COMPUTED_UNCALIBRATED":
+        return replace(bound, state=B8State415.BLOCKED, reason="RF_VOLUME_WITNESS_BLOCKED")
+    return replace(bound, reason="RF_CROSS_AND_RAW_RVOL_ARITHMETIC_ONLY")
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -286,5 +310,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         _validate_rf418(plan.rf)
         rf = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
             variant_id=variant_id, phase="R_F", selected_frame=plan.rf.timeframe)
-        assessments += ((rf, _rf418(inputs, plan, base, early)),)
+        geometry = _rf418(inputs, plan, base, early)
+        assessments += ((rf, _rf_volume419(inputs, plan, geometry)),)
     return B8Preview415(assessments)

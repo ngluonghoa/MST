@@ -16,9 +16,9 @@ these require separate consumer, migration and rollback evidence.
 | b5_phase_contract | domain_and_reference | 261 | 46 | 117 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_temporal_split_audit | domain_and_reference | 235 | 35 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b6_baseline_preview387 | domain_and_reference | 473 | 18 | 49 | 2 | KEEP | none |
-| b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 2 | KEEP | none |
+| b6_rf_volume405 | domain_and_reference | 82 | 10 | 19 | 3 | KEEP | none |
 | b7_support_preview409 | domain_and_reference | 469 | 16 | 38 | 1 | KEEP | none |
-| b8_base_preview415 | domain_and_reference | 290 | 12 | 30 | 1 | KEEP | none |
+| b8_base_preview415 | domain_and_reference | 315 | 12 | 31 | 1 | KEEP | none |
 | backtest | domain_and_reference | 71 | 4 | 23 | 0 | KEEP | none |
 | baseline_ui10_runtime379 | domain_and_reference | 159 | 7 | 20 | 1 | KEEP | none |
 | c2_fair_source_benchmark | source_adapter_and_quality | 292 | 28 | 41 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
