@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from .causal_compression_approach403 import inspect_compression_approach
+from .causal_cross_tf_candidate392 import inspect_h1_cross_of_d1_upper_pivot
 from .causal_structure_geometry import GeometryState, StructureSide, inspect_closed_bos_geometry
 from .market_data import Timeframe
 from .replay import require_utc
@@ -76,3 +77,57 @@ def inspect_compression_d1_breakout(rows, m15, *, target_index, percentile,
     if approach.approach is not True:
         return CompressionBreakout404("BLOCKED", "M15_APPROACH_NOT_AVAILABLE_BEFORE_D1_BREAKOUT")
     return _cross404(rows, target_index, upper_pivot, early, rf, as_of_utc)
+
+
+@dataclass(frozen=True)
+class CompressionH1RFPlan405:
+    breakout_index: int
+    candidate_epsilon: Decimal
+
+
+def _check_h1405(rf):
+    if type(rf) is not CompressionH1RFPlan405:
+        raise ValueError("MST_405_EXPLICIT_H1_RF_PLAN")
+    if type(rf.breakout_index) is not int or rf.breakout_index < 1:
+        raise ValueError("MST_405_EXPLICIT_H1_PAIR")
+    eps = rf.candidate_epsilon
+    if type(eps) is not Decimal or not eps.is_finite() or eps < 0:
+        raise ValueError("MST_405_EXPLICIT_EPSILON")
+
+
+def _cross405(rows, target_index, upper_pivot, early, pair, rf, as_of):
+    start = target_index+1-upper_pivot.base_count
+    geom = inspect_h1_cross_of_d1_upper_pivot(
+        rows[start:target_index+1], pivot_index=upper_pivot.candidate_index,
+        left_count=upper_pivot.left_count, right_count=upper_pivot.right_count,
+        tie_policy=upper_pivot.tie_policy, previous=pair[0], breakout=pair[1],
+        atr_d1_history=rows[early.atr_start:early.atr_stop],
+        candidate_epsilon=rf.candidate_epsilon, as_of_utc=as_of)
+    if geom.state is GeometryState.BLOCKED:
+        return CompressionBreakout404("BLOCKED", "H1_CLOSED_CROSS_" + geom.reason)
+    state = "GEOMETRY_MATCH_UNVERIFIED" if geom.candidate_cross else "GEOMETRY_NONMATCH_UNVERIFIED"
+    return CompressionBreakout404(state, "COMPRESSION_SAME_PIVOT_H1_CROSS_ONLY")
+
+
+def inspect_compression_h1_breakout(rows, m15, h1, *, target_index, percentile,
+                                    upper_pivot, early, rf, as_of_utc,
+                                    expected_base_count=None):
+    """Explicit H1 pair, prior M15 approach known before H1 target starts."""
+    require_utc(as_of_utc)
+    _check_h1405(rf)
+    if rf.breakout_index >= len(h1):
+        return CompressionBreakout404("MISSING_INPUT", "H1_BREAKOUT_OR_PREVIOUS_MISSING")
+    if early is None or upper_pivot is None:
+        return CompressionBreakout404("MISSING_INPUT", "EXPLICIT_APPROACH_OR_PIVOT_MISSING")
+    pair = h1[rf.breakout_index-1:rf.breakout_index+1]
+    target = pair[-1].selected
+    if target is None or not pair[-1].confirmation_prerequisites(as_of_utc):
+        return CompressionBreakout404("BLOCKED", "H1_BREAKOUT_NOT_CAUSALLY_AVAILABLE")
+    cutoff = target.market_bar_key.bar_start_utc
+    approach = inspect_compression_approach(
+        rows, m15, target_index=target_index, percentile=percentile,
+        upper_pivot=upper_pivot, plan=early, as_of_utc=cutoff,
+        expected_base_count=expected_base_count)
+    if approach.approach is not True:
+        return CompressionBreakout404("BLOCKED", "M15_APPROACH_NOT_AVAILABLE_BEFORE_H1_BREAKOUT")
+    return _cross405(rows, target_index, upper_pivot, early, pair, rf, as_of_utc)
