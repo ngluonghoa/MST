@@ -262,3 +262,103 @@ def inspect_s4_bos_down_preview(inputs,*,strategy,variant_id,plan):
     route=route_phase_inputs(inputs,zone_id="S4",strategy=strategy,variant_id=variant_id,
                              phase="R_E",selected_frame=plan.timeframe)
     return RangeEnginePreview385(preview.assessments+((route,_bos469(inputs,plan,preview.assessments[1][1])),))
+
+
+@dataclass(frozen=True)
+class S4ConfirmPlan470:
+    early: S4FalseBreakPlan468 | S4BosDownPlan469
+    timeframe: Timeframe
+    target_index: int
+    history_start: int
+    low_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+def _validate470(p,variant):
+    if type(p) is not S4ConfirmPlan470:
+        raise ValueError("MST_470_EXPLICIT_CONFIRM_PLAN")
+    if (type(p.early),variant) not in ((S4FalseBreakPlan468,"S4/E_FALSE_BREAK"),
+                                      (S4BosDownPlan469,"S4/E_BOS_DOWN")):
+        raise ValueError("MST_470_EXACT_EARLY_VARIANT")
+    validate_pair_atr442(p,frames=(Timeframe.H1,Timeframe.D1))
+    if any(type(i) is not int for i in (p.history_start,p.low_index,p.left_count,p.right_count)):
+        raise ValueError("MST_470_EXACT_PIVOT_INDICES")
+    if not 0<=p.history_start<p.target_index-1 or not 0<=p.low_index<p.target_index-1-p.history_start:
+        raise ValueError("MST_470_BOUNDED_PIVOT_HISTORY")
+    if not 1<=p.left_count<=40 or not 1<=p.right_count<=40 or type(p.tie_policy) is not TiePolicy:
+        raise ValueError("MST_470_EXPLICIT_PIVOT_POLICY")
+
+
+def _early470(inputs,p):
+    e=p.early
+    i=e.reentry_index if type(e) is S4FalseBreakPlan468 else e.target_index
+    return inputs.snapshots_for(e.timeframe)[i].selected
+
+
+def _daily470(inputs,p,target,r):
+    w=p.early.context.context.range_slice
+    rows=inputs.snapshots_for(Timeframe.D1)
+    daily,_=_sequence(rows[w.start:p.atr_stop],cutoff=target.market_bar_key.bar_start_utc)
+    if p.atr_stop<w.stop or not daily or _cross_tf_identity(daily[0])!=_cross_tf_identity(target):
+        return RangeIngredient385(RangeState385.BLOCKED,"S4_RF_D1_PATH_UNRESOLVED")
+    if any(not r.lower<=b.close<=r.upper for b in daily[w.stop-w.start:]):
+        return RangeIngredient385(RangeState385.NONMATCH,"S4_RF_D1_RANGE_INVALIDATED")
+    return None
+
+
+def _intraday470(inputs,early,target,r):
+    cutoff=target.market_bar_key.bar_start_utc
+    for tf in (Timeframe.M15,Timeframe.H1):
+        for snapshot in inputs.snapshots_for(tf):
+            start=snapshot.market_bar_key.bar_start_utc
+            if not early.verified_at_utc<=start<cutoff:
+                continue
+            if snapshot.selected is not None and snapshot.selected.bar_end_utc>cutoff:
+                continue
+            bar=_eligible(snapshot,cutoff=cutoff)
+            if bar is None or _cross_tf_identity(bar)!=_cross_tf_identity(target):
+                return RangeIngredient385(RangeState385.BLOCKED,"S4_RF_INTRADAY_PATH_UNRESOLVED")
+            if not r.lower<=bar.close<=r.upper:
+                return RangeIngredient385(RangeState385.NONMATCH,"S4_RF_INTRADAY_RANGE_INVALIDATED")
+    return None
+
+
+def _path470(inputs,p,early,target,r):
+    rows=inputs.snapshots_for(p.timeframe)
+    path,_=_sequence(rows[p.history_start:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    if not path or _source_identity(path[0])!=_source_identity(target) or path[0].market_bar_key.bar_start_utc<early.verified_at_utc:
+        return RangeIngredient385(RangeState385.BLOCKED,"S4_RF_MICRO_PATH_NOT_CAUSAL")
+    if any(not r.lower<=bar.close<=r.upper for bar in (*path,target)):
+        return RangeIngredient385(RangeState385.NONMATCH,"S4_RF_ORIGINAL_RANGE_INVALIDATED")
+    return _daily470(inputs,p,target,r) or _intraday470(inputs,early,target,r)
+
+
+def _confirm470(inputs,p,re):
+    if re.state is not RangeState385.MATCH:
+        return RangeIngredient385(RangeState385.BLOCKED,"S4_R_E_NOT_MATCHED")
+    if p.target_index>=len(inputs.snapshots_for(p.timeframe)) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return RangeIngredient385(RangeState385.MISSING,"S4_RF_BAR_OR_ATR_MISSING")
+    early=_early470(inputs,p)
+    prior,target=_pair441(inputs,p,early)
+    if prior is None:
+        return RangeIngredient385(RangeState385.BLOCKED,"S4_RF_PAIR_NOT_CAUSAL")
+    r=re.private_range
+    gap=_path470(inputs,p,early,target,r)
+    if gap is not None:
+        return gap
+    proof=_pivot469(inputs,p,prior,target,r)
+    return RangeIngredient385(proof.state,"S4_RF_"+proof.reason,proof.private_range,proof.distance)
+
+
+def inspect_s4_confirm_preview(inputs,*,strategy,variant_id,plan):
+    _validate470(plan,variant_id)
+    inspect=inspect_s4_false_break_preview if type(plan.early) is S4FalseBreakPlan468 else inspect_s4_bos_down_preview
+    preview=inspect(inputs,strategy=strategy,variant_id=variant_id,plan=plan.early)
+    route=route_phase_inputs(inputs,zone_id="S4",strategy=strategy,variant_id=variant_id,
+                             phase="R_F",selected_frame=plan.timeframe)
+    return RangeEnginePreview385(preview.assessments+((route,_confirm470(inputs,plan,preview.assessments[2][1])),))
