@@ -1,0 +1,3 @@
+# §440 — S1 explicit D1 resistance rejection/distribution candidate
+
+Explicit candidate choice, not all distribution patterns: after matched R0 anchor, a closed D1 RAW candle reaches same resistance and closes at or below it, with raw matched RVOL TF20 at exact target verification and weak close location (close-low)/(high-low). Explicit minimum RVOL and maximum close-location fraction, inclusive, no defaults. Prior20 exact same-frame witnesses, no RSI shortcut, missing or late evidence fails closed, no promotion of unmatched R0. RC timeframe remains an explicit D1 candidate, not approved manifest. Six fictional tests. No sell/major label authority. Rollback by revert.

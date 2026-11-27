@@ -8,6 +8,8 @@ from .causal_structure_geometry import (
     _sequence, inspect_causal_pivot,
 )
 from .contracts import DecisionStatus, Strategy
+from .causal_indicators import CausalIndicatorResult
+from .s1_distribution440 import S1DistributionPlan440, inspect_distribution440
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
@@ -25,6 +27,7 @@ class S1ContextPlan439:
     right_count: int
     tie_policy: TiePolicy
     candidate_min_span_bars: int | None
+    distribution: S1DistributionPlan440 | None = None
 
 
 class S1State439(str, Enum):
@@ -42,6 +45,8 @@ class S1Ingredient439:
     private_resistance: Decimal | None = None
     private_higher_low: Decimal | None = None
     observed_span_bars: int | None = None
+    rvol: CausalIndicatorResult | None = None
+    close_location: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -145,4 +150,10 @@ def inspect_s1_preview(inputs,*,strategy,variant_id,plan):
     _validate439(plan)
     route=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,
                              phase="R0",selected_frame=plan.timeframe)
-    return S1Preview439(((route,_r0439(inputs,plan)),))
+    base=_r0439(inputs,plan)
+    assessments=((route,base),)
+    if plan.distribution is not None:
+        rc=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,phase="R_C")
+        result=inspect_distribution440(inputs,plan,base,states=S1State439,ingredient=S1Ingredient439)
+        assessments+=((rc,result),)
+    return S1Preview439(assessments)
