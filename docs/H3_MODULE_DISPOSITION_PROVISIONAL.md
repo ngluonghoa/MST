@@ -102,7 +102,7 @@ these require separate consumer, migration and rollback evidence.
 | s1_major446 | domain_and_reference | 117 | 10 | 24 | 1 | KEEP | none |
 | s1_rf_volume444 | domain_and_reference | 59 | 7 | 18 | 1 | KEEP | none |
 | s1_strict447 | domain_and_reference | 54 | 12 | 17 | 1 | KEEP | none |
-| s2_context448 | domain_and_reference | 170 | 12 | 24 | 1 | KEEP | none |
+| s2_context448 | domain_and_reference | 170 | 9 | 24 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 1 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |

@@ -17,7 +17,7 @@ from test_causal_indicators import make_bar,snap
 def fixture(*,rising=False,h1_rising=False,anchor_close=D(10)):
     inputs=model()
     anchor=inputs.snapshots_for(Timeframe.M15)[0].selected
-    anchor=snap(replace(anchor,open_price=anchor_close,high=max(anchor_close,anchor.high),
+    anchor=snap(replace(anchor,open=anchor_close,high=max(anchor_close,anchor.high),
                         low=min(anchor_close,anchor.low),close=anchor_close))
     start=anchor.market_bar_key.bar_start_utc
     daily=[]
