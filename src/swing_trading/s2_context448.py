@@ -9,6 +9,7 @@ from .causal_structure_geometry import (
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
+from .s1_failed_break441 import _atr441
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 
@@ -25,10 +26,19 @@ class S2Window448:
 
 
 @dataclass(frozen=True)
+class S2RallyPlan449:
+    target_index: int
+    atr_start: int
+    atr_stop: int
+    candidate_k_near: Decimal | None
+
+
+@dataclass(frozen=True)
 class S2ContextPlan448:
     anchor_index: int
     d1: S2Window448
     h1: S2Window448
+    rally: S2RallyPlan449 | None = None
 
 
 class S2State448(str,Enum):
@@ -46,6 +56,8 @@ class S2Ingredient448:
     private_d1_lh: Decimal | None=None
     private_d1_ll: Decimal | None=None
     private_resistance: Decimal | None=None
+    private_atr: Decimal | None=None
+    private_distance: Decimal | None=None
 
 
 @dataclass(frozen=True)
@@ -158,6 +170,59 @@ def _r0448(inputs,plan):
                            trend.private_d1_lh,trend.private_d1_ll,resistance)
 
 
+def _validate_rally449(p,anchor_index):
+    if type(p) is not S2RallyPlan449:
+        raise ValueError("MST_449_EXACT_RALLY_PLAN")
+    if any(type(i) is not int for i in (p.target_index,p.atr_start,p.atr_stop)):
+        raise ValueError("MST_449_EXACT_INDICES")
+    if not anchor_index<p.target_index<512 or not 0<=p.atr_start<p.atr_stop<=512:
+        raise ValueError("MST_449_BOUNDED_RALLY")
+    if p.atr_stop-p.atr_start<15:
+        raise ValueError("MST_449_ATR_WARMUP")
+    k=p.candidate_k_near
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k<0):
+        raise ValueError("MST_449_EXPLICIT_NEAR_THRESHOLD")
+
+
+def _rally_geometry449(base,anchor,target,atr,p):
+    resistance=base.private_resistance
+    distance=resistance-target.close
+    if target.close<=anchor.close or distance<0:
+        state=S2State448.NONMATCH
+    elif p.candidate_k_near is None:
+        state=S2State448.DISTANCE
+    else:
+        state=S2State448.MATCH if distance<=p.candidate_k_near*atr else S2State448.NONMATCH
+    return S2Ingredient448(state,"SAME_H1_RESISTANCE_RALLY_CANDIDATE_ONLY",
+                           base.private_d1_lh,base.private_d1_ll,resistance,atr,distance)
+
+
+def _rally449(inputs,plan,base):
+    p=plan.rally
+    _validate_rally449(p,plan.anchor_index)
+    if base.state is not S2State448.MATCH:
+        return S2Ingredient448(S2State448.BLOCKED,"R0_BEARISH_CONTEXT_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S2Ingredient448(S2State448.MISSING,"EXACT_RALLY_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S2Ingredient448(S2State448.BLOCKED,"RALLY_TARGET_NOT_ELIGIBLE")
+    prior,_=_sequence(rows[plan.anchor_index:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    if not prior or _cross_tf_identity(prior[0])!=_cross_tf_identity(target):
+        return S2Ingredient448(S2State448.BLOCKED,"RALLY_HISTORY_NOT_CAUSAL")
+    if any(x.close>base.private_resistance for x in prior):
+        return S2Ingredient448(S2State448.NONMATCH,"RESISTANCE_ALREADY_BROKEN")
+    for frame,window in ((Timeframe.D1,plan.d1),(Timeframe.H1,plan.h1)):
+        history,state=_history448(inputs.snapshots_for(frame),window,target)
+        if history is None:
+            return S2Ingredient448(state,"BEARISH_CONTEXT_NO_LONGER_CURRENT")
+    atr=_atr441(inputs,p,target)
+    if atr is None or atr<=0:
+        return S2Ingredient448(S2State448.BLOCKED,"CAUSAL_D1_ATR_UNRESOLVED")
+    return _rally_geometry449(base,prior[0],target,atr,p)
+
+
 def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
             or type(plan) is not S2ContextPlan448 or variant_id!="S2/BASE"):
@@ -167,4 +232,9 @@ def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
     _validate_window448(plan.d1,lows=True)
     _validate_window448(plan.h1,lows=False)
     route=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R0")
-    return S2Preview448(((route,_r0448(inputs,plan)),))
+    base=_r0448(inputs,plan)
+    assessments=((route,base),)
+    if plan.rally is not None:
+        rc=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R_C")
+        assessments+=((rc,_rally449(inputs,plan,base)),)
+    return S2Preview448(assessments)
