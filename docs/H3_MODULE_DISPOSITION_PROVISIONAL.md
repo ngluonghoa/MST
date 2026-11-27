@@ -120,7 +120,7 @@ these require separate consumer, migration and rollback evidence.
 | s7_breakdown486 | domain_and_reference | 444 | 15 | 18 | 2 | IMPROVE | DUPLICATE_AST |
 | s7_holdings490 | domain_and_reference | 148 | 11 | 19 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
-| s8_context492 | domain_and_reference | 163 | 25 | 28 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
+| s8_context492 | domain_and_reference | 163 | 21 | 24 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
 | source_capability_evidence | domain_and_reference | 231 | 32 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
