@@ -5,7 +5,8 @@ from decimal import Decimal
 from .causal_structure_geometry import TiePolicy, _cross_tf_identity, _eligible, _sequence, _source_identity
 from .market_data import Timeframe
 from .s1_choch442 import _validate_pivots442, _rising442, _cross442
-from .s1_failed_break441 import _atr441, validate_pair_atr442
+from .feature_engine460 import inspect_target_d1_atr as _atr441
+from .s1_failed_break441 import validate_pair_atr442
 from .s1_holdings445 import S1HoldingsPlan445, S1HoldingsResult445, inspect_holdings445, validate_holdings445
 
 

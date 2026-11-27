@@ -10,7 +10,8 @@ from .causal_structure_geometry import (
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
-from .s1_failed_break441 import _atr441, _pair441, validate_pair_atr442
+from .feature_engine460 import inspect_target_d1_atr as _atr441
+from .s1_failed_break441 import _pair441, validate_pair_atr442
 from .s1_holdings445 import S1HoldingsPlan445, S1HoldingsResult445, validate_holdings445
 from .s2_strict453 import strict_chain453
 from .phase_input_routing369 import route_phase_inputs

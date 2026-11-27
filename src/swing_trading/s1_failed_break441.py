@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from .causal_indicators import IndicatorState, calculate_wilder_atr14
+from .feature_engine460 import inspect_target_d1_atr as _atr441
 from .causal_structure_geometry import _cross_tf_identity, _eligible, _source_identity
 from .market_data import Timeframe
 
@@ -51,25 +51,6 @@ def _pair441(inputs,p,distribution):
             or prior.market_bar_key.bar_start_utc<distribution.verified_at_utc):
         return None,None
     return prior,target
-
-
-def _atr441(inputs,p,target):
-    daily=inputs.snapshots_for(Timeframe.D1)
-    cutoff=target.market_bar_key.bar_start_utc
-    if p.atr_stop>len(daily):
-        return None
-    atr=calculate_wilder_atr14(daily[p.atr_start:p.atr_stop],
-                as_of_utc=inputs.as_of_utc,known_before_utc=cutoff)
-    if atr.state is not IndicatorState.COMPUTED_UNCALIBRATED:
-        return None
-    if _cross_tf_identity(daily[p.atr_start].selected)!=_cross_tf_identity(target):
-        return None
-    for snap in daily[p.atr_stop:]:
-        if snap.selected is None and snap.market_bar_key.bar_start_utc<cutoff:
-            return None
-        if snap.selected is not None and snap.selected.bar_end_utc<=cutoff:
-            return None
-    return atr.value
 
 
 def inspect_failed441(inputs,plan,base,rc,*,variant,states,ingredient):

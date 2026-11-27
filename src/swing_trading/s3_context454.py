@@ -13,7 +13,8 @@ from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .s1_choch442 import _pivots442, _validate_pivots442
 from .s1_context_preview439 import _tail439
-from .s1_failed_break441 import _atr441, _pair441, validate_pair_atr442
+from .feature_engine460 import inspect_target_d1_atr as _atr441
+from .s1_failed_break441 import _pair441, validate_pair_atr442
 
 
 @dataclass(frozen=True)

@@ -10,7 +10,7 @@ from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .replay import require_utc
 from .s1_choch442 import _validate_pivots442
-from .s1_failed_break441 import _atr441
+from .feature_engine460 import inspect_target_d1_atr as _atr441
 from .s3_context454 import (
     S3TrendWindow454, S3NearPlan455, S3State454, S3Preview454,
     _window454, _history454, _trend454, _validate_near455,
