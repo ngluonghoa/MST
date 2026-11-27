@@ -8,6 +8,7 @@ from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
     inspect_causal_pivot, inspect_closed_bos_geometry, _source_identity,
 )
+from .causal_trend_candidate382 import inspect_d1_paired_trend_candidate
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
@@ -46,6 +47,24 @@ class B7ConfirmPlan412:
 
 
 @dataclass(frozen=True)
+class B7TrendWindow413:
+    start: int
+    stop: int
+    high_indices: tuple[int, int]
+    low_indices: tuple[int, int]
+
+
+@dataclass(frozen=True)
+class B7TrendPlan413:
+    r0: B7TrendWindow413
+    rf: B7TrendWindow413 | None
+    lookback: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+
+
+@dataclass(frozen=True)
 class B7SupportPlan409:
     target_index: int
     pivot_tf: Timeframe
@@ -61,6 +80,7 @@ class B7SupportPlan409:
     reclaim: B7ReclaimPlan410 | None = None
     choch: B7ChochPlan411 | None = None
     rf: B7ConfirmPlan412 | None = None
+    trend: B7TrendPlan413 | None = None
 
 
 class B7SupportState409(str, Enum):
@@ -297,6 +317,67 @@ def _rf412(inputs, plan, early):
     return _rf_cross412(inputs, plan, rows, history, daily)
 
 
+def _validate_trend_window413(w, lookback):
+    if type(w) is not B7TrendWindow413:
+        raise ValueError("MST_413_EXPLICIT_TREND_WINDOW")
+    if (type(w.start) is not int or type(w.stop) is not int
+            or not 0 <= w.start < w.stop <= 512 or w.stop-w.start != 50+lookback):
+        raise ValueError("MST_413_EXACT_SMA_WINDOW")
+    _validate_micro_pair411(w.high_indices)
+    _validate_micro_pair411(w.low_indices)
+
+
+def _validate_trend413(p, rf):
+    if type(p) is not B7TrendPlan413 or type(p.lookback) is not int or not 1 <= p.lookback <= 462:
+        raise ValueError("MST_413_EXPLICIT_TREND_PLAN")
+    _validate_trend_window413(p.r0, p.lookback)
+    if p.rf is not None:
+        _validate_trend_window413(p.rf, p.lookback)
+        if rf is None or p.rf.stop < p.r0.stop:
+            raise ValueError("MST_413_NONREGRESSING_RF_WINDOW")
+
+
+def _trend_at413(inputs, p, w, target):
+    daily = inputs.snapshots_for(Timeframe.D1)
+    history = _window409(daily, w.start, w.stop)
+    if not history or target is None:
+        return B7SupportIngredient409(B7SupportState409.MISSING, "D1_TREND_WINDOW_OR_TARGET_MISSING")
+    cutoff = target.market_bar_key.bar_start_utc
+    if any(_eligible(row, cutoff=cutoff) is not None for row in daily[w.stop:]):
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "NEWER_KNOWN_D1_BAR_SKIPPED")
+    result = inspect_d1_paired_trend_candidate(history, high_indices=w.high_indices,
+        low_indices=w.low_indices, left_count=p.left_count, right_count=p.right_count,
+        tie_policy=p.tie_policy, lookback=p.lookback, as_of_utc=cutoff)
+    if result["relation"] == "BLOCKED_INPUT" or result["structure"] == "BLOCKED_PIVOT":
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "D1_TREND_INPUT_UNRESOLVED")
+    if _cross_tf_identity(history[0].selected) != _cross_tf_identity(target):
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "D1_TREND_SOURCE_MISMATCH")
+    match = result["structure"] == "LH_LL_GEOMETRY" and result["relation"] == "ALIGNED_GEOMETRY_ONLY"
+    state = B7SupportState409.MATCH if match else B7SupportState409.NONMATCH
+    return B7SupportIngredient409(state, "D1_PAIRED_FALLING_GEOMETRY_ONLY")
+
+
+def _trend_target413(inputs, tf, index):
+    rows = inputs.snapshots_for(tf)
+    return _eligible(rows[index], cutoff=inputs.as_of_utc) if index < len(rows) else None
+
+
+def _r0_trend413(inputs, plan):
+    target = _trend_target413(inputs, Timeframe.M15, plan.target_index)
+    return _trend_at413(inputs, plan.trend, plan.trend.r0, target)
+
+
+def _rf_trend413(inputs, plan, r0, cross):
+    if plan.trend.rf is None:
+        return B7SupportIngredient409(B7SupportState409.MISSING, "EXPLICIT_RF_TREND_WINDOW_MISSING")
+    if r0.state is not B7SupportState409.MATCH:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "R0_DOWNTREND_NOT_MATCHED")
+    if cross.state is not B7SupportState409.MATCH:
+        return cross
+    target = _trend_target413(inputs, plan.rf.timeframe, plan.rf.breakout_index)
+    return _trend_at413(inputs, plan.trend, plan.trend.rf, target)
+
+
 def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
     """Explicit M15 low and D1/H1 pivot diagnostic; RC timeframe remains pending."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -308,6 +389,13 @@ def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
                                variant_id=variant_id, phase="R_C")
     rc = _rc409(inputs, plan)
     assessments = ((route, rc),)
+    r0 = None
+    if plan.trend is not None:
+        _validate_trend413(plan.trend, plan.rf)
+        r0 = _r0_trend413(inputs, plan)
+        context = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
+                                     variant_id=variant_id, phase="R0")
+        assessments = ((context, r0),) + assessments
     if plan.reclaim is not None:
         _validate_reclaim410(plan.reclaim, variant_id)
         early = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
@@ -322,6 +410,9 @@ def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
         _validate_rf412(plan.rf)
         route = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
             variant_id=variant_id, phase="R_F", selected_frame=plan.rf.timeframe)
-        early_proof = assessments[-1][1] if len(assessments) > 1 else None
-        assessments += ((route, _rf412(inputs, plan, early_proof)),)
+        early_proof = assessments[-1][1] if plan.reclaim is not None or plan.choch is not None else None
+        cross = _rf412(inputs, plan, early_proof)
+        if plan.trend is not None:
+            cross = _rf_trend413(inputs, plan, r0, cross)
+        assessments += ((route, cross),)
     return B7SupportPreview409(assessments)
