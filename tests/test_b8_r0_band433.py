@@ -43,7 +43,7 @@ class B8R0Band433Tests(unittest.TestCase):
         inputs,p=fixture()
         row=inputs.snapshots_for(Timeframe.M15)[p.target_index].selected
         for kw in ({"known_at_utc":row.market_bar_key.bar_start_utc+timedelta(seconds=1)},
-                   {"upper":D(9)},{"lower":D(2),"tick":D(2)}):
+                   {"upper":D(9)},{"lower":D(3),"tick":D(3)}):
             _,safe=run(inputs,bind(inputs,p,**kw))
             self.assertEqual(safe["phases"][0]["ingredient_state"],"BLOCKED")
 
