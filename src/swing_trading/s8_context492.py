@@ -268,3 +268,123 @@ def inspect_s8_early494_preview(inputs,*,strategy,variant_id,plan):
     preview=inspect_s8_exhaustion493_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.exhaustion)
     route=route_phase_inputs(inputs,zone_id="S8",strategy=strategy,variant_id=variant_id,phase="R_E")
     return S8Preview492(preview.assessments+((route,_early494(inputs,plan,preview.assessments[1][1])),))
+
+
+@dataclass(frozen=True)
+class S8ConfirmPlan495:
+    early: S8EarlyPlan494
+    timeframe: Timeframe
+    target_index: int
+    history_start: int
+    low_index: int
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+
+
+@dataclass(frozen=True)
+class S8ConfirmIngredient495:
+    state: S1State439
+    reason: str
+    private_event_id: str | None = None
+    private_high: Decimal | None = None
+    private_early_low: Decimal | None = None
+    private_key_low: Decimal | None = None
+    private_rf_known: datetime | None = None
+
+
+def _validate495(p):
+    if type(p) is not S8ConfirmPlan495 or type(p.early) is not S8EarlyPlan494:
+        raise ValueError("MST_495_EXACT_CONFIRM_PLAN")
+    if type(p.timeframe) is not Timeframe or p.timeframe not in (Timeframe.H1,Timeframe.D1):
+        raise ValueError("MST_495_EXPLICIT_HIGHER_FRAME")
+    # Reuse the same bounded causal geometry configuration checks, not a second formula.
+    _validate494(S8EarlyPlan494(p.early.exhaustion,p.history_start,p.target_index,
+        p.low_index,p.left_count,p.right_count,p.tie_policy,p.atr_start,p.atr_stop,p.candidate_epsilon))
+
+
+def _path495(inputs,p,target,re):
+    rows=inputs.snapshots_for(p.timeframe)
+    if any(s.market_bar_key.bar_start_utc>=re.private_early_known for s in rows[:p.history_start]):
+        return None
+    path,_=_sequence(rows[p.history_start:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    early=inputs.snapshots_for(Timeframe.M15)[p.early.target_index].selected
+    if not path or path[0].market_bar_key.bar_start_utc<re.private_early_known:
+        return None
+    if _cross_tf_identity(early)!=_cross_tf_identity(target) or _source_identity(path[0])!=_source_identity(target):
+        return None
+    if any(a.verified_at_utc>b.market_bar_key.bar_start_utc for a,b in zip(path,path[1:])):
+        return None
+    return path
+
+
+def _recovery495(inputs,target,re):
+    cutoff=target.verified_at_utc
+    for snap in inputs.snapshots_for(Timeframe.M15):
+        if not re.private_early_known<=snap.market_bar_key.bar_start_utc<target.bar_end_utc:
+            continue
+        if snap.selected is not None and snap.selected.bar_end_utc>target.bar_end_utc:
+            continue
+        b=_eligible(snap,cutoff=cutoff)
+        if b is None or _cross_tf_identity(b)!=_cross_tf_identity(target):
+            return S1State439.BLOCKED
+        if b.high>re.private_high:
+            return S1State439.NONMATCH
+    return None
+
+
+def _cross495(inputs,p,target,path,re,low):
+    if any(b.high>re.private_high for b in (*path,target)):
+        return S8ConfirmIngredient495(S1State439.NONMATCH,"EXHAUSTION_HIGH_INVALIDATED")
+    if any(b.close<low for b in path[p.low_index+p.right_count+1:]):
+        return S8ConfirmIngredient495(S1State439.NONMATCH,"EARLIER_SUPPLIED_KEY_LOW_CROSS")
+    if path[-1].close<low or target.close>=low or target.close>=target.open:
+        return S8ConfirmIngredient495(S1State439.NONMATCH,"NO_LATER_CLOSED_BEARISH_KEY_LOW_CROSS")
+    atr=inspect_target_d1_atr(inputs,p,target)
+    if atr is None or atr<=0:
+        return S8ConfirmIngredient495(S1State439.BLOCKED,"RF_ATR_UNRESOLVED")
+    k=p.candidate_epsilon
+    state=S1State439.DISTANCE if k is None else S1State439.MATCH if target.close<low-k*atr else S1State439.NONMATCH
+    return S8ConfirmIngredient495(state,"HIGHER_FRAME_CLOSED_REVERSAL_CANDIDATE_ONLY",
+        re.private_event_id,re.private_high,re.private_micro_low,low,target.verified_at_utc)
+
+
+def _shape495(inputs,p,target,path,re):
+    denial=_recovery495(inputs,target,re)
+    if denial is not None:
+        return S8ConfirmIngredient495(denial,"RF_M15_RECOVERY_OR_UNRESOLVED")
+    rows=inputs.snapshots_for(p.timeframe)
+    pivot=inspect_causal_pivot(rows[p.history_start:p.target_index-1],candidate_index=p.low_index,
+        side=StructureSide.LOW,left_count=p.left_count,right_count=p.right_count,
+        tie_policy=p.tie_policy,as_of_utc=path[-1].market_bar_key.bar_start_utc)
+    if pivot.state is not GeometryState.DESCRIPTIVE_ONLY:
+        return S8ConfirmIngredient495(S1State439.BLOCKED,"RF_KEY_LOW_NOT_CAUSAL")
+    if pivot.geometric_extremum is not True or pivot.pivot_price>=re.private_micro_low:
+        return S8ConfirmIngredient495(S1State439.NONMATCH,"RF_KEY_LOW_NOT_BELOW_EARLY_SUPPORT")
+    return _cross495(inputs,p,target,path,re,pivot.pivot_price)
+
+
+def _confirm495(inputs,p,re):
+    if re.state is not S1State439.MATCH:
+        return S8ConfirmIngredient495(S1State439.BLOCKED,"R_E_NOT_MATCHED")
+    rows=inputs.snapshots_for(p.timeframe)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S8ConfirmIngredient495(S1State439.MISSING,"RF_BAR_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None or target.verified_at_utc>p.early.exhaustion.expires_at_utc:
+        return S8ConfirmIngredient495(S1State439.BLOCKED,"RF_BAR_OR_EXPIRY_UNRESOLVED")
+    path=_path495(inputs,p,target,re)
+    if path is None:
+        return S8ConfirmIngredient495(S1State439.BLOCKED,"RF_PATH_NOT_CAUSAL")
+    return _shape495(inputs,p,target,path,re)
+
+
+def inspect_s8_confirm495_preview(inputs,*,strategy,variant_id,plan):
+    _validate495(plan)
+    preview=inspect_s8_early494_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.early)
+    route=route_phase_inputs(inputs,zone_id="S8",strategy=strategy,variant_id=variant_id,
+        phase="R_F",selected_frame=plan.timeframe)
+    return S8Preview492(preview.assessments+((route,_confirm495(inputs,plan,preview.assessments[2][1])),))
