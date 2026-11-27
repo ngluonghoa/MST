@@ -14,6 +14,7 @@ from .s1_failed_break441 import S1FailedBreakPlan441, inspect_failed441
 from .s1_choch442 import S1ChochPlan442, inspect_choch442
 from .s1_confirm443 import S1ConfirmPlan443, inspect_rf443
 from .s1_holdings445 import S1HoldingsResult445
+from .s1_major446 import S1MajorPlan446, S1MajorResult446, select_early446, inspect_major446
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
@@ -35,6 +36,7 @@ class S1ContextPlan439:
     failed: S1FailedBreakPlan441 | None = None
     choch: S1ChochPlan442 | None = None
     rf: S1ConfirmPlan443 | None = None
+    major: S1MajorPlan446 | None = None
 
 
 class S1State439(str, Enum):
@@ -56,6 +58,7 @@ class S1Ingredient439:
     close_location: Decimal | None = None
     private_atr: Decimal | None = None
     holdings: S1HoldingsResult445 | None = None
+    major: S1MajorResult446 | None = None
 
 
 @dataclass(frozen=True)
@@ -157,6 +160,7 @@ def inspect_s1_preview(inputs,*,strategy,variant_id,plan):
             ("S1/E_FAILED_BREAK","S1/E_CHOCH_DOWN","S1/F_MAJOR_CYCLE_TOP_PENDING")):
         raise ValueError("MST_439_EXACT_SCOPE")
     _validate439(plan)
+    early_variant=select_early446(plan,variant_id)
     route=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,
                              phase="R0",selected_frame=plan.timeframe)
     base=_r0439(inputs,plan)
@@ -167,20 +171,21 @@ def inspect_s1_preview(inputs,*,strategy,variant_id,plan):
         result=inspect_distribution440(inputs,plan,base,states=S1State439,ingredient=S1Ingredient439)
         assessments+=((rc,result),)
     if plan.failed is not None:
-        early=inspect_failed441(inputs,plan,base,result,variant=variant_id,
+        early=inspect_failed441(inputs,plan,base,result,variant=early_variant,
                                 states=S1State439,ingredient=S1Ingredient439)
         re=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,
                               phase="R_E",selected_frame=plan.failed.timeframe)
         assessments+=((re,early),)
     if plan.choch is not None:
-        early=inspect_choch442(inputs,plan,result,variant=variant_id,
+        early=inspect_choch442(inputs,plan,result,variant=early_variant,
                                states=S1State439,ingredient=S1Ingredient439)
         re=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,
                               phase="R_E",selected_frame=plan.choch.timeframe)
         assessments+=((re,early),)
     if plan.rf is not None:
-        proof=inspect_rf443(inputs,plan,early,variant=variant_id,strategy=strategy,
+        proof=inspect_rf443(inputs,plan,early,variant=early_variant,strategy=strategy,
                             states=S1State439,ingredient=S1Ingredient439)
+        proof=inspect_major446(inputs,plan,proof,states=S1State439,ingredient=S1Ingredient439)
         rf=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,phase="R_F")
         assessments+=((rf,proof),)
     return S1Preview439(assessments)
