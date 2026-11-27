@@ -1,0 +1,3 @@
+# §439 — S1 explicit prior rising geometry and resistance
+
+Locked §24.4 R0: W1/D1 rising history plus causal major resistance. Explicit selected W1 or D1, bounded history and M15 replay anchor, alternating confirmed high/low pairs, strict HH/HL, latest supplied closed history, same cross-frame source identity. Candidate resistance is the second confirmed high, higher low the second confirmed low. Explicit candidate minimum observed pivot span (inclusive, supplied bars only, no default, no official calendar/month inference). Missing span remains descriptive; no RSI shortcut or inferred cycle-top label. Six fictional regression methods. This is an unapproved context ingredient, not verified long trend, distribution or sell action. Rollback by revert.
