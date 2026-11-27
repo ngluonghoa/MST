@@ -1,0 +1,3 @@
+# §424 — B8 RF measured-base net reward/risk candidate
+
+Explicit measured-base plan, no arbitrary input TP: floor from exact R0 base, stop=floor−explicit ATR buffer; target=resistance+(resistance−floor). Exact RF close is a hypothetical entry, not a fill. Net per-share reward=target×(1−sell fee−tax)−entry×(1+buy fee); risk=entry×(1+buy fee)−stop×(1−sell fee−tax). All costs explicit, no defaults, no execution slippage or settlement claim. Optional positive candidate threshold, compared by cross-multiplication; invalid stop/target geometry is nonmatch. Six fictional regressions. No actual risk approval. Rollback: revert atomic squash PR.
