@@ -17,7 +17,8 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
-from .relative_strength421 import RSPlan421, RSResult421, inspect_rs421, validate_rs421
+from .relative_strength421 import (RSPlan421, RSResult421, inspect_rs421, validate_rs421,
+                                   inspect_rs_confirmation422)
 from .rvol_tod_contract import (TODCumulativeObservation, TODRawPrefix,
                                 calculate_rvol_tod20_from_raw_prefixes)
 
@@ -47,6 +48,7 @@ class B8ConfirmPlan418:
     breakout_index: int
     candidate_epsilon: Decimal
     volume: B6RFVolumePlan389 | B6H1VolumePlan394 | None = None
+    rs: RSPlan421 | None = None
 
 
 @dataclass(frozen=True)
@@ -351,6 +353,34 @@ def _r0_rs421(inputs, p, base):
     return replace(base,reason="BASE_AND_LOG_RS_CANDIDATE_ONLY",rs=result)
 
 
+def _rf_rs422(inputs, p, base, geometry):
+    if p.rf.rs is None:
+        return geometry
+    validate_rs421(p.rf.rs)
+    if geometry.state is not B8State415.MATCH:
+        return geometry
+    if base.rs is None or base.rs.candidate_match is not True:
+        return replace(geometry,state=B8State415.BLOCKED,reason="R0_RS_CANDIDATE_NOT_MATCHED")
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    if p.rf.timeframe is Timeframe.D1 and p.rf.rs.stock_stop!=p.rf.breakout_index+1:
+        return replace(geometry,state=B8State415.BLOCKED,reason="RF_RS_NOT_BOUND_TO_D1_TARGET")
+    cutoff=(target.verified_at_utc if p.rf.timeframe is Timeframe.D1
+            else target.market_bar_key.bar_start_utc)
+    result=inspect_rs_confirmation422(inputs.snapshots_for(Timeframe.D1),p.rs,p.rf.rs,
+                                      cutoff=cutoff)
+    return _rf_rs_result422(geometry,result)
+
+
+def _rf_rs_result422(geometry, result):
+    if result.state=="MISSING_INPUT":
+        return replace(geometry,state=B8State415.MISSING,reason="RF_RS_HISTORY_MISSING",rs=result)
+    if result.state!="COMPUTED_UNCALIBRATED":
+        return replace(geometry,state=B8State415.BLOCKED,reason="RF_RS_WINDOW_BLOCKED",rs=result)
+    if result.candidate_match is False:
+        return replace(geometry,state=B8State415.NONMATCH,reason="RF_RS_SLOPE_NONMATCH",rs=result)
+    return replace(geometry,reason="RF_CROSS_AND_LOG_RS_CANDIDATE_ONLY",rs=result)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -381,5 +411,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         rf = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
             variant_id=variant_id, phase="R_F", selected_frame=plan.rf.timeframe)
         geometry = _rf418(inputs, plan, base, early)
-        assessments += ((rf, _rf_volume419(inputs, plan, geometry)),)
+        volume = _rf_volume419(inputs, plan, geometry)
+        assessments += ((rf, _rf_rs422(inputs, plan, base, volume)),)
     return B8Preview415(assessments)
