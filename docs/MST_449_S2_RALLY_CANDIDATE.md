@@ -1,0 +1,3 @@
+# MST §449 — S2 rally near same resistance
+
+Opt-in R_C candidate after §448 R0, with explicitly selected later closed M15 target, causal intervening history and unchanged latest supplied D1/H1 bearish context. Reuses causal D1 ATR14 with explicit warmup window; no defaults. Candidate requires rising close relative to anchor, close at or below same H1 resistance, no prior close above resistance, and inclusive distance <= explicit k × ATR. No numeric calibration, official calendar continuity, source attestation or sell/short authority. Later R_E rejection and R_F micro-low break remain separate. Legacy R0-only and B2/S2 unchanged. Rollback: revert isolated §449 PR.
