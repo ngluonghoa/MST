@@ -1,0 +1,3 @@
+# §442 — S1 selected CHoCH down candidate
+
+Explicit S1/E_CHOCH_DOWN, selected H1/M15, exact prior microstructure from after verified distribution to before the pre-break bar. Alternating causal high/low pivots with known right bars; prior HH/HL and same-source pair, previous close at/above second HL, target strictly below HL minus explicit epsilon×latest supplied causal D1 ATR. No default epsilon, no automatic failed-break/major variant substitution. Common pair/ATR validation extracted without changing §441 behavior. Six fictional regressions, no source/parameter/sell authority. Rollback by revert.

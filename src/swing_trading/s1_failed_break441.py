@@ -19,6 +19,10 @@ class S1FailedBreakPlan441:
 def validate_failed441(p,variant):
     if type(p) is not S1FailedBreakPlan441 or variant!="S1/E_FAILED_BREAK":
         raise ValueError("MST_441_EXPLICIT_FAILED_BREAK_VARIANT")
+    validate_pair_atr442(p)
+
+
+def validate_pair_atr442(p):
     if type(p.timeframe) is not Timeframe or p.timeframe not in (Timeframe.H1,Timeframe.M15):
         raise ValueError("MST_441_EXPLICIT_FRAME")
     if any(type(i) is not int for i in (p.target_index,p.atr_start,p.atr_stop)):

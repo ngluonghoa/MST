@@ -11,6 +11,7 @@ from .contracts import DecisionStatus, Strategy
 from .causal_indicators import CausalIndicatorResult
 from .s1_distribution440 import S1DistributionPlan440, inspect_distribution440
 from .s1_failed_break441 import S1FailedBreakPlan441, inspect_failed441
+from .s1_choch442 import S1ChochPlan442, inspect_choch442
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
@@ -30,6 +31,7 @@ class S1ContextPlan439:
     candidate_min_span_bars: int | None
     distribution: S1DistributionPlan440 | None = None
     failed: S1FailedBreakPlan441 | None = None
+    choch: S1ChochPlan442 | None = None
 
 
 class S1State439(str, Enum):
@@ -165,5 +167,11 @@ def inspect_s1_preview(inputs,*,strategy,variant_id,plan):
                                 states=S1State439,ingredient=S1Ingredient439)
         re=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,
                               phase="R_E",selected_frame=plan.failed.timeframe)
+        assessments+=((re,early),)
+    if plan.choch is not None:
+        early=inspect_choch442(inputs,plan,result,variant=variant_id,
+                               states=S1State439,ingredient=S1Ingredient439)
+        re=route_phase_inputs(inputs,zone_id="S1",strategy=strategy,variant_id=variant_id,
+                              phase="R_E",selected_frame=plan.choch.timeframe)
         assessments+=((re,early),)
     return S1Preview439(assessments)
