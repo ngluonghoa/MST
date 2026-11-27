@@ -14,7 +14,7 @@ from .contracts import (
 from .private_multitf_readiness import BaselineResolvedInputs
 from .market_data import Timeframe
 from .causal_structure_geometry import TiePolicy
-from .causal_trend_candidate382 import inspect_d1_paired_trend_candidate
+from .feature_engine460 import inspect_current_d1_context
 from .structural_phase_evidence import ROUTES, inspect_routed_phase_bos
 from .b2s2_swing_evidence215 import (
     B2S2BaselinePreview371, B2S2PreviewPlan371, inspect_b2s2_baseline_preview,
@@ -398,13 +398,7 @@ _D1_CONTEXT_PHASES383 = (
 def _current_d1_context383(inputs, plan):
     if type(plan) is not D1ContextPlan383:
         raise TypeError("MST_383_EXPLICIT_D1_CONTEXT_PLAN")
-    if type(plan.lookback) is not int or not 1 <= plan.lookback <= 462:
-        raise ValueError("MST_383_BOUNDED_LOOKBACK")
-    # Never search backward for a more convenient old, complete window.
-    rows = inputs.snapshots_for(Timeframe.D1)[-(50 + plan.lookback):]
-    return inspect_d1_paired_trend_candidate(
-        rows, as_of_utc=inputs.as_of_utc, **asdict(plan),
-    )
+    return inspect_current_d1_context(inputs, **asdict(plan))
 
 
 def _context_phase_rows383(context):
@@ -432,6 +426,10 @@ def evaluate_baseline_context_preview(inputs, *, trend_plan, requests=()):
     """
     result = evaluate_baseline_preview(inputs, requests=requests).safe_phase_summary()
     context = _current_d1_context383(inputs, trend_plan)
+    return _attach_context383(result, context)
+
+
+def _attach_context383(result, context):
     result["schema"] = "mst.private.baseline_engine_context_preview.v0.1"
     result["shared_d1_context"] = context
     result["d1_context_phase_references"] = _context_phase_rows383(context)
