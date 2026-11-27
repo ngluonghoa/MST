@@ -1,0 +1,3 @@
+# §443 — S1 later D1 structural HL break candidate
+
+Selected failed-break or CHoCH early branch must match. Explicit D1 prior and target both after verified RE, same source, exact post-distribution D1 rising-pair history known before the prior bar, later close strictly below second HL minus explicit epsilon×latest supplied D1 ATR. No alternative timeframe or major-cycle fallback. This is structural ingredient only; independent volume/context, holdings, calibration and event/expiry remain unresolved. Six fictional regressions exercise both strategies, W1/D1 contexts and H1/M15 RE. Rollback by revert.

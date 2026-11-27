@@ -22,8 +22,8 @@ def validate_failed441(p,variant):
     validate_pair_atr442(p)
 
 
-def validate_pair_atr442(p):
-    if type(p.timeframe) is not Timeframe or p.timeframe not in (Timeframe.H1,Timeframe.M15):
+def validate_pair_atr442(p,*,frames=(Timeframe.H1,Timeframe.M15)):
+    if type(p.timeframe) is not Timeframe or p.timeframe not in frames:
         raise ValueError("MST_441_EXPLICIT_FRAME")
     if any(type(i) is not int for i in (p.target_index,p.atr_start,p.atr_stop)):
         raise ValueError("MST_441_EXACT_INDICES")
