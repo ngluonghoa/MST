@@ -6,13 +6,18 @@ from enum import Enum
 from .causal_indicators import IndicatorState, calculate_wilder_atr14
 from .causal_structure_geometry import (
     GeometryState, StructureSide, TiePolicy, _cross_tf_identity, _eligible,
-    inspect_causal_pivot,
+    inspect_causal_pivot, _source_identity,
 )
 from .contracts import DecisionStatus, Strategy
 from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+
+
+@dataclass(frozen=True)
+class B7ReclaimPlan410:
+    candidate_epsilon: Decimal
 
 
 @dataclass(frozen=True)
@@ -28,12 +33,15 @@ class B7SupportPlan409:
     atr_start: int
     atr_stop: int
     candidate_k_near: Decimal | None
+    reclaim: B7ReclaimPlan410 | None = None
 
 
 class B7SupportState409(str, Enum):
     BLOCKED = "BLOCKED"
     MISSING = "MISSING_INPUT"
     DISTANCE = "CAUSAL_DISTANCE_UNCALIBRATED"
+    MATCH = "GEOMETRY_MATCH_UNVERIFIED"
+    NONMATCH = "GEOMETRY_NONMATCH_UNVERIFIED"
 
 
 @dataclass(frozen=True)
@@ -42,6 +50,8 @@ class B7SupportIngredient409:
     reason: str
     distance_atr: Decimal | None = None
     near_candidate: bool | None = None
+    private_support: Decimal | None = None
+    private_atr: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -105,7 +115,34 @@ def _rc409(inputs, plan):
         zone_upper=pivot.pivot_price, atr_d1=atr.value, candidate_k_near=plan.candidate_k_near)
     return B7SupportIngredient409(B7SupportState409.DISTANCE,
         "SUPPORT_DISTANCE_ONLY_NO_REVERSAL_OR_RISK_APPROVAL",
-        near.normalized_by_atr, near.in_candidate_band)
+        near.normalized_by_atr, near.in_candidate_band, pivot.pivot_price, atr.value)
+
+
+def _validate_reclaim410(plan, variant_id):
+    if type(plan) is not B7ReclaimPlan410 or variant_id != "B7/E_RECLAIM":
+        raise ValueError("MST_410_EXPLICIT_RECLAIM_VARIANT")
+    epsilon = plan.candidate_epsilon
+    if type(epsilon) is not Decimal or not epsilon.is_finite() or epsilon < 0:
+        raise ValueError("MST_410_EXPLICIT_EPSILON")
+
+
+def _reclaim410(inputs, plan, rc):
+    rows = inputs.snapshots_for(Timeframe.M15)
+    index = plan.target_index + 1
+    if index >= len(rows) or rc.state is B7SupportState409.MISSING:
+        return B7SupportIngredient409(B7SupportState409.MISSING, "RECLAIM_PAIR_OR_SUPPORT_MISSING")
+    if rc.state is not B7SupportState409.DISTANCE:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "PRIOR_SUPPORT_UNRESOLVED")
+    target = _eligible(rows[index], cutoff=inputs.as_of_utc)
+    if target is None:
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "RECLAIM_TARGET_NOT_ELIGIBLE")
+    prior = _eligible(rows[index-1], cutoff=target.market_bar_key.bar_start_utc)
+    if prior is None or _source_identity(prior) != _source_identity(target):
+        return B7SupportIngredient409(B7SupportState409.BLOCKED, "PRIOR_SIDE_NOT_CAUSALLY_AVAILABLE")
+    boundary = rc.private_support + plan.reclaim.candidate_epsilon * rc.private_atr
+    crossed = prior.close < rc.private_support and target.close > boundary
+    state = B7SupportState409.MATCH if crossed else B7SupportState409.NONMATCH
+    return B7SupportIngredient409(state, "SAME_SUPPORT_CLOSED_RECLAIM_GEOMETRY_ONLY")
 
 
 def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
@@ -117,4 +154,11 @@ def inspect_b7_support_preview(inputs, *, strategy, variant_id, plan):
     _validate409(plan)
     route = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
                                variant_id=variant_id, phase="R_C")
-    return B7SupportPreview409(((route, _rc409(inputs, plan)),))
+    rc = _rc409(inputs, plan)
+    assessments = ((route, rc),)
+    if plan.reclaim is not None:
+        _validate_reclaim410(plan.reclaim, variant_id)
+        early = route_phase_inputs(inputs, zone_id="B7", strategy=strategy,
+                                   variant_id=variant_id, phase="R_E")
+        assessments += ((early, _reclaim410(inputs, plan, rc)),)
+    return B7SupportPreview409(assessments)
