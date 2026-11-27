@@ -1,6 +1,6 @@
 """§424 B8 synthetic-safe base-floor stop and measured-base net reward/risk."""
-from dataclasses import dataclass
-from decimal import Decimal, localcontext
+from dataclasses import dataclass, replace
+from decimal import Decimal, localcontext, ROUND_FLOOR
 
 from .causal_structure_geometry import _sequence
 
@@ -24,6 +24,9 @@ class B8RiskResult424:
     net_risk: Decimal | None = None
     net_rr: Decimal | None = None
     candidate_match: bool | None = None
+    atr_entry_ceiling: Decimal | None = None
+    rr_entry_ceiling: Decimal | None = None
+    max_entry: Decimal | None = None
 
     @property
     def action_eligible(self):
@@ -69,8 +72,24 @@ def _net424(entry, stop, target, plan):
                            stop,target,reward,risk,ratio,match)
 
 
-def inspect_b8_risk424(history, *, target, resistance, atr, plan):
+def _entry_cap425(result, resistance, atr, extension_k, plan):
+    k=plan.candidate_min_net_rr
+    if extension_k is None or k is None or result.stop is None:
+        return result
+    with localcontext() as ctx:
+        ctx.prec=50
+        ctx.rounding=ROUND_FLOOR
+        atr_cap=resistance+extension_k*atr
+        rr_cap=((result.target+k*result.stop)*(1-plan.sell_fee_rate-plan.sell_tax_rate)
+                /((1+k)*(1+plan.buy_fee_rate)))
+    return replace(result,atr_entry_ceiling=atr_cap,rr_entry_ceiling=rr_cap,
+                   max_entry=min(atr_cap,rr_cap))
+
+
+def inspect_b8_risk424(history, *, target, resistance, atr, plan, extension_k=None):
     validate_risk424(plan)
+    if extension_k is not None and not _nonnegative424(extension_k):
+        raise ValueError("MST_425_EXPLICIT_EXTENSION_CAP")
     rows,_=_sequence(history,cutoff=target.market_bar_key.bar_start_utc)
     if not rows:
         return B8RiskResult424("BLOCKED","BASE_NOT_CAUSALLY_AVAILABLE")
@@ -82,4 +101,5 @@ def inspect_b8_risk424(history, *, target, resistance, atr, plan):
         stop,take=levels
         if not 0<stop<target.close<take:
             return B8RiskResult424("NONMATCH","NO_VALID_LONG_REWARD_GEOMETRY")
-        return _net424(target.close,stop,take,plan)
+        result=_net424(target.close,stop,take,plan)
+        return _entry_cap425(result,resistance,atr,extension_k,plan)

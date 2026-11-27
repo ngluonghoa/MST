@@ -1,0 +1,3 @@
+# §425 — B8 theoretical combined Max Entry
+
+For explicit extension multiplier k and positive net RR threshold q, ATR ceiling=pivot+k×ATR; RR ceiling=(target+q×stop)×(1−sell fee−tax)/((1+q)×(1+buy fee)). Max entry=min(both); Decimal precision 50, floor rounding for ceiling arithmetic; not tick-rounded or an executable order price. Stop/target and costs come only from §424 exact base plan, pivot/ATR from §423. Even an extension nonmatch can retain private RR/cap diagnostic, never convert to match. Missing thresholds no cap, invalid stop/target no cap. No approved threshold, execution, venue price band or settlement authority. Six fictional regressions. Rollback: revert atomic squash PR.

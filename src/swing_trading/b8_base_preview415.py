@@ -427,16 +427,19 @@ def _rf_risk424(inputs, p, base, geometry):
     if plan is None:
         return geometry
     validate_risk424(plan)
-    if geometry.state is not B8State415.MATCH:
+    if geometry.state is not B8State415.MATCH and geometry.extension_candidate_match is not False:
         return geometry
     target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
     rows=inputs.snapshots_for(p.timeframe)[p.base_start:p.base_stop]
     result=inspect_b8_risk424(rows,target=target,resistance=base.private_resistance,
-                             atr=base.private_atr,plan=plan)
+                             atr=base.private_atr,plan=plan,
+                             extension_k=p.rf.extension.candidate_max_extension_atr if p.rf.extension else None)
     return _rf_risk_result424(geometry,result)
 
 
 def _rf_risk_result424(geometry,result):
+    if geometry.extension_candidate_match is False:
+        return replace(geometry,risk=result)
     if result.state=="BLOCKED":
         return replace(geometry,state=B8State415.BLOCKED,reason=result.reason,risk=result)
     if result.state=="NONMATCH" or result.candidate_match is False:
