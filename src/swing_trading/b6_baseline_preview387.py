@@ -443,6 +443,8 @@ def _compression_rf405(inputs, strategy, variant_id, plan, rows):
                                phase="R_F", selected_frame=frame)
     geometry = B6Ingredient387(B6State387(rf.state), rf.reason,
                                volume_state=frame.value + "_VOLUME_SPEC_PENDING")
-    if frame is Timeframe.D1 and plan.rf.volume is not None:
+    if frame is Timeframe.H1:
+        return route, _h1_volume394(inputs, plan.rf, geometry)
+    if plan.rf.volume is not None:
         geometry = _volume389(inputs, plan.rf, geometry)
     return route, geometry
