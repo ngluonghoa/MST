@@ -21,6 +21,11 @@ class B8NearPlan416:
 
 
 @dataclass(frozen=True)
+class B8EarlyPlan417:
+    candidate_epsilon: Decimal
+
+
+@dataclass(frozen=True)
 class B8BasePlan415:
     timeframe: Timeframe
     target_index: int
@@ -34,6 +39,7 @@ class B8BasePlan415:
     atr_stop: int
     candidate_max_width_atr: Decimal | None
     near: B8NearPlan416 | None = None
+    early: B8EarlyPlan417 | None = None
 
 
 class B8State415(str, Enum):
@@ -170,6 +176,33 @@ def _near416(inputs, p, base):
                            distance_atr=near.normalized_by_atr)
 
 
+def _validate_early417(p):
+    if type(p) is not B8EarlyPlan417:
+        raise ValueError("MST_417_EXPLICIT_EARLY_PLAN")
+    e = p.candidate_epsilon
+    if type(e) is not Decimal or not e.is_finite() or e < 0:
+        raise ValueError("MST_417_EXPLICIT_EPSILON")
+
+
+def _early417(inputs, p, base, near):
+    rows = inputs.snapshots_for(Timeframe.M15)
+    index = p.target_index + 2
+    if near is None or near.state is B8State415.MISSING or index >= len(rows):
+        return B8Ingredient415(B8State415.MISSING, "EXPLICIT_APPROACH_OR_EARLY_BAR_MISSING")
+    if near.state is not B8State415.MATCH:
+        return B8Ingredient415(B8State415.BLOCKED, "APPROACH_CANDIDATE_NOT_MATCHED")
+    target = _eligible(rows[index], cutoff=inputs.as_of_utc)
+    if target is None:
+        return B8Ingredient415(B8State415.BLOCKED, "EARLY_TARGET_NOT_ELIGIBLE")
+    prior = _eligible(rows[index-1], cutoff=target.market_bar_key.bar_start_utc)
+    if prior is None or _source_identity(prior) != _source_identity(target):
+        return B8Ingredient415(B8State415.BLOCKED, "APPROACH_NOT_KNOWN_BEFORE_CROSS")
+    boundary = base.private_resistance + p.early.candidate_epsilon * base.private_atr
+    match = prior.close <= base.private_resistance and target.close > boundary
+    state = B8State415.MATCH if match else B8State415.NONMATCH
+    return B8Ingredient415(state, "SAME_RESISTANCE_CLOSED_CROSS_ONLY")
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -181,9 +214,16 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
                                phase="R0", selected_frame=plan.timeframe)
     base = _r0415(inputs, plan)
     assessments = ((route, base),)
+    near = None
     if plan.near is not None:
         _validate_near416(plan.near)
         rc = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
                                 variant_id=variant_id, phase="R_C")
-        assessments += ((rc, _near416(inputs, plan, base)),)
+        near = _near416(inputs, plan, base)
+        assessments += ((rc, near),)
+    if plan.early is not None:
+        _validate_early417(plan.early)
+        re = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
+                                variant_id=variant_id, phase="R_E")
+        assessments += ((re, _early417(inputs, plan, base, near)),)
     return B8Preview415(assessments)
