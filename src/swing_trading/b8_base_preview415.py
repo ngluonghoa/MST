@@ -26,6 +26,13 @@ class B8EarlyPlan417:
 
 
 @dataclass(frozen=True)
+class B8ConfirmPlan418:
+    timeframe: Timeframe
+    breakout_index: int
+    candidate_epsilon: Decimal
+
+
+@dataclass(frozen=True)
 class B8BasePlan415:
     timeframe: Timeframe
     target_index: int
@@ -40,6 +47,7 @@ class B8BasePlan415:
     candidate_max_width_atr: Decimal | None
     near: B8NearPlan416 | None = None
     early: B8EarlyPlan417 | None = None
+    rf: B8ConfirmPlan418 | None = None
 
 
 class B8State415(str, Enum):
@@ -203,6 +211,53 @@ def _early417(inputs, p, base, near):
     return B8Ingredient415(state, "SAME_RESISTANCE_CLOSED_CROSS_ONLY")
 
 
+def _validate_rf418(p):
+    if type(p) is not B8ConfirmPlan418 or type(p.timeframe) is not Timeframe:
+        raise ValueError("MST_418_EXPLICIT_RF_PLAN")
+    if p.timeframe not in (Timeframe.H1, Timeframe.D1):
+        raise ValueError("MST_418_EXPLICIT_RF_FRAME")
+    if type(p.breakout_index) is not int or not 1 <= p.breakout_index < 512:
+        raise ValueError("MST_418_EXPLICIT_RF_INDEX")
+    e = p.candidate_epsilon
+    if type(e) is not Decimal or not e.is_finite() or e < 0:
+        raise ValueError("MST_418_EXPLICIT_EPSILON")
+
+
+def _rf_pair418(inputs, p, rows, m15):
+    index = p.rf.breakout_index
+    target = _eligible(rows[index], cutoff=inputs.as_of_utc)
+    if target is None:
+        return None
+    cutoff = target.market_bar_key.bar_start_utc
+    prior = _eligible(rows[index-1], cutoff=cutoff)
+    early = _eligible(m15[p.target_index+2], cutoff=cutoff)
+    if prior is None or early is None:
+        return None
+    if (_source_identity(prior) != _source_identity(target)
+            or _cross_tf_identity(early) != _cross_tf_identity(target)):
+        return None
+    if prior.market_bar_key == target.market_bar_key:
+        return None
+    return prior, target
+
+
+def _rf418(inputs, p, base, early):
+    rows = inputs.snapshots_for(p.rf.timeframe)
+    m15 = inputs.snapshots_for(Timeframe.M15)
+    if early is None or early.state is B8State415.MISSING or p.rf.breakout_index >= len(rows):
+        return B8Ingredient415(B8State415.MISSING, "EXPLICIT_EARLY_OR_RF_PAIR_MISSING")
+    if early.state is not B8State415.MATCH:
+        return B8Ingredient415(B8State415.BLOCKED, "EARLY_CANDIDATE_NOT_MATCHED")
+    pair = _rf_pair418(inputs, p, rows, m15)
+    if pair is None:
+        return B8Ingredient415(B8State415.BLOCKED, "RF_PAIR_OR_EARLY_NOT_CAUSALLY_AVAILABLE")
+    prior, target = pair
+    boundary = base.private_resistance + p.rf.candidate_epsilon * base.private_atr
+    match = prior.close <= base.private_resistance and target.close > boundary
+    state = B8State415.MATCH if match else B8State415.NONMATCH
+    return B8Ingredient415(state, "LATER_HIGHER_FRAME_SAME_RESISTANCE_CROSS_ONLY")
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -214,7 +269,7 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
                                phase="R0", selected_frame=plan.timeframe)
     base = _r0415(inputs, plan)
     assessments = ((route, base),)
-    near = None
+    near = early = None
     if plan.near is not None:
         _validate_near416(plan.near)
         rc = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
@@ -225,5 +280,11 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         _validate_early417(plan.early)
         re = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
                                 variant_id=variant_id, phase="R_E")
-        assessments += ((re, _early417(inputs, plan, base, near)),)
+        early = _early417(inputs, plan, base, near)
+        assessments += ((re, early),)
+    if plan.rf is not None:
+        _validate_rf418(plan.rf)
+        rf = route_phase_inputs(inputs, zone_id="B8", strategy=strategy,
+            variant_id=variant_id, phase="R_F", selected_frame=plan.rf.timeframe)
+        assessments += ((rf, _rf418(inputs, plan, base, early)),)
     return B8Preview415(assessments)
