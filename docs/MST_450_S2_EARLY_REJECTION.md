@@ -1,0 +1,3 @@
+# MST §450 — S2 M15 micro lower high and closed rejection
+
+Opt-in R_E after matched §449 R_C. Explicit post-rally causal M15 history, same stream, two witnessed lower highs before the later target, no intervening close above the same H1 resistance, and later qualified bearish close below both micro LH and resistance after reaching the micro LH. Explicit rejection proximity to same H1 resistance uses absolute high distance and causal D1 ATR14, inclusive caller threshold, no default. Missing/late/unmatched inputs fail closed. Candidate only; not complete source/calendar/aggregation proof, S2 sell action, naked short or approved parameters. R_F structural micro-low break and holdings remain separate. Legacy previews unchanged. Rollback by reverting isolated §450 PR.

@@ -34,11 +34,23 @@ class S2RallyPlan449:
 
 
 @dataclass(frozen=True)
+class S2EarlyPlan450:
+    target_index: int
+    history_start: int
+    high_indices: tuple[int,int]
+    left_count: int
+    right_count: int
+    tie_policy: TiePolicy
+    candidate_k_rejection: Decimal | None
+
+
+@dataclass(frozen=True)
 class S2ContextPlan448:
     anchor_index: int
     d1: S2Window448
     h1: S2Window448
     rally: S2RallyPlan449 | None = None
+    early: S2EarlyPlan450 | None = None
 
 
 class S2State448(str,Enum):
@@ -58,6 +70,7 @@ class S2Ingredient448:
     private_resistance: Decimal | None=None
     private_atr: Decimal | None=None
     private_distance: Decimal | None=None
+    private_micro_lh: Decimal | None=None
 
 
 @dataclass(frozen=True)
@@ -223,6 +236,63 @@ def _rally449(inputs,plan,base):
     return _rally_geometry449(base,prior[0],target,atr,p)
 
 
+def _validate_early450(p):
+    if type(p) is not S2EarlyPlan450:
+        raise ValueError("MST_450_EXACT_EARLY_PLAN")
+    if any(type(i) is not int for i in (p.target_index,p.history_start,p.left_count,p.right_count)):
+        raise ValueError("MST_450_EXACT_INDICES")
+    if not 0<=p.history_start<p.target_index<512:
+        raise ValueError("MST_450_BOUNDED_HISTORY")
+    if not 1<=p.left_count<=40 or not 1<=p.right_count<=40 or type(p.tie_policy) is not TiePolicy:
+        raise ValueError("MST_450_EXPLICIT_PIVOT_POLICY")
+    _indices448(p.high_indices,p.target_index-p.history_start)
+    k=p.candidate_k_rejection
+    if k is not None and (type(k) is not Decimal or not k.is_finite() or k<0):
+        raise ValueError("MST_450_EXPLICIT_REJECTION_THRESHOLD")
+
+
+def _rejection450(rc,target,lh,atr,p):
+    resistance=rc.private_resistance
+    distance=abs(target.high-resistance)
+    if not (target.high>=lh and target.close<min(lh,resistance) and target.close<target.open):
+        state=S2State448.NONMATCH
+    elif p.candidate_k_rejection is None:
+        state=S2State448.DISTANCE
+    else:
+        state=S2State448.MATCH if distance<=p.candidate_k_rejection*atr else S2State448.NONMATCH
+    return S2Ingredient448(state,"M15_MICRO_LH_AND_CLOSED_REJECTION_CANDIDATE_ONLY",
+                           rc.private_d1_lh,rc.private_d1_ll,resistance,atr,distance,lh)
+
+
+def _early450(inputs,plan,rc):
+    p=plan.early
+    _validate_early450(p)
+    if rc is None or rc.state is not S2State448.MATCH:
+        return S2Ingredient448(S2State448.BLOCKED,"R_C_RALLY_NOT_MATCHED")
+    if p.history_start<plan.rally.target_index:
+        raise ValueError("MST_450_HISTORY_PRECEDES_RALLY")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows):
+        return S2Ingredient448(S2State448.MISSING,"EXACT_REJECTION_TARGET_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S2Ingredient448(S2State448.BLOCKED,"REJECTION_TARGET_NOT_ELIGIBLE")
+    cutoff=target.market_bar_key.bar_start_utc
+    prior,_=_sequence(rows[plan.rally.target_index:p.target_index],cutoff=cutoff)
+    if not prior or _source_identity(prior[0])!=_source_identity(target):
+        return S2Ingredient448(S2State448.BLOCKED,"REJECTION_HISTORY_NOT_CAUSAL")
+    if any(x.close>rc.private_resistance for x in prior):
+        return S2Ingredient448(S2State448.NONMATCH,"RESISTANCE_ALREADY_BROKEN")
+    history=rows[p.history_start:p.target_index]
+    lh,state=_pair448(history,p,p.high_indices,StructureSide.HIGH,cutoff)
+    if state is not S2State448.MATCH:
+        return S2Ingredient448(state,"MICRO_LH_PAIR_UNRESOLVED_OR_NONMATCH")
+    atr=_atr441(inputs,plan.rally,target)
+    if atr is None or atr<=0:
+        return S2Ingredient448(S2State448.BLOCKED,"CAUSAL_REJECTION_ATR_UNRESOLVED")
+    return _rejection450(rc,target,lh,atr,p)
+
+
 def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
             or type(plan) is not S2ContextPlan448 or variant_id!="S2/BASE"):
@@ -234,7 +304,12 @@ def inspect_s2_preview(inputs,*,strategy,variant_id,plan):
     route=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R0")
     base=_r0448(inputs,plan)
     assessments=((route,base),)
+    rc=None
     if plan.rally is not None:
-        rc=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R_C")
-        assessments+=((rc,_rally449(inputs,plan,base)),)
+        rc_route=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R_C")
+        rc=_rally449(inputs,plan,base)
+        assessments+=((rc_route,rc),)
+    if plan.early is not None:
+        re=route_phase_inputs(inputs,zone_id="S2",strategy=strategy,variant_id=variant_id,phase="R_E")
+        assessments+=((re,_early450(inputs,plan,rc)),)
     return S2Preview448(assessments)
