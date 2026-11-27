@@ -1,0 +1,3 @@
+# §453 S2 strict cumulative candidate chain
+
+Explicit opt-in only, all four source-locked phases, prior candidate completeness and RF hypothetical settled holdings scenario. Check supplied H1/M15 bars closed after R_E and no later than RF start for causal qualification and same resistance not reclaimed; unresolved post-R_E supplied observations fail closed. No inference of absent calendar slots or official continuity, optional RVOL remains optional, no market source/parameter/event/holdings approval or actionable sell. Four fictional route combinations (two strategies × H1/M15), negative and redaction tests; legacy previews unchanged. S2 candidate completeness is not detector parity or deployment approval.
