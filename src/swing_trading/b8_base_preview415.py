@@ -17,6 +17,8 @@ from .market_data import Timeframe
 from .phase_input_routing369 import route_phase_inputs
 from .private_multitf_readiness import BaselineResolvedInputs
 from .zone_manifest_v03 import inspect_near_zone_arithmetic
+from .b8_settlement427 import (B8SettlementPlan427, B8SettlementResult427,
+                                inspect_settlement427, validate_settlement427)
 from .b8_price_band426 import B8PriceBand426, B8PriceBandResult426, inspect_band426, validate_band426
 from .b8_risk_geometry424 import (B8MeasuredBaseRisk424, B8RiskResult424,
                                   inspect_b8_risk424, validate_risk424)
@@ -60,6 +62,7 @@ class B8ConfirmPlan418:
     extension: B8ExtensionPlan423 | None = None
     risk: B8MeasuredBaseRisk424 | None = None
     band: B8PriceBand426 | None = None
+    settlement: B8SettlementPlan427 | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +107,7 @@ class B8Ingredient415:
     extension_candidate_match: bool | None = None
     risk: B8RiskResult424 | None = None
     band: B8PriceBandResult426 | None = None
+    settlement: B8SettlementResult427 | None = None
 
 
 @dataclass(frozen=True)
@@ -470,6 +474,22 @@ def _rf_band426(inputs,p,geometry):
     return replace(geometry,band=result)
 
 
+def _rf_settlement427(inputs,p,geometry,strategy):
+    plan=p.rf.settlement
+    if plan is None:
+        return geometry
+    validate_settlement427(plan)
+    if geometry.state is not B8State415.MATCH:
+        return geometry
+    target=inputs.snapshots_for(p.rf.timeframe)[p.rf.breakout_index].selected
+    result=inspect_settlement427(target,plan,strategy=strategy)
+    if result.state=="BLOCKED":
+        return replace(geometry,state=B8State415.BLOCKED,reason=result.reason,settlement=result)
+    if result.candidate_match is False:
+        return replace(geometry,state=B8State415.NONMATCH,reason=result.reason,settlement=result)
+    return replace(geometry,settlement=result)
+
+
 def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
     """Explicit prior base width and upper-pivot geometry, no RS or price-limit approval."""
     if (type(inputs) is not BaselineResolvedInputs or type(strategy) is not Strategy
@@ -504,5 +524,6 @@ def inspect_b8_preview(inputs, *, strategy, variant_id, plan):
         rs = _rf_rs422(inputs, plan, base, volume)
         extension = _rf_extension423(inputs, plan, base, rs)
         risk = _rf_risk424(inputs, plan, base, extension)
-        assessments += ((rf, _rf_band426(inputs, plan, risk)),)
+        band = _rf_band426(inputs, plan, risk)
+        assessments += ((rf, _rf_settlement427(inputs, plan, band, strategy)),)
     return B8Preview415(assessments)
