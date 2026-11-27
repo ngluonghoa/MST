@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal, localcontext
 from enum import Enum
 
-from .causal_structure_geometry import _sequence
+from .causal_structure_geometry import _sequence, _source_identity
 from .market_data import InstrumentClass, PriceBasis, Timeframe
 from .replay import require_utc
 
@@ -112,3 +112,44 @@ def inspect_rs421(daily, p, *, cutoff):
     if not _scope421(stock[0],benchmark[0],p) or not _aligned421(stock,benchmark):
         return RSResult421("BLOCKED","RS_SCOPE_OR_ALIGNMENT_MISMATCH")
     return _math421(stock,benchmark,p)
+
+
+def _definition422(p):
+    return (p.horizon,p.slope_window,p.benchmark_kind,p.benchmark_id,
+            p.alignment_policy_version)
+
+
+def _same_stream422(earlier, later):
+    a,b=earlier[0].selected,later[0].selected
+    return a is not None and b is not None and _source_identity(a)==_source_identity(b)
+
+
+def _overlap422(first, second):
+    by_key={x.market_bar_key:x for x in first}
+    return all(x.market_bar_key not in by_key or by_key[x.market_bar_key]==x
+               for x in second)
+
+
+def inspect_rs_confirmation422(daily, earlier, later, *, cutoff):
+    """Later window must preserve the earlier definition and source lineage."""
+    validate_rs421(later)
+    if earlier is None:
+        return RSResult421("MISSING_INPUT","R0_RS_PLAN_MISSING")
+    validate_rs421(earlier)
+    if _definition422(earlier)!=_definition422(later) or later.stock_stop<=earlier.stock_stop:
+        return RSResult421("BLOCKED","RS_DEFINITION_CHANGED_OR_WINDOW_NOT_ADVANCED")
+    result=inspect_rs421(daily,later,cutoff=cutoff)
+    if result.state!="COMPUTED_UNCALIBRATED":
+        return result
+    return _lineage422(daily,earlier,later,result)
+
+
+def _lineage422(daily, earlier, later, result):
+    if not _same_stream422(daily[earlier.stock_start:earlier.stock_stop],
+                           daily[later.stock_start:later.stock_stop]):
+        return RSResult421("BLOCKED","STOCK_RS_STREAM_CHANGED")
+    if not _same_stream422(earlier.benchmark_rows,later.benchmark_rows):
+        return RSResult421("BLOCKED","BENCHMARK_RS_STREAM_CHANGED")
+    if not _overlap422(earlier.benchmark_rows,later.benchmark_rows):
+        return RSResult421("BLOCKED","BENCHMARK_OVERLAP_REVISION_CHANGED")
+    return result
