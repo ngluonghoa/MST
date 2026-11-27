@@ -67,14 +67,14 @@ these require separate consumer, migration and rollback evidence.
 | legacy_migration | domain_and_reference | 205 | 24 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_binding | domain_and_reference | 413 | 87 | 131 | 3 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | locked_ui10_renderer | domain_and_reference | 352 | 10 | 129 | 1 | IMPROVE | FUNCTION_90_PLUS |
-| market_data | domain_and_reference | 162 | 23 | 29 | 62 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| market_data | domain_and_reference | 162 | 23 | 29 | 63 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 14 | KEEP | HIGH_FAN_IN |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 17 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 18 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | provider_custody_host_plan | evidence_and_rights | 393 | 25 | 47 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_head_custody | evidence_and_rights | 432 | 40 | 84 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | provider_review_packet | evidence_and_rights | 264 | 37 | 104 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -91,8 +91,8 @@ these require separate consumer, migration and rollback evidence.
 | reference_pinned_fd | evidence_and_rights | 163 | 23 | 78 | 1 | IMPROVE | HIGH_BRANCH_SCORE, SILENT_EXCEPT |
 | reference_storage_preflight | evidence_and_rights | 143 | 22 | 82 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | relative_strength421 | domain_and_reference | 155 | 11 | 14 | 2 | KEEP | none |
-| replay | domain_and_reference | 26 | 3 | 5 | 58 | KEEP | HIGH_FAN_IN |
-| replay_batch | domain_and_reference | 139 | 13 | 47 | 0 | KEEP | none |
+| replay | domain_and_reference | 26 | 3 | 5 | 59 | KEEP | HIGH_FAN_IN |
+| replay_batch | domain_and_reference | 139 | 13 | 47 | 1 | KEEP | none |
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 118 | 11 | 23 | 5 | KEEP | none |
 | s1_confirm443 | domain_and_reference | 74 | 9 | 23 | 1 | KEEP | none |
@@ -111,7 +111,7 @@ these require separate consumer, migration and rollback evidence.
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
 | source_capability_evidence | domain_and_reference | 231 | 32 | 76 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
-| source_quality | domain_and_reference | 296 | 39 | 58 | 20 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
+| source_quality | domain_and_reference | 296 | 39 | 58 | 21 | IMPROVE | HIGH_BRANCH_SCORE, HIGH_FAN_IN |
 | ssi_historical_availability | source_adapter_and_quality | 95 | 12 | 45 | 0 | KEEP | none |
 | ssi_intraday_label_diagnostics | source_adapter_and_quality | 181 | 17 | 87 | 0 | KEEP | none |
 | ssi_intraday_session_probe209 | domain_and_reference | 202 | 38 | 104 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
@@ -119,7 +119,8 @@ these require separate consumer, migration and rollback evidence.
 | ssi_source_qualification | source_adapter_and_quality | 345 | 16 | 64 | 2 | KEEP | none |
 | ssi_volume_parity | source_adapter_and_quality | 229 | 20 | 63 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | structural_phase_evidence | domain_and_reference | 611 | 34 | 110 | 6 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
-| unified_mode459 | domain_and_reference | 117 | 11 | 22 | 0 | KEEP | none |
+| unified_mode459 | domain_and_reference | 117 | 11 | 22 | 1 | KEEP | none |
+| validation_replay461 | domain_and_reference | 134 | 12 | 19 | 0 | KEEP | none |
 | vcbs_source_contract | source_adapter_and_quality | 175 | 19 | 41 | 0 | KEEP | none |
 | vn_2026_closure_anchors | domain_and_reference | 102 | 8 | 30 | 0 | KEEP | none |
 | vn_backtest_execution_fixture | domain_and_reference | 184 | 18 | 38 | 0 | KEEP | none |
