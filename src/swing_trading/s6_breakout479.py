@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from .causal_structure_geometry import (
-    GeometryState,StructureSide,TiePolicy,_eligible,_sequence,_source_identity,inspect_causal_pivot,
+    GeometryState,StructureSide,TiePolicy,_eligible,_sequence,_source_identity,inspect_causal_pivot,_cross_tf_identity,
 )
 from .contracts import DecisionStatus,Strategy
 from .feature_engine460 import inspect_target_d1_atr
@@ -209,3 +209,97 @@ def inspect_s6_failure_preview(inputs,*,strategy,variant_id,plan):
     preview=inspect_s6_breakout_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.breakout)
     route=route_phase_inputs(inputs,zone_id="S6",strategy=strategy,variant_id=variant_id,phase="R_C")
     return S6Preview479(preview.assessments+((route,_failure480(inputs,plan,preview.assessments[0][1])),))
+
+@dataclass(frozen=True)
+class S6EarlyPlan481:
+    failure: S6FailurePlan480
+    target_index: int
+    atr_start: int
+    atr_stop: int
+    candidate_epsilon: Decimal | None
+    window_known_at_utc: datetime
+    expires_at_utc: datetime
+
+
+@dataclass(frozen=True)
+class S6EarlyIngredient481:
+    state: S1State439
+    reason: str
+    private_pivot: Decimal | None = None
+    private_event_id: str | None = None
+    private_early_start: datetime | None = None
+    private_early_known: datetime | None = None
+
+
+def _validate481(p):
+    if type(p) is not S6EarlyPlan481 or type(p.failure) is not S6FailurePlan480:
+        raise ValueError("MST_481_EXACT_EARLY_PLAN")
+    _validate480(p.failure)
+    if any(type(i) is not int for i in (p.target_index,p.atr_start,p.atr_stop)):
+        raise ValueError("MST_481_EXACT_INDICES")
+    if not 1<=p.target_index<512 or not 0<=p.atr_start<p.atr_stop<=512 or p.atr_stop-p.atr_start<15:
+        raise ValueError("MST_481_BOUNDED_WINDOWS")
+    e=p.candidate_epsilon
+    if e is not None and (type(e) is not Decimal or not e.is_finite() or e<0):
+        raise ValueError("MST_481_EXPLICIT_EPSILON")
+    if any(type(t) is not datetime for t in (p.window_known_at_utc,p.expires_at_utc)):
+        raise ValueError("MST_481_EXPLICIT_EXPIRY_CLOCK")
+    require_utc(p.window_known_at_utc)
+    require_utc(p.expires_at_utc)
+    if p.window_known_at_utc>=p.expires_at_utc:
+        raise ValueError("MST_481_EXPIRY_ORDER")
+
+
+def _path481(inputs,p,target,rc):
+    rows=inputs.snapshots_for(Timeframe.M15)
+    start=next((i for i,s in enumerate(rows[:p.target_index])
+                if s.market_bar_key.bar_start_utc>=rc.private_failure_known),None)
+    if start is None:
+        return None
+    path,_=_sequence(rows[start:p.target_index],cutoff=target.market_bar_key.bar_start_utc)
+    if not path or _source_identity(path[0])!=_source_identity(target):
+        return None
+    failure=inputs.snapshots_for(p.failure.breakout.timeframe)[p.failure.failure_index].selected
+    if _cross_tf_identity(failure)!=_cross_tf_identity(target):
+        return None
+    if any(a.verified_at_utc>b.market_bar_key.bar_start_utc for a,b in zip(path,path[1:])):
+        return None
+    return path
+
+
+def _shape481(inputs,p,target,path,rc):
+    pivot=rc.private_pivot
+    if any(b.close<pivot for b in path) or target.close>=pivot:
+        state=S1State439.NONMATCH
+    else:
+        atr=inspect_target_d1_atr(inputs,p,target)
+        if atr is None or atr<=0:
+            return S6EarlyIngredient481(S1State439.BLOCKED,"EARLY_ATR_UNRESOLVED")
+        e=p.candidate_epsilon
+        state=S1State439.DISTANCE if e is None else S1State439.MATCH if target.close<pivot-e*atr else S1State439.NONMATCH
+    return S6EarlyIngredient481(state,"FIRST_SUPPLIED_M15_CLOSED_FAILED_RECLAIM_CANDIDATE_ONLY",
+        pivot,rc.private_event_id,target.market_bar_key.bar_start_utc,target.verified_at_utc)
+
+
+def _early481(inputs,p,rc):
+    if rc.state is not S1State439.MATCH:
+        return S6EarlyIngredient481(S1State439.BLOCKED,"R_C_NOT_MATCHED")
+    rows=inputs.snapshots_for(Timeframe.M15)
+    if p.target_index>=len(rows) or p.atr_stop>len(inputs.snapshots_for(Timeframe.D1)):
+        return S6EarlyIngredient481(S1State439.MISSING,"EARLY_BAR_OR_ATR_MISSING")
+    target=_eligible(rows[p.target_index],cutoff=inputs.as_of_utc)
+    if target is None:
+        return S6EarlyIngredient481(S1State439.BLOCKED,"EARLY_BAR_UNQUALIFIED")
+    if p.window_known_at_utc>p.failure.breakout.bar_start_utc or target.verified_at_utc>p.expires_at_utc:
+        return S6EarlyIngredient481(S1State439.BLOCKED,"EARLY_EVENT_WINDOW_OR_EXPIRY")
+    path=_path481(inputs,p,target,rc)
+    if path is None:
+        return S6EarlyIngredient481(S1State439.BLOCKED,"EARLY_PATH_NOT_CAUSAL")
+    return _shape481(inputs,p,target,path,rc)
+
+
+def inspect_s6_early_preview(inputs,*,strategy,variant_id,plan):
+    _validate481(plan)
+    preview=inspect_s6_failure_preview(inputs,strategy=strategy,variant_id=variant_id,plan=plan.failure)
+    route=route_phase_inputs(inputs,zone_id="S6",strategy=strategy,variant_id=variant_id,phase="R_E")
+    return S6Preview479(preview.assessments+((route,_early481(inputs,plan,preview.assessments[1][1])),))
