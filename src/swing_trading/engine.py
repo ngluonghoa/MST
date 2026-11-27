@@ -27,7 +27,8 @@ from .s7_retest_evidence import (
     S7BaselinePreview374, S7OriginPlan374, S7MicroPlan374, inspect_s7_baseline_preview,
 )
 from .range_baseline_preview385 import RangeEnginePlan385, RangeEnginePreview385, inspect_routed_range_preview
-from .b6_baseline_preview387 import B6EnginePlan387, B6EnginePreview387, inspect_b6_baseline_preview
+from .b6_baseline_preview387 import (B6EnginePlan387, B6EnginePreview387, B6CompressionPlan396,
+                                     inspect_b6_baseline_preview, inspect_b6_compression_preview)
 from .zone_manifest_v03 import MANIFESTS
 
 PREVIEW_ZONES = ("B2", "B5", "S2", "S7")
@@ -88,7 +89,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396
 
 
 @dataclass(frozen=True)
@@ -242,7 +243,7 @@ def _request_supported376(request):
         return False
     if type(request.zone_id) is not str or type(request.strategy) is not Strategy:
         return False
-    if type(request.plan) is B6EnginePlan387:
+    if type(request.plan) in (B6EnginePlan387, B6CompressionPlan396):
         return request.zone_id == "B6"
     if type(request.plan) is RangeEnginePlan385:
         return request.zone_id in ("B3", "S4")
@@ -291,6 +292,8 @@ def _dispatch375(inputs, request):
         request.zone_id, request.strategy, request.variant_id, request.plan)
     if type(variant) is not str or variant not in MANIFESTS[zone].variants:
         raise ValueError("MST_375_VARIANT_INVALID")
+    if type(plan) is B6CompressionPlan396:
+        return inspect_b6_compression_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is B6EnginePlan387:
         return inspect_b6_baseline_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is RangeEnginePlan385:
