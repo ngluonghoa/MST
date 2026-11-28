@@ -44,6 +44,7 @@ from .b6_baseline_preview387 import (B6EnginePlan387, B6EnginePreview387, B6Comp
 from .b7_support_preview409 import B7SupportPlan409, B7SupportPreview409, inspect_b7_support_preview
 from .b8_base_preview415 import B8BasePlan415, B8Preview415, inspect_b8_preview
 from .s1_context_preview439 import S1ContextPlan439, S1Preview439, inspect_s1_preview
+from .b1_decline499 import B1DeclinePlan499,B1Preview499,inspect_b1_decline499_preview
 from .s2_context448 import S2ContextPlan448, S2Preview448, inspect_s2_preview
 from .s3_context454 import S3ContextPlan454, S3Preview454, inspect_s3_preview
 from .s3_tp458 import S3TPPlan458, inspect_s3_tp_preview
@@ -109,7 +110,7 @@ class BaselinePreviewRequest375:
     zone_id: str
     strategy: Strategy
     variant_id: str
-    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463 | S3TPConfirmPlan464 | S3HoldingsPlan465 | S3StrictPlan466 | S4RejectionPlan467 | S4FalseBreakPlan468 | S4BosDownPlan469 | S4ConfirmPlan470 | S4HoldingsPlan471 | S4StrictPlan472 | S5TransitionPlan473 | S5RallyPlan474 | S5EarlyPlan475 | S5ConfirmPlan476 | S5HoldingsPlan477 | S5StrictPlan478 | S6BreakoutPlan479 | S6FailurePlan480 | S6EarlyPlan481 | S6ConfirmPlan482 | S6VolumePlan483 | S6HoldingsPlan484 | S6StrictPlan485 | S7BreakdownPlan486 | S7RetestPlan487 | S7EarlyPlan488 | S7ConfirmPlan489 | S7HoldingsPlan490 | S7StrictPlan491 | S8ContextPlan492 | S8ExhaustionPlan493 | S8EarlyPlan494 | S8ConfirmPlan495 | S8VolumePlan496 | S8HoldingsPlan497 | S8StrictPlan498
+    plan: B2S2PreviewPlan371 | B5EnginePlan375 | S7EnginePlan375 | StructuralEnginePlan376 | RangeEnginePlan385 | B6EnginePlan387 | B6CompressionPlan396 | B7SupportPlan409 | B8BasePlan415 | S1ContextPlan439 | S2ContextPlan448 | S3ContextPlan454 | S3TPPlan458 | S3TPEventPlan463 | S3TPConfirmPlan464 | S3HoldingsPlan465 | S3StrictPlan466 | S4RejectionPlan467 | S4FalseBreakPlan468 | S4BosDownPlan469 | S4ConfirmPlan470 | S4HoldingsPlan471 | S4StrictPlan472 | S5TransitionPlan473 | S5RallyPlan474 | S5EarlyPlan475 | S5ConfirmPlan476 | S5HoldingsPlan477 | S5StrictPlan478 | S6BreakoutPlan479 | S6FailurePlan480 | S6EarlyPlan481 | S6ConfirmPlan482 | S6VolumePlan483 | S6HoldingsPlan484 | S6StrictPlan485 | S7BreakdownPlan486 | S7RetestPlan487 | S7EarlyPlan488 | S7ConfirmPlan489 | S7HoldingsPlan490 | S7StrictPlan491 | S8ContextPlan492 | S8ExhaustionPlan493 | S8EarlyPlan494 | S8ConfirmPlan495 | S8VolumePlan496 | S8HoldingsPlan497 | S8StrictPlan498 | B1DeclinePlan499
 
 
 @dataclass(frozen=True)
@@ -231,7 +232,7 @@ def _s7_states377(preview):
 
 
 def _preview_states377(preview):
-    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385, B6EnginePreview387, B7SupportPreview409, B8Preview415, S1Preview439, S2Preview448, S3Preview454, S5Preview473, S6Preview479, S7Preview486, S8Preview492):
+    if type(preview) in (B2S2BaselinePreview371, StructuralEnginePreview376, RangeEnginePreview385, B6EnginePreview387, B7SupportPreview409, B8Preview415, S1Preview439, S2Preview448, S3Preview454, S5Preview473, S6Preview479, S7Preview486, S8Preview492, B1Preview499):
         return _pair_states377(preview)
     if type(preview) is B5RFPreview373:
         return _b5_states377(preview)
@@ -269,6 +270,8 @@ def _request_supported376(request):
         return request.zone_id == "S3"
     if type(request.plan) is S2ContextPlan448:
         return request.zone_id == "S2"
+    if type(request.plan) is B1DeclinePlan499:
+        return request.zone_id == "B1"
     if type(request.plan) is S1ContextPlan439:
         return request.zone_id == "S1"
     if type(request.plan) is B8BasePlan415:
@@ -346,6 +349,8 @@ def _dispatch375(inputs, request):
         return inspect_s3_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is S2ContextPlan448:
         return inspect_s2_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
+    if type(plan) is B1DeclinePlan499:
+        return inspect_b1_decline499_preview(inputs,strategy=strategy,variant_id=variant,plan=plan)
     if type(plan) is S1ContextPlan439:
         return inspect_s1_preview(inputs, strategy=strategy, variant_id=variant, plan=plan)
     if type(plan) is B8BasePlan415:
