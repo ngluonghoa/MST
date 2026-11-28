@@ -121,7 +121,7 @@ these require separate consumer, migration and rollback evidence.
 | s7_holdings490 | domain_and_reference | 148 | 11 | 19 | 1 | KEEP | none |
 | s7_retest_evidence | domain_and_reference | 572 | 21 | 75 | 2 | IMPROVE | FILE_500_PLUS, HIGH_BRANCH_SCORE |
 | s8_context492 | domain_and_reference | 390 | 21 | 24 | 3 | IMPROVE | HIGH_BRANCH_SCORE |
-| s8_holdings497 | domain_and_reference | 99 | 10 | 19 | 1 | KEEP | none |
+| s8_holdings497 | domain_and_reference | 99 | 10 | 18 | 1 | KEEP | none |
 | s8_rf_volume496 | domain_and_reference | 87 | 14 | 17 | 2 | KEEP | none |
 | segmented_cache | cache_and_persistence | 295 | 27 | 58 | 1 | IMPROVE | HIGH_BRANCH_SCORE |
 | session_calendar | domain_and_reference | 128 | 14 | 21 | 3 | KEEP | none |
