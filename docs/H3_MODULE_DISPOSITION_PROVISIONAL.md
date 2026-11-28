@@ -9,6 +9,7 @@ these require separate consumer, migration and rollback evidence.
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | __init__ | domain_and_reference | 3 | 0 | 0 | 0 | KEEP | none |
 | adaptive_source_router | source_adapter_and_quality | 289 | 27 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
+| b1_bos_up503 | domain_and_reference | 139 | 16 | 14 | 1 | KEEP | none |
 | b1_bottom500 | domain_and_reference | 173 | 17 | 24 | 2 | KEEP | none |
 | b1_decline499 | domain_and_reference | 111 | 9 | 19 | 3 | KEEP | none |
 | b1_reclaim502 | domain_and_reference | 116 | 16 | 19 | 1 | KEEP | none |
@@ -59,7 +60,7 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 545 | 59 | 117 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| engine | domain_and_reference | 548 | 60 | 119 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
