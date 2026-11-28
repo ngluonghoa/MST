@@ -9,7 +9,7 @@ these require separate consumer, migration and rollback evidence.
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | __init__ | domain_and_reference | 3 | 0 | 0 | 0 | KEEP | none |
 | adaptive_source_router | source_adapter_and_quality | 289 | 27 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
-| b1_bottom500 | domain_and_reference | 105 | 17 | 22 | 1 | KEEP | none |
+| b1_bottom500 | domain_and_reference | 173 | 17 | 27 | 1 | KEEP | none |
 | b1_decline499 | domain_and_reference | 111 | 9 | 19 | 2 | KEEP | none |
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
@@ -58,7 +58,7 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 540 | 57 | 113 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| engine | domain_and_reference | 542 | 58 | 115 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
@@ -74,7 +74,7 @@ these require separate consumer, migration and rollback evidence.
 | migration_archive | domain_and_reference | 126 | 24 | 69 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | native_minute_bar_source_plan | source_adapter_and_quality | 252 | 15 | 61 | 3 | KEEP | none |
 | partition_chunk_cache | cache_and_persistence | 483 | 26 | 49 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
-| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 22 | KEEP | HIGH_FAN_IN |
+| phase_input_routing369 | domain_and_reference | 241 | 16 | 36 | 23 | KEEP | HIGH_FAN_IN |
 | private_cache_signal_ui_preview | domain_and_reference | 164 | 34 | 60 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_cache_source_bridge | domain_and_reference | 357 | 27 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | private_multitf_readiness | domain_and_reference | 308 | 35 | 91 | 19 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE, HIGH_FAN_IN |
