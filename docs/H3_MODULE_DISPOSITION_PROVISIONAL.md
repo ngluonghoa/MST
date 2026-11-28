@@ -12,13 +12,13 @@ these require separate consumer, migration and rollback evidence.
 | b1_bos_up503 | domain_and_reference | 139 | 14 | 15 | 2 | KEEP | none |
 | b1_bottom500 | domain_and_reference | 173 | 17 | 24 | 3 | KEEP | none |
 | b1_confirm504 | domain_and_reference | 137 | 16 | 14 | 2 | KEEP | none |
-| b1_decline499 | domain_and_reference | 111 | 9 | 19 | 10 | KEEP | none |
+| b1_decline499 | domain_and_reference | 111 | 9 | 19 | 10 | KEEP | HIGH_FAN_IN |
 | b1_major508 | domain_and_reference | 67 | 9 | 21 | 2 | KEEP | none |
 | b1_market506 | domain_and_reference | 94 | 14 | 16 | 2 | KEEP | none |
 | b1_market507 | domain_and_reference | 53 | 7 | 16 | 3 | KEEP | none |
 | b1_reclaim502 | domain_and_reference | 116 | 16 | 19 | 2 | KEEP | none |
 | b1_rf_volume505 | domain_and_reference | 88 | 14 | 17 | 2 | KEEP | none |
-| b1_risk509 | domain_and_reference | 121 | 19 | 18 | 1 | KEEP | none |
+| b1_risk509 | domain_and_reference | 121 | 15 | 17 | 1 | KEEP | none |
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
 | b5_feature_pack | domain_and_reference | 149 | 28 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
