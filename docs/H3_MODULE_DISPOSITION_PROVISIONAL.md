@@ -13,7 +13,7 @@ these require separate consumer, migration and rollback evidence.
 | b1_bottom500 | domain_and_reference | 173 | 17 | 24 | 3 | KEEP | none |
 | b1_confirm504 | domain_and_reference | 137 | 16 | 14 | 2 | KEEP | none |
 | b1_decline499 | domain_and_reference | 111 | 9 | 19 | 9 | KEEP | none |
-| b1_major508 | domain_and_reference | 67 | 9 | 23 | 1 | KEEP | none |
+| b1_major508 | domain_and_reference | 67 | 9 | 21 | 1 | KEEP | none |
 | b1_market506 | domain_and_reference | 94 | 14 | 16 | 2 | KEEP | none |
 | b1_market507 | domain_and_reference | 53 | 7 | 16 | 2 | KEEP | none |
 | b1_reclaim502 | domain_and_reference | 116 | 16 | 19 | 2 | KEEP | none |
