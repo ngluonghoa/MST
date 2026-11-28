@@ -20,7 +20,7 @@ these require separate consumer, migration and rollback evidence.
 | b1_reclaim502 | domain_and_reference | 116 | 16 | 19 | 2 | KEEP | none |
 | b1_rf_volume505 | domain_and_reference | 88 | 14 | 17 | 2 | KEEP | none |
 | b1_risk509 | domain_and_reference | 121 | 15 | 17 | 3 | KEEP | none |
-| b1_session511 | domain_and_reference | 79 | 11 | 21 | 1 | KEEP | none |
+| b1_session511 | domain_and_reference | 79 | 9 | 18 | 1 | KEEP | none |
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
 | b5_feature_pack | domain_and_reference | 149 | 28 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
