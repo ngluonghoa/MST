@@ -68,8 +68,8 @@ class B1Major508Tests(unittest.TestCase):
         with self.assertRaisesRegex(PrivateMultiTfDenied,"MST_368_MIXED_BUCKET_SOURCE_REVISION"):
             alter(inputs,Timeframe.W1,rows[:-1]+(wrong,))
         late=snap(replace(r,verified_at_utc=inputs.as_of_utc+timedelta(seconds=1)))
-        a,_=proof(alter(inputs,Timeframe.W1,rows[:-1]+(late,)),p,MAJOR)
-        self.assertIs(a[-1][1].state,S1State439.BLOCKED)
+        with self.assertRaisesRegex(PrivateMultiTfDenied,"MST_368_SELECTED_REVISION_LOOKAHEAD"):
+            alter(inputs,Timeframe.W1,rows[:-1]+(late,))
 
     def test_exact_variant_and_no_prior_bypass(self):
         inputs,p=fixture()
