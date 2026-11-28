@@ -11,7 +11,7 @@ these require separate consumer, migration and rollback evidence.
 | adaptive_source_router | source_adapter_and_quality | 289 | 27 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
 | b1_bos_up503 | domain_and_reference | 139 | 14 | 15 | 2 | KEEP | none |
 | b1_bottom500 | domain_and_reference | 173 | 17 | 24 | 3 | KEEP | none |
-| b1_confirm504 | domain_and_reference | 137 | 17 | 15 | 1 | KEEP | none |
+| b1_confirm504 | domain_and_reference | 137 | 16 | 14 | 1 | KEEP | none |
 | b1_decline499 | domain_and_reference | 111 | 9 | 19 | 5 | KEEP | none |
 | b1_reclaim502 | domain_and_reference | 116 | 16 | 19 | 2 | KEEP | none |
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
