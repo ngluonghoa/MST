@@ -24,7 +24,7 @@ def fixture(variant="B1/E_RECLAIM",*,close=D(21),low=D(8),epsilon=D("0.1")):
     p=replace(p,expires_at_utc=early.verified_at_utc+timedelta(days=10))
     rows=inputs.snapshots_for(Timeframe.D1)
     path=tuple(snap(make_bar(1200+i,start=early.verified_at_utc+timedelta(days=i+1),
-        high=h,low=l,close=c)) for i,(h,l,c) in enumerate(
+        open_price=max(D(10),l),high=h,low=l,close=c)) for i,(h,l,c) in enumerate(
         ((D(14),D(9),D(12)),(D(18),D(10),D(15)),(D(15),D(9),D(12)),
          (D(14),low,D(11)),(D(15),D(10),D(12)),(D(17),D(11),D(15)),
          (D(22),D(10),close))))
