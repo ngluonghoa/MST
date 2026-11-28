@@ -12,13 +12,14 @@ these require separate consumer, migration and rollback evidence.
 | b1_bos_up503 | domain_and_reference | 139 | 14 | 15 | 2 | KEEP | none |
 | b1_bottom500 | domain_and_reference | 173 | 17 | 24 | 3 | KEEP | none |
 | b1_confirm504 | domain_and_reference | 137 | 16 | 14 | 2 | KEEP | none |
-| b1_decline499 | domain_and_reference | 111 | 9 | 19 | 10 | KEEP | HIGH_FAN_IN |
+| b1_decline499 | domain_and_reference | 111 | 9 | 19 | 11 | KEEP | HIGH_FAN_IN |
+| b1_entry510 | domain_and_reference | 80 | 10 | 11 | 1 | KEEP | none |
 | b1_major508 | domain_and_reference | 67 | 9 | 21 | 2 | KEEP | none |
 | b1_market506 | domain_and_reference | 94 | 14 | 16 | 2 | KEEP | none |
 | b1_market507 | domain_and_reference | 53 | 7 | 16 | 3 | KEEP | none |
 | b1_reclaim502 | domain_and_reference | 116 | 16 | 19 | 2 | KEEP | none |
 | b1_rf_volume505 | domain_and_reference | 88 | 14 | 17 | 2 | KEEP | none |
-| b1_risk509 | domain_and_reference | 121 | 15 | 17 | 1 | KEEP | none |
+| b1_risk509 | domain_and_reference | 121 | 15 | 17 | 2 | KEEP | none |
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
 | b5_feature_pack | domain_and_reference | 149 | 28 | 64 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -66,12 +67,12 @@ these require separate consumer, migration and rollback evidence.
 | d1_three_source_observation_audit | domain_and_reference | 336 | 45 | 117 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | dnse_d1_reference_fallback | source_adapter_and_quality | 368 | 30 | 69 | 5 | IMPROVE | HIGH_BRANCH_SCORE |
 | durable_evidence | evidence_and_rights | 184 | 12 | 35 | 3 | IMPROVE | DUPLICATE_AST |
-| engine | domain_and_reference | 566 | 66 | 131 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
+| engine | domain_and_reference | 569 | 67 | 133 | 3 | IMPROVE | FILE_500_PLUS, FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | engineering_contracts | engineering_governance | 175 | 10 | 27 | 5 | KEEP | none |
 | engineering_release | engineering_governance | 102 | 19 | 20 | 0 | KEEP | none |
 | evidence_checkpoint | evidence_and_rights | 184 | 12 | 36 | 1 | KEEP | none |
 | evidence_recovery | evidence_and_rights | 81 | 4 | 23 | 1 | KEEP | none |
-| feature_engine460 | domain_and_reference | 50 | 9 | 18 | 18 | KEEP | HIGH_FAN_IN |
+| feature_engine460 | domain_and_reference | 50 | 9 | 18 | 19 | KEEP | HIGH_FAN_IN |
 | fixture_scan | cache_and_persistence | 88 | 8 | 44 | 0 | KEEP | none |
 | hose_session_geometry210 | domain_and_reference | 494 | 28 | 91 | 0 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | incremental_cache | cache_and_persistence | 441 | 23 | 83 | 9 | IMPROVE | HIGH_BRANCH_SCORE |
@@ -107,7 +108,7 @@ these require separate consumer, migration and rollback evidence.
 | rvol_tod_contract | domain_and_reference | 357 | 21 | 75 | 2 | IMPROVE | HIGH_BRANCH_SCORE |
 | s1_choch442 | domain_and_reference | 119 | 11 | 23 | 7 | KEEP | none |
 | s1_confirm443 | domain_and_reference | 75 | 9 | 23 | 1 | KEEP | none |
-| s1_context_preview439 | domain_and_reference | 199 | 9 | 37 | 23 | KEEP | HIGH_FAN_IN |
+| s1_context_preview439 | domain_and_reference | 199 | 9 | 37 | 24 | KEEP | HIGH_FAN_IN |
 | s1_distribution440 | domain_and_reference | 96 | 11 | 21 | 2 | KEEP | none |
 | s1_failed_break441 | domain_and_reference | 81 | 11 | 17 | 10 | KEEP | HIGH_FAN_IN |
 | s1_holdings445 | domain_and_reference | 64 | 11 | 15 | 10 | KEEP | HIGH_FAN_IN |
