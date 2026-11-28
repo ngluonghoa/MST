@@ -9,7 +9,7 @@ these require separate consumer, migration and rollback evidence.
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | __init__ | domain_and_reference | 3 | 0 | 0 | 0 | KEEP | none |
 | adaptive_source_router | source_adapter_and_quality | 289 | 27 | 75 | 0 | IMPROVE | HIGH_BRANCH_SCORE |
-| b1_bottom500 | domain_and_reference | 105 | 18 | 24 | 1 | KEEP | none |
+| b1_bottom500 | domain_and_reference | 105 | 17 | 22 | 1 | KEEP | none |
 | b1_decline499 | domain_and_reference | 111 | 9 | 19 | 2 | KEEP | none |
 | b2s2_swing_evidence215 | domain_and_reference | 379 | 33 | 98 | 1 | IMPROVE | FUNCTION_90_PLUS, HIGH_BRANCH_SCORE |
 | b5_calibration_draft | domain_and_reference | 169 | 16 | 33 | 0 | KEEP | none |
