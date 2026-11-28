@@ -8,6 +8,7 @@ import unittest
 from swing_trading.b1_major508 import B1MajorPlan508
 from swing_trading.contracts import Strategy
 from swing_trading.market_data import Timeframe
+from swing_trading.private_multitf_readiness import PrivateMultiTfDenied
 from swing_trading.s1_context_preview439 import S1State439
 from swing_trading.unified_mode459 import EngineMode
 from test_b1_market507 import fixture as rf_fixture
@@ -64,7 +65,10 @@ class B1Major508Tests(unittest.TestCase):
         r=rows[-1].selected
         o=replace(r.observation_key,source_stream_id="fixture-other")
         wrong=snap(replace(r,observation_key=o,observation_revision=replace(r.observation_revision,observation_key=o)))
-        a,_=proof(alter(inputs,Timeframe.W1,rows[:-1]+(wrong,)),p,MAJOR)
+        with self.assertRaisesRegex(PrivateMultiTfDenied,"MST_368_MIXED_BUCKET_SOURCE_REVISION"):
+            alter(inputs,Timeframe.W1,rows[:-1]+(wrong,))
+        late=snap(replace(r,verified_at_utc=inputs.as_of_utc+timedelta(seconds=1)))
+        a,_=proof(alter(inputs,Timeframe.W1,rows[:-1]+(late,)),p,MAJOR)
         self.assertIs(a[-1][1].state,S1State439.BLOCKED)
 
     def test_exact_variant_and_no_prior_bypass(self):
